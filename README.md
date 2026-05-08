@@ -1,39 +1,92 @@
-**Welcome to your Base44 project** 
+# Iran Tour Advisor
 
-**About**
+Iran Tour Advisor is a modern AI-powered cultural travel platform designed for international travelers who want to explore the authentic soul of Iran through curated journeys, local experiences, and personalized travel planning.
 
-View and Edit  your app on [Base44.com](http://Base44.com) 
+The platform connects travelers with carefully designed tour packages based on their travel goals — including architecture, history, culture, photography, food, nature, desert adventures, luxury travel, and research-focused experiences.
 
-This project contains everything you need to run your app locally.
+In addition to curated tours, travelers can connect with local guides across different Iranian cities and build fully customized journeys with the help of an intelligent AI travel assistant.
 
-**Edit the code in your local development environment**
+## Core Features
 
-Any change pushed to the repo will also be reflected in the Base44 Builder.
+* Curated Iran travel packages
+* Goal-based travel experiences
+* AI-powered travel assistant
+* Personalized trip builder
+* Local tour guide marketplace
+* Multilingual platform (English, Persian, Arabic)
+* Modern premium UI/UX
+* Fully responsive experience
+* Admin dashboard & CMS
+* Smart travel discovery system
+* Cultural storytelling-focused design
 
-**Prerequisites:** 
+## Platform Vision
 
-1. Clone the repository using the project's Git URL 
-2. Navigate to the project directory
-3. Install dependencies: `npm install`
-4. Create an `.env.local` file and set the right environment variables
+Iran Tour Advisor aims to introduce the real beauty of Iran through modern technology, local expertise, and immersive cultural experiences.
 
-```
-VITE_BASE44_APP_ID=your_app_id
-VITE_BASE44_APP_BASE_URL=your_backend_url
+The platform is designed to make discovering Iran easier, safer, and more inspiring for global travelers while showcasing the country’s architecture, history, hospitality, art, food, and natural landscapes in a premium digital experience.
 
-e.g.
-VITE_BASE44_APP_ID=cbef744a8545c389ef439ea6
-VITE_BASE44_APP_BASE_URL=https://my-to-do-list-81bfaad7.base44.app
-```
+## Experience Philosophy
 
-Run the app: `npm run dev`
+The platform combines:
 
-**Publish your changes**
+* Modern travel technology
+* AI-assisted planning
+* Authentic Iranian culture
+* Minimal luxury aesthetics
+* Human-centered UX
+* Story-driven travel experiences
 
-Open [Base44.com](http://Base44.com) and click on Publish.
+## Main Sections
 
-**Docs & Support**
+### Travel Packages
 
-Documentation: [https://docs.base44.com/Integrations/Using-GitHub](https://docs.base44.com/Integrations/Using-GitHub)
+Explore curated travel experiences designed around specific interests and travel purposes.
 
-Support: [https://app.base44.com/support](https://app.base44.com/support)
+### AI Travel Assistant
+
+An intelligent assistant that helps travelers discover or generate personalized travel plans based on their interests.
+
+### Local Guides Marketplace
+
+Find trusted local guides in different Iranian cities and connect directly for custom city experiences.
+
+### Custom Journey Builder
+
+Create personalized travel itineraries based on destination, duration, interests, and travel style.
+
+### Multilingual Experience
+
+Optimized for:
+
+* English
+* فارسی
+* العربية
+
+With full RTL/LTR support and culturally adaptive UX.
+
+## Future Roadmap
+
+* Smart AI itinerary generation
+* Booking & reservation system
+* Guide verification system
+* Interactive maps & travel timelines
+* Community reviews
+* Personalized recommendations
+* Advanced admin analytics
+* Travel journal & content platform
+
+## Design Direction
+
+Iran Tour Advisor is designed to feel:
+
+* Cinematic
+* Authentic
+* Premium
+* Minimal
+* Intelligent
+* Emotionally immersive
+
+---
+
+“Discover the hidden beauty of authentic Iran through meaningful cultural journeys.”
