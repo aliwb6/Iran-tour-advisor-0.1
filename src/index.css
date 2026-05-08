@@ -1,0 +1,224 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&family=Inter:wght@300;400;500;600;700&family=Vazirmatn:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Warm Ivory + Persian Blue + Turquoise + Gold */
+    --background: 38 30% 97%;
+    --foreground: 222 45% 8%;
+    --card: 38 25% 98%;
+    --card-foreground: 222 45% 8%;
+    --popover: 38 25% 98%;
+    --popover-foreground: 222 45% 8%;
+    --primary: 222 55% 12%;
+    --primary-foreground: 38 30% 97%;
+    --secondary: 38 20% 93%;
+    --secondary-foreground: 222 45% 12%;
+    --muted: 38 15% 92%;
+    --muted-foreground: 222 12% 48%;
+    --accent: 178 85% 32%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 38 18% 87%;
+    --input: 38 18% 87%;
+    --ring: 178 85% 32%;
+    --radius: 0.75rem;
+
+    /* Brand tokens */
+    --gold: 38 62% 52%;
+    --gold-light: 40 70% 78%;
+    --sand: 38 35% 94%;
+    --navy: 222 55% 12%;
+    --navy-light: 222 40% 22%;
+    --turquoise: 178 85% 32%;
+    --turquoise-light: 178 60% 50%;
+    --ivory: 38 30% 97%;
+    --warm-gray: 28 10% 55%;
+
+    --font-heading: 'Cormorant Garamond', Georgia, serif;
+    --font-body: 'Inter', system-ui, sans-serif;
+    --font-vazirmatn: 'Vazirmatn', sans-serif;
+
+    /* Sidebar */
+    --sidebar-background: 222 45% 8%;
+    --sidebar-foreground: 38 30% 90%;
+    --sidebar-primary: 178 85% 32%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 222 35% 15%;
+    --sidebar-accent-foreground: 38 30% 90%;
+    --sidebar-border: 222 30% 16%;
+    --sidebar-ring: 178 85% 32%;
+  }
+
+  .dark {
+    --background: 222 45% 5%;
+    --foreground: 38 25% 94%;
+    --card: 222 40% 8%;
+    --card-foreground: 38 25% 94%;
+    --popover: 222 40% 8%;
+    --popover-foreground: 38 25% 94%;
+    --primary: 38 25% 92%;
+    --primary-foreground: 222 45% 8%;
+    --secondary: 222 35% 13%;
+    --secondary-foreground: 38 25% 92%;
+    --muted: 222 28% 15%;
+    --muted-foreground: 38 12% 58%;
+    --accent: 178 75% 38%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 222 28% 18%;
+    --input: 222 28% 18%;
+    --ring: 178 75% 38%;
+    --gold: 38 62% 58%;
+    --gold-light: 40 55% 68%;
+    --sand: 38 20% 15%;
+    --navy: 222 45% 5%;
+    --navy-light: 222 35% 15%;
+    --turquoise: 178 75% 38%;
+    --turquoise-light: 178 55% 52%;
+    --ivory: 222 45% 5%;
+    --warm-gray: 28 8% 50%;
+
+    --sidebar-background: 222 45% 4%;
+    --sidebar-foreground: 38 25% 88%;
+    --sidebar-primary: 178 75% 38%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 222 35% 10%;
+    --sidebar-accent-foreground: 38 25% 88%;
+    --sidebar-border: 222 30% 14%;
+    --sidebar-ring: 178 75% 38%;
+  }
+}
+
+@layer base {
+  * { @apply border-border outline-ring/50; }
+  html { scroll-behavior: smooth; }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "kern" 1, "liga" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  h1, h2, h3, h4, h5, h6 { @apply font-heading; }
+}
+
+/* ── RTL Typography ── */
+[dir="rtl"] body,
+[dir="rtl"] p,
+[dir="rtl"] span,
+[dir="rtl"] div,
+[dir="rtl"] button,
+[dir="rtl"] input,
+[dir="rtl"] textarea,
+[dir="rtl"] .font-body {
+  font-family: 'Vazirmatn', sans-serif;
+}
+[dir="rtl"] h1,
+[dir="rtl"] h2,
+[dir="rtl"] h3,
+[dir="rtl"] h4,
+[dir="rtl"] .font-heading {
+  font-family: 'Vazirmatn', sans-serif;
+  font-weight: 600;
+}
+
+/* ── Persian Carpet Design Language ── */
+
+/* Repeating geometric border */
+.carpet-border {
+  background: repeating-linear-gradient(
+    90deg,
+    hsl(var(--accent)) 0px, hsl(var(--accent)) 5px,
+    transparent 5px, transparent 9px,
+    hsl(var(--gold)) 9px, hsl(var(--gold)) 11px,
+    transparent 11px, transparent 15px
+  );
+  height: 2px;
+}
+
+/* Soft warm card shadow */
+.shadow-warm {
+  box-shadow:
+    0 1px 2px hsl(var(--navy) / 0.04),
+    0 4px 16px hsl(var(--navy) / 0.06),
+    0 12px 40px hsl(var(--navy) / 0.05);
+}
+
+.shadow-warm-lg {
+  box-shadow:
+    0 2px 4px hsl(var(--navy) / 0.04),
+    0 8px 24px hsl(var(--navy) / 0.08),
+    0 24px 64px hsl(var(--navy) / 0.07);
+}
+
+/* Subtle woven texture */
+.carpet-texture {
+  position: relative;
+}
+.carpet-texture::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0.018;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    repeating-linear-gradient(45deg, hsl(var(--accent)) 0, hsl(var(--accent)) 1px, transparent 0, transparent 50%),
+    repeating-linear-gradient(-45deg, hsl(var(--gold)) 0, hsl(var(--gold)) 1px, transparent 0, transparent 50%);
+  background-size: 10px 10px;
+}
+
+/* Cinematic gradient overlay */
+.cinematic-overlay {
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    hsl(var(--navy) / 0.15) 40%,
+    hsl(var(--navy) / 0.6) 75%,
+    hsl(var(--navy) / 0.88) 100%
+  );
+}
+
+/* Premium glass card */
+.glass-card {
+  background: hsl(var(--background) / 0.7);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  border: 1px solid hsl(var(--border) / 0.6);
+}
+
+/* Hover lift */
+.hover-lift {
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.35s ease;
+}
+.hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow:
+    0 8px 24px hsl(var(--navy) / 0.1),
+    0 24px 64px hsl(var(--navy) / 0.08);
+}
+
+/* Text balance */
+.text-balance { text-wrap: balance; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.25);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.45);
+}
+
+/* Section rhythm */
+.section-gap { padding-top: 6rem; padding-bottom: 6rem; }
+@media (max-width: 768px) {
+  .section-gap { padding-top: 4rem; padding-bottom: 4rem; }
+}
