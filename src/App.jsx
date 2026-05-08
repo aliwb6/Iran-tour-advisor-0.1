@@ -58,7 +58,6 @@ const AuthenticatedApp = () => {
           <Route path="/package/:id" element={<PackageDetails />} />
           <Route path="/guides" element={<Guides />} />
           <Route path="/guides/:slug" element={<GuideDetails />} />
-          <Route path="/destinations" element={<Destinations />} />
           <Route path="/search" element={<Search />} />
           <Route path="/custom-trip" element={<CustomTrip />} />
           <Route path="/ai-assistant" element={<AIAssistant />} />

@@ -121,7 +121,7 @@ export default function HeroSection() {
             className="inline-flex items-center gap-2 bg-white/12 hover:bg-white/20 text-white border border-white/25 px-7 py-3.5 rounded-full font-body font-medium text-sm transition-all duration-300 backdrop-blur-sm"
           >
             <Sparkles className="w-4 h-4 text-gold" />
-            {lang === 'fa' ? 'با هوش مصنوعی برنامه‌ریزی کن' : lang === 'ar' ? 'خطط مع الذكاء الاصطناعي' : 'Plan with AI'}
+            {lang === 'fa' ? 'با هوش مصنوعی برنامه‌ریزی کن' : lang === 'ar' ? 'خطط مع الذكاء الاصطناعي' : t('hero_cta_ai')}
           </Link>
         </motion.div>
 

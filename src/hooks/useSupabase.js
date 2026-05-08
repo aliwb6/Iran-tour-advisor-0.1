@@ -34,8 +34,13 @@ export function useTours(filters = {}) {
 
         const { data, error: supabaseError } = await query.order('created_at', { ascending: false });
 
-        if (supabaseError) throw supabaseError;
-        if (isMounted) {
+        if (supabaseError) {
+          console.warn('Supabase fetch error (table may not exist):', supabaseError.message);
+          if (isMounted) {
+            setTours([]);
+            setError(null);
+          }
+        } else if (isMounted) {
           setTours(data || []);
           setError(null);
         }
@@ -73,8 +78,13 @@ export function useTourBySlug(slug) {
           .eq('slug', slug)
           .single();
 
-        if (supabaseError) throw supabaseError;
-        if (isMounted) {
+        if (supabaseError) {
+          console.warn('Supabase fetch error (table may not exist):', supabaseError.message);
+          if (isMounted) {
+            setTour(null);
+            setError(null);
+          }
+        } else if (isMounted) {
           setTour(data);
           setError(null);
         }
@@ -112,8 +122,13 @@ export function useTourById(id) {
           .eq('id', id)
           .single();
 
-        if (supabaseError) throw supabaseError;
-        if (isMounted) {
+        if (supabaseError) {
+          console.warn('Supabase fetch error (table may not exist):', supabaseError.message);
+          if (isMounted) {
+            setTour(null);
+            setError(null);
+          }
+        } else if (isMounted) {
           setTour(data);
           setError(null);
         }
@@ -151,8 +166,13 @@ export function usePackageById(id) {
           .eq('id', id)
           .single();
 
-        if (supabaseError) throw supabaseError;
-        if (isMounted) {
+        if (supabaseError) {
+          console.warn('Supabase fetch error (table may not exist):', supabaseError.message);
+          if (isMounted) {
+            setPkg(null);
+            setError(null);
+          }
+        } else if (isMounted) {
           setPkg(data);
           setError(null);
         }

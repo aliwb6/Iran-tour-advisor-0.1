@@ -1,7 +1,33 @@
-I have renamed the table to tours in Supabase, but I'm still getting the 'Could not find table in schema cache' error. Please:
+Subject: Project Cleanup & Implementation of "Iran Tour Advisor" Core Identity
 
-Update all Supabase queries to use from('tours').
+Please apply these major structural changes to the project based on the "Iran Tour Advisor" vision:
 
-Ensure that the supabaseClient.js is correctly initialized.
+1. Cleanup & Simplification:
 
-If there is a types file or database.types.ts, please regenerate or update it to reflect the new table name tours with all the new columns (jsonb, text, etc.)."
+Remove Destinations: Completely remove the "Destinations" section and its related pages/routes.
+
+Simplify Guides: Remove all pre-made guide pages. Keep only one single template for a guide profile to be used as a reference.
+
+Refactor Packages: Keep only one default package as a sample. This page MUST match the dark-themed cinematic UI from the provided screenshots (Header with overlay, Stats bar, Itinerary timeline, Included/Not Included, and Gallery).
+
+2. Table Connection (The Fix):
+
+Ensure the tour data is fetched from the tours table in Supabase. If the 'schema cache' error persists, wrap the fetch call in a way that handles missing tables gracefully or uses a direct API call.
+
+3. Home Page Transformation (The Identity):
+
+Hero Section: Update the landing page to present "Iran Tour Advisor" using the provided text. Focus on the "AI-powered cultural travel platform" and "Discovering the authentic soul of Iran" messaging.
+
+Experience Ways (Dynamic Section): Replace the old "Ways to experience Iran" with a dynamic section for "Popular Packages". For now, create the UI cards and layout, but set it to show a "Coming Soon" or a "Loading" state until we fill the database.
+
+Vision & Philosophy: Add a section that beautifully displays the "Experience Philosophy" (Modern Tech + Authentic Culture + Minimal Luxury).
+
+4. Design & UX:
+
+Maintain the Cinematic, Premium, and Minimal aesthetic.
+
+Ensure full support for the Multilingual Experience (English, Persian, Arabic) with RTL/LTR switching.
+
+The UI should feel emotionally immersive and storytelling-focused.
+
+Please update the routes and the main navigation bar to reflect these removals.

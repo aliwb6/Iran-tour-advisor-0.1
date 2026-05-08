@@ -22,7 +22,6 @@ export default function Navbar() {
 
   const navLinks = [
     { path: '/tours', label: t('nav_tours') },
-    { path: '/destinations', label: t('nav_destinations') },
     { path: '/guides', label: t('nav_guides') },
     { path: '/custom-trip', label: t('nav_custom') },
     { path: '/ai-assistant', label: t('nav_ai') },
@@ -59,8 +58,8 @@ export default function Navbar() {
               <div className="flex flex-col leading-none">
                 <span className={`font-heading text-base font-semibold tracking-wide transition-colors ${
                   !scrolled && isHome ? 'text-white' : 'text-foreground'
-                }`}>Iran Soul Tours</span>
-                <span className="font-body text-[9px] uppercase tracking-[0.18em] text-gold/80">Premium Experiences</span>
+                }`}>Iran Tour Advisor</span>
+                <span className={`font-body text-[9px] uppercase tracking-[0.18em] text-gold/80`}>AI-Powered</span>
               </div>
             </Link>
 
