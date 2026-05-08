@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useI18n } from '@/lib/i18n.jsx';
 import { motion } from 'framer-motion';
-import { Clock, MapPin, ArrowRight, ArrowLeft, Loader2 } from 'lucide-react';
+import { Clock, MapPin, ArrowRight, ArrowLeft } from 'lucide-react';
 import { useTours, FALLBACK_IMAGE } from '@/hooks/useSupabase';
 import { useNavigate } from 'react-router-dom';
 

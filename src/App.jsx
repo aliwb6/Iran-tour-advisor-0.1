@@ -12,6 +12,8 @@ import Layout from '@/components/layout/Layout';
 import Home from '@/pages/Home';
 import Tours from '@/pages/Tours';
 import TourDetails from '@/pages/TourDetails';
+import PackageDetails from '@/pages/PackageDetails';
+import AdminTourForm from '@/pages/AdminTourForm';
 import Guides from '@/pages/Guides';
 import GuideDetails from '@/pages/GuideDetails';
 import Destinations from '@/pages/Destinations';
@@ -53,6 +55,7 @@ const AuthenticatedApp = () => {
           <Route path="/" element={<Home />} />
           <Route path="/tours" element={<Tours />} />
           <Route path="/tours/:slug" element={<TourDetails />} />
+          <Route path="/package/:id" element={<PackageDetails />} />
           <Route path="/guides" element={<Guides />} />
           <Route path="/guides/:slug" element={<GuideDetails />} />
           <Route path="/destinations" element={<Destinations />} />
@@ -63,6 +66,7 @@ const AuthenticatedApp = () => {
           <Route path="/blog" element={<Blog />} />
           <Route path="/blog/:slug" element={<ArticleDetails />} />
         </Route>
+      <Route path="/admin/new-tour" element={<AdminTourForm />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );

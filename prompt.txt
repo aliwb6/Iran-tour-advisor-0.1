@@ -1,13 +1,9 @@
-"The Supabase connection is now active, and I have added a real package to the tours table.
+"I need a simple Admin Page to create new tours easily. It should have:
 
-Please update the project with these specific changes:
+Dynamic Form: Fields for all columns in the package tours table.
 
-Data Fetching: In the Home and Packages (or Tours) pages, completely remove the static mock data. Use the supabase client from src/supabaseClient.js to fetch all rows from the tours table.
+Add Days Feature: A way to add multiple days to the itinerary without writing JSON manually.
 
-Mapping Fields: Ensure the UI components (like Package Cards) correctly map to my Supabase columns: title, description, price, image_url, duration, location, and target_audience.
+Submit Button: When clicked, it should use supabase.from('package tours').insert() to save the new tour.
 
-Loading State: While the data is being fetched from Supabase, show a simple loading spinner or skeleton.
-
-Error Handling: If the fetch fails, show a friendly message to the user.
-
-Please provide the updated code for the fetching logic and the component rendering."
+Security: For now, just make it a hidden route, but later we will protect it with a password."

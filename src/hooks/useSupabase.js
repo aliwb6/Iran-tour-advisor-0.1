@@ -134,6 +134,45 @@ export function useTourById(id) {
   return { tour, loading, error };
 }
 
+export function usePackageById(id) {
+  const [pkg, setPkg] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    setLoading(true);
+
+    const fetchPackage = async () => {
+      try {
+        const { data, error: supabaseError } = await supabase
+          .from('package_tours')
+          .select('*')
+          .eq('id', id)
+          .single();
+
+        if (supabaseError) throw supabaseError;
+        if (isMounted) {
+          setPkg(data);
+          setError(null);
+        }
+      } catch (err) {
+        if (isMounted) {
+          setError(err.message);
+          setPkg(null);
+        }
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    if (id) fetchPackage();
+    return () => { isMounted = false; };
+  }, [id]);
+
+  return { pkg, loading, error };
+}
+
 export function useDestinations() {
   const [destinations, setDestinations] = useState([]);
   const [loading, setLoading] = useState(true);
