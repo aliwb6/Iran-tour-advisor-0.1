@@ -1,9 +1,7 @@
-"I need a simple Admin Page to create new tours easily. It should have:
+I have renamed the table to tours in Supabase, but I'm still getting the 'Could not find table in schema cache' error. Please:
 
-Dynamic Form: Fields for all columns in the package tours table.
+Update all Supabase queries to use from('tours').
 
-Add Days Feature: A way to add multiple days to the itinerary without writing JSON manually.
+Ensure that the supabaseClient.js is correctly initialized.
 
-Submit Button: When clicked, it should use supabase.from('package tours').insert() to save the new tour.
-
-Security: For now, just make it a hidden route, but later we will protect it with a password."
+If there is a types file or database.types.ts, please regenerate or update it to reflect the new table name tours with all the new columns (jsonb, text, etc.)."

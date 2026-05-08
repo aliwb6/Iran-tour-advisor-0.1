@@ -83,7 +83,7 @@ export default function AdminTourForm() {
         not_included: formData.not_included.filter(i => i.trim()),
       };
 
-      const { error: supabaseError } = await supabase.from('package_tours').insert(payload);
+      const { error: supabaseError } = await supabase.from('tours').insert(payload);
 
       if (supabaseError) throw supabaseError;
 

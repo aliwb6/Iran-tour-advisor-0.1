@@ -146,7 +146,7 @@ export function usePackageById(id) {
     const fetchPackage = async () => {
       try {
         const { data, error: supabaseError } = await supabase
-          .from('package_tours')
+          .from('tours')
           .select('*')
           .eq('id', id)
           .single();
