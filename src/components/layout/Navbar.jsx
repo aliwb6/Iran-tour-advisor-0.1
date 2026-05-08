@@ -23,7 +23,6 @@ export default function Navbar() {
   const navLinks = [
     { path: '/tours', label: t('nav_tours') },
     { path: '/guides', label: t('nav_guides') },
-    { path: '/custom-trip', label: t('nav_custom') },
     { path: '/ai-assistant', label: t('nav_ai') },
     { path: '/about', label: t('nav_about') },
     { path: '/blog', label: t('nav_blog') },
@@ -94,14 +93,14 @@ export default function Navbar() {
                 <ThemeToggle />
                 <LanguageSwitcher />
               </div>
-              <Link
-                to="/custom-trip"
-                className={`hidden lg:inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-body font-semibold uppercase tracking-wider transition-all duration-300 ${
-                  !scrolled && isHome
-                    ? 'bg-white/15 text-white border border-white/30 hover:bg-white/25'
-                    : 'bg-accent text-white hover:bg-accent/90'
-                }`}
-              >
+<Link
+                  to="/ai-assistant"
+                  className={`hidden lg:inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-body font-semibold uppercase tracking-wider transition-all duration-300 ${
+                    !scrolled && isHome
+                      ? 'bg-white/15 text-white border border-white/30 hover:bg-white/25'
+                      : 'bg-accent text-white hover:bg-accent/90'
+                  }`}
+                >
                 {t('hero_cta_custom')}
               </Link>
               <button
@@ -164,10 +163,10 @@ export default function Navbar() {
                 <ThemeToggle />
                 <LanguageSwitcher />
                 <Link
-                  to="/custom-trip"
+                  to="/ai-assistant"
                   className="ms-auto inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-accent text-white text-sm font-body font-medium"
                 >
-                  {t('hero_cta_custom')}
+                  {t('hero_cta_ai')}
                 </Link>
               </div>
             </div>

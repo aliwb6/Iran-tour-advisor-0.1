@@ -18,9 +18,6 @@ import PackageDetails from '@/pages/PackageDetails';
 import AdminTourForm from '@/pages/AdminTourForm';
 import Guides from '@/pages/Guides';
 import GuideDetails from '@/pages/GuideDetails';
-import Destinations from '@/pages/Destinations';
-import Search from '@/pages/Search';
-import CustomTrip from '@/pages/CustomTrip';
 import AIAssistant from '@/pages/AIAssistant';
 import About from '@/pages/About';
 import Blog from '@/pages/Blog';
@@ -60,8 +57,6 @@ const AuthenticatedApp = () => {
           <Route path="/package/:id" element={<PackageDetails />} />
           <Route path="/guides" element={<Guides />} />
           <Route path="/guides/:slug" element={<GuideDetails />} />
-          <Route path="/search" element={<Search />} />
-          <Route path="/custom-trip" element={<CustomTrip />} />
           <Route path="/ai-assistant" element={<AIAssistant />} />
           <Route path="/about" element={<About />} />
           <Route path="/blog" element={<Blog />} />

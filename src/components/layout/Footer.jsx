@@ -5,7 +5,6 @@ import { Compass, Mail, Instagram, Youtube, Twitter } from 'lucide-react';
 const EXPLORE = [
   { path: '/tours', key: 'nav_tours' },
   { path: '/guides', key: 'nav_guides' },
-  { path: '/custom-trip', key: 'nav_custom' },
   { path: '/ai-assistant', key: 'nav_ai' },
 ];
 
@@ -33,8 +32,8 @@ export default function Footer() {
                 <Compass className="w-4 h-4 text-turquoise" />
               </div>
               <div>
-                <p className="font-heading text-base font-semibold text-white">Iran Soul Tours</p>
-                <p className="font-body text-[9px] uppercase tracking-[0.18em] text-gold/60">Premium Experiences</p>
+                <p className="font-heading text-base font-semibold text-white">Iran Tour Advisor</p>
+                <p className="font-body text-[9px] uppercase tracking-[0.18em] text-gold/60">AI-Powered</p>
               </div>
             </Link>
             <p className="font-body text-sm text-white/50 leading-relaxed mb-6">
@@ -123,7 +122,7 @@ export default function Footer() {
         {/* Bottom bar */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-6 border-t border-white/10">
           <p className="font-body text-xs text-white/35">
-            © {new Date().getFullYear()} Iran Soul Tours. {t('footer_rights')}.
+            © {new Date().getFullYear()} Iran Tour Advisor. {t('footer_rights')}.
           </p>
           <div className="flex items-center gap-5">
             <a href="#" className="font-body text-xs text-white/35 hover:text-white/60 transition-colors">{t('footer_privacy')}</a>

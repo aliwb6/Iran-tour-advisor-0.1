@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Sparkles, Send, Loader2, Landmark, Sun, UtensilsCrossed, BookOpen, Camera, Crown } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import { useTours, useGuides } from '@/hooks/useSupabase';
 
 const chips = [
   { key: 'ai_chip_architecture', icon: Landmark },
@@ -21,6 +22,9 @@ export default function AIAssistant() {
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef(null);
 
+  const { tours } = useTours({});
+  const { guides } = useGuides();
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
@@ -32,10 +36,32 @@ export default function AIAssistant() {
     setInput('');
     setLoading(true);
 
-    const systemPrompt = `You are the AI travel concierge for Iran Tour Advisor, a premium travel brand specializing in authentic Iranian experiences. 
-You help travelers discover the perfect journey through Iran. Be knowledgeable, warm, and sophisticated. 
-Respond in ${lang === 'fa' ? 'Persian/Farsi' : lang === 'ar' ? 'Arabic' : 'English'}.
-Suggest specific cities, experiences, and cultural highlights. Be concise but evocative.`;
+    const toursContext = tours.length > 0
+      ? tours.map(t => `- "${t.title}" (${t.duration} days, $${t.price?.toLocaleString()}, ${t.location || t.cities || 'Iran'}): ${t.description?.substring(0, 150)}...`).join('\n')
+      : 'No tour packages available yet.';
+
+    const guidesContext = guides.length > 0
+      ? guides.map(g => `- ${g.full_name || g.name} (${g.city}, ${g.specialty || 'Local Guide'})${g.bio ? ': ' + g.bio.substring(0, 100) : ''}`).join('\n')
+      : 'No local guides approved yet.';
+
+    const responseLang = lang === 'fa' ? 'Persian/Farsi' : lang === 'ar' ? 'Arabic' : 'English';
+
+    const systemPrompt = `You are the AI travel concierge for Iran Tour Advisor, a premium AI-powered travel platform for authentic Iranian experiences.
+Your role: Help travelers discover and build personalized journeys through Iran by drawing from real tour packages and approved local guides.
+Respond in ${responseLang}.
+
+AVAILABLE TOUR PACKAGES:
+${toursContext}
+
+APPROVED LOCAL GUIDES:
+${guidesContext}
+
+Guidelines:
+- When users ask about personalized or custom trips, reference specific packages and suggest connecting with suitable guides
+- Be knowledgeable, warm, and sophisticated in your responses
+- Suggest specific cities, experiences, and cultural highlights
+- If a guide matches the user's interests, recommend reaching out to them
+- Be concise but evocative and storytelling-focused`;
 
     const response = await base44.integrations.Core.InvokeLLM({
       prompt: `${systemPrompt}\n\nUser: ${text}`,

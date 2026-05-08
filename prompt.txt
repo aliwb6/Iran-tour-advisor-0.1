@@ -1,35 +1,29 @@
-Subject: User Roles Implementation (Tourist/Guide) and UI Flow Correction
+Subject: Remove Custom Trip Page and Enhance AI Assistant Logic
 
-Please implement the following features and fixes:
+Please apply the following changes to the project:
 
-1. Registration Flow (Tourist vs. Guide):
+1. Navigation & Route Cleanup:
 
-Sign-up Page: Create a registration form that defaults to the "Tourist" role.
+Remove Custom Trip: Completely remove the "Custom Trip" page, its route, and its link from the Navigation Bar and Footer.
 
-Role Toggle: Add a clear option at the bottom of the form: "Are you a Local Guide? Register as a Guide."
+AI Responsibility: The logic for "Building a Personalized Trip" should now be handled exclusively by the AI Assistant.
 
-Tourist Access: Tourists should be able to sign up easily with their email and get immediate access to the site.
+2. AI Assistant Enhancement:
 
-Guide Onboarding: When "Guide" is selected, after registration, redirect them to a "Create Your Profile" page where they can enter their bio, expertise, and city.
+Database Context: Update the AI Assistant's prompt/context so that it knows about our available Tour Packages (from the tours table) and Approved Local Guides.
 
-Admin Approval Logic: Add a hidden is_approved boolean field (default: false) to the Guide's profile in Supabase. Guides' profiles should NOT be visible on the site until an admin manually changes this to true.
+Functionality: When a user asks for a personalized or custom trip, the AI should suggest elements from existing packages or recommend connecting with a specific local guide.
 
-2. Tour Packages UI Correction:
+3. User Registration Logic (Tourist vs. Guide):
 
-List View vs. Detail View: Stop the auto-redirect to a single package.
+Role Selection: On the Sign-up page, implement a toggle or radio button to choose between "Tourist" (default) and "Local Guide".
 
-Tour Index Page: Create a grid of "Tour Cards" based on the provided screenshots. Each card must show the thumbnail, title, price, and duration.
+Guide Onboarding: If a user registers as a Guide, they must be redirected to a Profile Creation form (Bio, City, Specialty).
 
-Navigation: Only navigate to the "Package Detail" page when a user clicks on a specific card.
+Approval System: Profiles for Guides must have an is_approved status set to false by default and should not appear in the "Local Guides" section until approved by an admin.
 
-3. Guides Section Cleanup:
+4. UI Consistency:
 
-Remove all hardcoded guide profiles.
+Package Cards: Ensure the "Tour Packages" page shows a grid of cards (as per the dark cinematic design) instead of redirecting to a single detail page immediately.
 
-Keep only one template for the Guide Card.
-
-Dynamic Fetching: Set up the Guides page to fetch and display only profiles from the profiles table where role === 'guide' AND is_approved === true.
-
-4. Supabase Integration:
-
-Update the profiles table schema to include role (enum: tourist, guide) and is_approved (boolean).
+Guide Cards: Show only one template card for now, which will dynamically populate once Guides are approved
