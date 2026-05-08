@@ -5,9 +5,34 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        heading: ['var(--font-heading)'],
-        body: ['var(--font-body)'],
-        vazirmatn: ['var(--font-vazirmatn)'],
+        /* ── Global Typography System ── */
+        /* All languages use Khamenei font */
+        primary: ['var(--font-primary)', 'var(--font-fallback-system)'],
+        sans: ['var(--font-primary)', 'var(--font-fallback-system)'],
+        serif: ['var(--font-primary)', 'Georgia', 'serif'],
+        mono: ['SF Mono', 'Consolas', 'Liberation Mono', 'monospace'],
+
+        /* Legacy aliases for backward compatibility */
+        heading: ['var(--font-primary)', 'var(--font-fallback-system)'],
+        body: ['var(--font-primary)', 'var(--font-fallback-system)'],
+      },
+      fontWeight: {
+        normal: 'var(--font-weight-normal)',
+        medium: 'var(--font-weight-medium)',
+        bold: 'var(--font-weight-bold)',
+        black: 'var(--font-weight-black)',
+      },
+      lineHeight: {
+        tight: 'var(--leading-tight)',
+        snug: 'var(--leading-snug)',
+        normal: 'var(--leading-normal)',
+        relaxed: 'var(--leading-relaxed)',
+        loose: 'var(--leading-loose)',
+      },
+      letterSpacing: {
+        tight: 'var(--tracking-tight)',
+        normal: 'var(--tracking-normal)',
+        wide: 'var(--tracking-wide)',
       },
       borderRadius: {
         lg: 'var(--radius)',
@@ -86,9 +111,21 @@ module.exports = {
         '128': '32rem',
       },
       fontSize: {
-        'display': ['clamp(3rem, 7vw, 6.5rem)', { lineHeight: '1.05', letterSpacing: '-0.02em' }],
-        'display-sm': ['clamp(2rem, 5vw, 4rem)', { lineHeight: '1.1', letterSpacing: '-0.02em' }],
-        'display-xs': ['clamp(1.5rem, 3vw, 2.5rem)', { lineHeight: '1.15', letterSpacing: '-0.015em' }],
+        'display': ['clamp(3rem, 7vw, 6.5rem)', {
+          lineHeight: '1.05',
+          letterSpacing: '-0.02em',
+          fontWeight: 'var(--font-weight-black)',
+        }],
+        'display-sm': ['clamp(2rem, 5vw, 4rem)', {
+          lineHeight: '1.1',
+          letterSpacing: '-0.02em',
+          fontWeight: 'var(--font-weight-bold)',
+        }],
+        'display-xs': ['clamp(1.5rem, 3vw, 2.5rem)', {
+          lineHeight: '1.15',
+          letterSpacing: '-0.015em',
+          fontWeight: 'var(--font-weight-bold)',
+        }],
       },
       keyframes: {
         'accordion-down': { from: { height: '0' }, to: { height: 'var(--radix-accordion-content-height)' } },

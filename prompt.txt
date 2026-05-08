@@ -1,0 +1,40 @@
+want to implement a global typography system for the entire website using a custom font that I will provide later.
+
+Requirements:
+
+Apply the custom font globally across the entire project
+The font must be used consistently for:
+English
+فارسی
+العربية
+All pages, components, sections, modals, forms, cards, navigation, admin panel, and chatbot UI must inherit this font automatically
+Ensure proper RTL and LTR compatibility
+Typography rendering must look polished and premium in all three languages
+Preserve readability and spacing across multilingual layouts
+
+Technical requirements:
+
+Create a centralized typography/font configuration system
+Import the font correctly for performance optimization
+Use CSS variables or Tailwind theme extension for scalable typography management
+Avoid hardcoded font-family values inside components
+Make the font globally manageable from a single source
+Ensure fallback fonts are configured properly
+Optimize font loading performance
+Prevent layout shift during font loading
+Apply font smoothing and proper rendering settings
+
+Also:
+
+Ensure the admin panel uses the same typography system
+Ensure responsive typography scaling works correctly
+Headings, paragraphs, buttons, inputs, labels, and navigation should all use the global font system
+Keep typography elegant, modern, premium, and highly readable
+
+After implementation:
+
+I should only need to replace the font files once to update the typography across the entire platform automatically.
+
+Use best practices for multilingual modern frontend applications.
+
+Font file path: home/alireza/Desktop/KHAMENEI Fonts.zip

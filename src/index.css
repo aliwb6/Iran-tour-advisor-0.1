@@ -1,4 +1,42 @@
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&family=Inter:wght@300;400;500;600;700&family=Vazirmatn:wght@300;400;500;600;700&display=swap');
+/* ═══════════════════════════════════════════════════════════════
+   GLOBAL TYPOGRAPHY SYSTEM
+   Centralized font configuration - Khamenei font for all languages
+   To change the font: Replace font files in /public/fonts/
+   and update the --font-primary variable below
+═══════════════════════════════════════════════════════════════ */
+
+/* ── Font Face Declarations ── */
+@font-face {
+  font-family: 'Khamenei';
+  src: url('/fonts/Khamenei-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Khamenei';
+  src: url('/fonts/Khamenei-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Khamenei';
+  src: url('/fonts/Khamenei-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Khamenei';
+  src: url('/fonts/Khamenei-Black.ttf') format('truetype');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
 
 @tailwind base;
 @tailwind components;
@@ -39,9 +77,32 @@
     --ivory: 38 30% 97%;
     --warm-gray: 28 10% 55%;
 
-    --font-heading: 'Cormorant Garamond', Georgia, serif;
-    --font-body: 'Inter', system-ui, sans-serif;
-    --font-vazirmatn: 'Vazirmatn', sans-serif;
+    /* ── Global Typography System ── */
+    /* PRIMARY: Khamenei for all languages (English, Persian/Farsi, Arabic) */
+    --font-primary: 'Khamenei', 'Tahoma', 'Arial', sans-serif;
+
+    /* Fallback fonts for different scripts */
+    --font-fallback-latin: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+    --font-fallback-arabic: 'Tahoma', 'Arial', 'Noto Sans Arabic', sans-serif;
+    --font-fallback-system: system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+
+    /* Font weights */
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-bold: 700;
+    --font-weight-black: 900;
+
+    /* Line heights optimized for multilingual text */
+    --leading-tight: 1.2;
+    --leading-snug: 1.375;
+    --leading-normal: 1.5;
+    --leading-relaxed: 1.625;
+    --leading-loose: 1.75;
+
+    /* Letter spacing */
+    --tracking-tight: -0.025em;
+    --tracking-normal: 0;
+    --tracking-wide: 0.025em;
 
     /* Sidebar */
     --sidebar-background: 222 45% 8%;
@@ -96,35 +157,111 @@
 }
 
 @layer base {
-  * { @apply border-border outline-ring/50; }
-  html { scroll-behavior: smooth; }
-  body {
-    @apply bg-background text-foreground;
-    font-feature-settings: "kern" 1, "liga" 1;
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
-  h1, h2, h3, h4, h5, h6 { @apply font-heading; }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-primary), var(--font-fallback-system);
+    font-weight: var(--font-weight-normal);
+    line-height: var(--leading-normal);
+    letter-spacing: var(--tracking-normal);
+    font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Global typography hierarchy */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-primary), var(--font-fallback-system);
+    font-weight: var(--font-weight-bold);
+    line-height: var(--leading-tight);
+    letter-spacing: var(--tracking-tight);
+    text-wrap: balance;
+  }
+
+  h1 { font-size: 2.5rem; font-weight: var(--font-weight-black); }
+  h2 { font-size: 2rem; font-weight: var(--font-weight-bold); }
+  h3 { font-size: 1.5rem; font-weight: var(--font-weight-bold); }
+  h4 { font-size: 1.25rem; font-weight: var(--font-weight-medium); }
+  h5 { font-size: 1.125rem; font-weight: var(--font-weight-medium); }
+  h6 { font-size: 1rem; font-weight: var(--font-weight-medium); }
+
+  p {
+    font-family: var(--font-primary), var(--font-fallback-system);
+    line-height: var(--leading-relaxed);
+    text-wrap: pretty;
+  }
+
+  /* Form elements */
+  input, textarea, select, button {
+    font-family: var(--font-primary), var(--font-fallback-system);
+  }
+
+  /* Navigation */
+  nav, .nav, header {
+    font-family: var(--font-primary), var(--font-fallback-system);
+  }
+
+  /* Labels and legends */
+  label, legend {
+    font-family: var(--font-primary), var(--font-fallback-system);
+    font-weight: var(--font-weight-medium);
+  }
+
+  /* Code */
+  code, pre, kbd, samp {
+    font-family: 'SF Mono', 'Consolas', 'Liberation Mono', monospace;
+    font-size: 0.875em;
+  }
 }
 
-/* ── RTL Typography ── */
-[dir="rtl"] body,
-[dir="rtl"] p,
-[dir="rtl"] span,
-[dir="rtl"] div,
-[dir="rtl"] button,
-[dir="rtl"] input,
-[dir="rtl"] textarea,
-[dir="rtl"] .font-body {
-  font-family: 'Vazirmatn', sans-serif;
+/* ── RTL Typography (Persian & Arabic) ── */
+[dir="rtl"],
+[lang="fa"],
+[lang="ar"] {
+  font-family: var(--font-primary), var(--font-fallback-arabic), var(--font-fallback-system);
 }
+
 [dir="rtl"] h1,
 [dir="rtl"] h2,
 [dir="rtl"] h3,
 [dir="rtl"] h4,
-[dir="rtl"] .font-heading {
-  font-family: 'Vazirmatn', sans-serif;
-  font-weight: 600;
+[dir="rtl"] h5,
+[dir="rtl"] h6 {
+  font-family: var(--font-primary), var(--font-fallback-arabic), var(--font-fallback-system);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--leading-snug);
+}
+
+[dir="rtl"] p,
+[dir="rtl"] span,
+[dir="rtl"] div,
+[dir="rtl"] li {
+  font-family: var(--font-primary), var(--font-fallback-arabic), var(--font-fallback-system);
+  line-height: var(--leading-loose);
+}
+
+/* Arabic-specific typography adjustments */
+[lang="ar"] {
+  font-feature-settings: "ss01" 1, "ss02" 1, "calt" 0;
+  text-align: right;
+}
+
+/* Persian-specific typography adjustments */
+[lang="fa"] {
+  font-feature-settings: "ss01" 1, "ss02" 1, "calt" 0;
+  text-align: right;
+  line-height: var(--leading-loose);
 }
 
 /* ── Persian Carpet Design Language ── */
@@ -203,8 +340,36 @@
     0 24px 64px hsl(var(--navy) / 0.08);
 }
 
-/* Text balance */
+/* Text utilities */
 .text-balance { text-wrap: balance; }
+.text-pretty { text-wrap: pretty; }
+
+/* Typography scale */
+.text-display {
+  font-size: clamp(3rem, 7vw, 6.5rem);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+
+.text-display-sm {
+  font-size: clamp(2rem, 5vw, 4rem);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.text-display-xs {
+  font-size: clamp(1.5rem, 3vw, 2.5rem);
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+}
+
+/* Responsive typography */
+@media (max-width: 768px) {
+  h1 { font-size: 2rem; }
+  h2 { font-size: 1.75rem; }
+  h3 { font-size: 1.375rem; }
+  h4 { font-size: 1.125rem; }
+}
 
 /* Scrollbar */
 ::-webkit-scrollbar { width: 5px; }
@@ -221,4 +386,13 @@
 .section-gap { padding-top: 6rem; padding-bottom: 6rem; }
 @media (max-width: 768px) {
   .section-gap { padding-top: 4rem; padding-bottom: 4rem; }
+}
+
+/* Font loading optimization - prevents layout shift */
+.fonts-loading {
+  font-display: optional;
+}
+
+.fonts-loaded {
+  font-display: swap;
 }
