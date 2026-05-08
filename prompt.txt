@@ -1,15 +1,13 @@
-"I have successfully set up my Supabase database with a tours table containing columns like title, slug, description, price, image_url, duration, and location. I've also enabled RLS (Public Read).
+"The Supabase connection is now active, and I have added a real package to the tours table.
 
-Please update the project with these requirements:
+Please update the project with these specific changes:
 
-Data Integration: Replace the current Mock Data in the Tours and Home pages with real data fetched from my Supabase tours table using the @supabase/supabase-js client.
+Data Fetching: In the Home and Packages (or Tours) pages, completely remove the static mock data. Use the supabase client from src/supabaseClient.js to fetch all rows from the tours table.
 
-Missing Pages: Create the /destinations page and ensure it dynamically lists locations.
+Mapping Fields: Ensure the UI components (like Package Cards) correctly map to my Supabase columns: title, description, price, image_url, duration, location, and target_audience.
 
-Search Logic: Implement the /search page so it actually filters the tours table in Supabase.
+Loading State: While the data is being fetched from Supabase, show a simple loading spinner or skeleton.
 
-UX: Add Loading Skeletons for the data-fetching states and implement Fallback Images for any missing thumbnails.
+Error Handling: If the fetch fails, show a friendly message to the user.
 
-SEO: Ensure each tour's detail page uses its Supabase data (title and description) for SEO metadata.
-
-Please use the supabaseClient.js for all database calls and provide the updated code for the fetching logic."
+Please provide the updated code for the fetching logic and the component rendering."
