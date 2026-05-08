@@ -1,58 +1,15 @@
 import { useI18n } from '@/lib/i18n.jsx';
 import { motion } from 'framer-motion';
 import { Clock, ArrowRight, ArrowLeft } from 'lucide-react';
-
-const BLOG_IMAGES = [
-  "https://media.base44.com/images/public/69fddcfab0730c36bda3631e/7a7bd2ab5_generated_847e20ff.png",
-  "https://media.base44.com/images/public/69fddcfab0730c36bda3631e/ec81100de_generated_93b3e8aa.png",
-  "https://media.base44.com/images/public/69fddcfab0730c36bda3631e/edfc38152_generated_aa7676e0.png",
-  "https://media.base44.com/images/public/69fddcfab0730c36bda3631e/cf89f19da_generated_07d478da.png",
-  "https://media.base44.com/images/public/69fddcfab0730c36bda3631e/f18bb9878_generated_9073fec9.png",
-  "https://media.base44.com/images/public/69fddcfab0730c36bda3631e/1b1289732_generated_4d25fae3.png",
-];
-
-const posts = [
-  {
-    title: { en: "The Art of Persian Tilework: A Journey Through Color", fa: "هنر کاشی‌کاری ایرانی: سفری از میان رنگ‌ها", ar: "فن البلاط الفارسي: رحلة عبر الألوان" },
-    excerpt: { en: "Exploring the intricate geometric patterns and vibrant colors that define Iran's architectural identity.", fa: "کاوش در الگوهای هندسی پیچیده و رنگ‌های زنده‌ای که هویت معماری ایران را تعریف می‌کنند.", ar: "استكشاف الأنماط الهندسية المعقدة والألوان النابضة التي تحدد هوية إيران المعمارية." },
-    category: { en: "Architecture", fa: "معماری", ar: "العمارة" },
-    readTime: 8,
-  },
-  {
-    title: { en: "Inside the Grand Bazaar: Stories of Silk and Spice", fa: "درون بازار بزرگ: داستان‌های ابریشم و ادویه", ar: "داخل البازار الكبير: قصص الحرير والتوابل" },
-    excerpt: { en: "A sensory journey through Iran's most iconic bazaars, where centuries of trade continue to thrive.", fa: "سفری حسی در نمادین‌ترین بازارهای ایران، جایی که قرن‌ها تجارت همچنان پابرجاست.", ar: "رحلة حسية عبر أشهر بازارات إيران، حيث تستمر قرون من التجارة." },
-    category: { en: "Culture", fa: "فرهنگ", ar: "الثقافة" },
-    readTime: 6,
-  },
-  {
-    title: { en: "Persepolis at Dawn: Photographing Ancient Glory", fa: "تخت جمشید در سپیده‌دم: عکاسی از شکوه باستان", ar: "برسبوليس عند الفجر: تصوير المجد القديم" },
-    excerpt: { en: "Tips and stories from a golden-hour photography session at Iran's most magnificent ancient site.", fa: "نکات و داستان‌هایی از جلسه عکاسی ساعت طلایی در باشکوه‌ترین اثر باستانی ایران.", ar: "نصائح وقصص من جلسة تصوير الساعة الذهبية في أروع موقع أثري في إيران." },
-    category: { en: "Photography", fa: "عکاسی", ar: "التصوير" },
-    readTime: 10,
-  },
-  {
-    title: { en: "A Taste of Iran: Saffron, Pomegranate, and Poetry", fa: "طعم ایران: زعفران، انار و شعر", ar: "طعم إيران: الزعفران والرمان والشعر" },
-    excerpt: { en: "Discovering how Persian cuisine is an art form that combines flavors, history, and hospitality.", fa: "کشف اینکه چگونه آشپزی ایرانی یک فرم هنری است که طعم‌ها، تاریخ و مهمان‌نوازی را ترکیب می‌کند.", ar: "اكتشاف كيف يجمع المطبخ الفارسي بين النكهات والتاريخ والضيافة." },
-    category: { en: "Food", fa: "غذا", ar: "الطعام" },
-    readTime: 7,
-  },
-  {
-    title: { en: "Wind Catchers of Yazd: Ancient Air Conditioning", fa: "بادگیرهای یزد: تهویه مطبوع باستانی", ar: "ملاقف يزد: التكييف القديم" },
-    excerpt: { en: "How the architects of ancient Iran engineered elegant solutions to desert heat thousands of years ago.", fa: "چگونه معماران ایران باستان هزاران سال پیش راه‌حل‌های زیبایی برای گرمای کویر طراحی کردند.", ar: "كيف ابتكر معماريو إيران القديمة حلولًا أنيقة لحرارة الصحراء منذ آلاف السنين." },
-    category: { en: "Architecture", fa: "معماری", ar: "العمارة" },
-    readTime: 5,
-  },
-  {
-    title: { en: "Stargazing in the Lut: The World's Darkest Desert", fa: "ستاره‌شناسی در لوت: تاریک‌ترین کویر جهان", ar: "مراقبة النجوم في لوت: أظلم صحراء في العالم" },
-    excerpt: { en: "An unforgettable night under the stars in Iran's UNESCO-listed Lut Desert — the hottest place on Earth.", fa: "شبی فراموش‌نشدنی زیر ستاره‌ها در کویر لوت ایران — گرم‌ترین نقطه زمین.", ar: "ليلة لا تُنسى تحت النجوم في صحراء لوت الإيرانية — أكثر الأماكن حرارة على وجه الأرض." },
-    category: { en: "Nature", fa: "طبیعت", ar: "الطبيعة" },
-    readTime: 9,
-  },
-];
+import { useNavigate } from 'react-router-dom';
+import { articles } from '@/data/articles';
 
 export default function Blog() {
   const { t, dir, lang } = useI18n();
+  const navigate = useNavigate();
   const Arrow = dir === 'rtl' ? ArrowLeft : ArrowRight;
+
+  const posts = articles;
 
   return (
     <div dir={dir} className="pt-24 pb-16">
@@ -76,11 +33,12 @@ export default function Blog() {
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
+          onClick={() => navigate(`/blog/${posts[0].slug}`)}
           className="group grid grid-cols-1 lg:grid-cols-2 gap-8 mb-16 cursor-pointer"
         >
           <div className="aspect-[4/3] rounded-2xl overflow-hidden">
             <img
-              src={BLOG_IMAGES[0]}
+              src={posts[0].coverImage}
               alt={posts[0].title[lang] || posts[0].title.en}
               className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
             />
@@ -112,16 +70,17 @@ export default function Blog() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {posts.slice(1).map((post, i) => (
             <motion.article
-              key={i}
+              key={post.id}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.05 }}
+              onClick={() => navigate(`/blog/${post.slug}`)}
               className="group cursor-pointer"
             >
               <div className="aspect-[4/3] rounded-2xl overflow-hidden mb-4">
                 <img
-                  src={BLOG_IMAGES[(i + 1) % BLOG_IMAGES.length]}
+                  src={post.coverImage}
                   alt={post.title[lang] || post.title.en}
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                 />

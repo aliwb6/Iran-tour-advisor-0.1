@@ -1,146 +1,155 @@
-Subject: Fix Configuration and Runtime Errors in React/Vite Project
+You are working on this repository:
 
-"I am working on a React project (Vite) on Arch Linux. After moving my project files, I have encountered several configuration and code-level errors. Please provide the corrected code for the following files.
+[Iran-tour-advisor-0.1 GitHub Repository](https://github.com/aliwb6/Iran-tour-advisor-0.1?utm_source=chatgpt.com)
 
-1. Project Structure & Environment:
+Your task is to COMPLETE the frontend and make the website behave like a real tourism platform.
 
-Environment: Node.js with Vite
+IMPORTANT:
 
-Configuration: jsconfig.json for path aliasing (@/* -> ./src/*)
+* First fully inspect the project structure, routing, components, pages, API/data architecture, assets, and styling system before changing anything.
+* Preserve the current design language, color palette, typography, spacing, RTL support, responsiveness, and component architecture.
+* Do NOT redesign the project from scratch.
+* Focus on finishing missing functionality and navigation flows.
 
-Issue: Receiving a deprecation warning for baseUrl.
+Main goals:
 
-2. Files to Fix:
+1. ROUTING & PAGE FLOW
+   Implement complete routing/navigation for:
 
-File A: jsconfig.json
-Error: Option 'baseUrl' is deprecated and will stop functioning in TypeScript 7.0.
-Current Code:
+* Tour Packages
+* Package Details
+* Tour Guides
+* Guide Details
+* Magazine/Blog Articles
+* Article Details
+* Destinations/Cities
+* Search results
+* Categories
+* Navbar links
+* Footer links
 
-JSON
-[{
-  "compilerOptions": {
-    "ignoreDeprecations": "5.0",
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["./src/*"]
-    },
-    "jsx": "react-jsx",
-    "module": "esnext",
-    "moduleResolution": "bundler",
-    "lib": ["esnext", "dom"],
-    "target": "esnext",
-    "checkJs": true,
-    "skipLibCheck": true,
-    "allowSyntheticDefaultImports": true,
-    "esModuleInterop": true,
-    "resolveJsonModule": true,
-    "types": []
-  },
-  "include": ["src/components/**/*.js", "src/pages/**/*.jsx", "src/Layout.jsx"],
-  "exclude": ["node_modules", "dist", "src/vite-plugins", "src/components/ui", "src/api", "src/lib"]
-} ]
-File B: src/components/home/AITeaser.jsx
-Error: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type... (Related to chip[lang])
-Current Code:
+Every card/button that visually looks clickable must actually navigate somewhere meaningful.
 
-JavaScript
-[import { Link } from 'react-router-dom';
-import { useI18n } from '@/lib/i18n.jsx';
-import { motion } from 'framer-motion';
-import { Sparkles, ArrowRight, ArrowLeft, MessageSquare } from 'lucide-react';
+2. PACKAGE DETAILS PAGE
+   Create a professional dynamic package details page.
 
-const BG = "https://media.base44.com/images/public/69fddcfab0730c36bda3631e/cce446b52_generated_d017c773.png";
+Each package page should contain:
 
-const chips = [
-  { en: "Best time to visit Isfahan?", fa: "بهترین زمان برای اصفهان؟", ar: "أفضل وقت لزيارة أصفهان؟" },
-  { en: "7-day desert adventure", fa: "ماجراجویی ۷ روزه کویر", ar: "مغامرة صحراوية 7 أيام" },
-  { en: "Family trip to Iran", fa: "سفر خانوادگی به ایران", ar: "رحلة عائلية إلى إيران" },
-];
+* Hero/banner image
+* Title
+* Price
+* Duration
+* Location
+* Gallery section
+* Overview/about section
+* Tour plan / itinerary
+* Included & excluded services
+* Map/location section
+* Related packages
+* CTA buttons
+* Responsive layout
 
-export default function AITeaser() {
-  const { t, dir, lang } = useI18n();
-  const Arrow = dir === 'rtl' ? ArrowLeft : ArrowRight;
+Use realistic mock data if backend/API is missing.
 
-  return (
-    <section dir={dir} className="section-gap relative overflow-hidden">
-      {/* Background */}
-      <div className="absolute inset-0">
-        <img src={BG} alt="" className="w-full h-full object-cover" />
-        <div className="absolute inset-0 bg-navy/80" />
-        <div className="absolute inset-0 carpet-texture" />
-      </div>
+3. TOUR GUIDES SYSTEM
+   Implement:
 
-      {/* Persian carpet border */}
-      <div className="absolute top-0 inset-x-0 h-1 carpet-border" />
-      <div className="absolute bottom-0 inset-x-0 h-1 carpet-border" />
+* Guides listing page
+* Individual guide profile page
 
-      <div className="relative z-10 max-w-4xl mx-auto px-5 sm:px-8 lg:px-10 text-center">
-        <motion.div
-          initial={{ opacity: 0, y: 28 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.7 }}
-        >
-          {/* Icon badge */}
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-accent/20 border border-accent/30 mb-8">
-            <Sparkles className="w-7 h-7 text-accent" />
-          </div>
+Guide profile should include:
 
-          <p className="font-body text-xs uppercase tracking-[0.2em] text-accent/80 mb-4 flex items-center justify-center gap-2">
-            <span className="block w-6 h-px bg-accent/60" />
-            {lang === 'fa' ? 'هوش مصنوعی سفر' : lang === 'ar' ? 'ذكاء اصطناعي للسفر' : 'AI Travel Intelligence'}
-            <span className="block w-6 h-px bg-accent/60" />
-          </p>
+* Photo
+* Bio
+* Languages
+* Experience
+* Cities/regions covered
+* Rating UI
+* Related tours/packages
+* Contact/social section
 
-          <h2 className="font-heading text-display-sm text-white mb-4">{t('ai_title')}</h2>
-          <p className="font-body text-white/60 text-base leading-relaxed mb-8 max-w-xl mx-auto">
-            {t('ai_subtitle')}
-          </p>
+4. MAGAZINE / BLOG SYSTEM
+   Implement:
 
-          {/* Chat preview chips */}
-          <div className="flex flex-wrap justify-center gap-3 mb-10">
-            {chips.map((chip, i) => (
-              <Link
-                key={i}
-                to="/ai-assistant"
-                className="flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white/80 hover:text-white text-sm font-body px-4 py-2.5 rounded-full transition-all duration-300 backdrop-blur-sm"
-              >
-                <MessageSquare className="w-3.5 h-3.5 text-accent shrink-0" />
-                {(chip)[lang] || chip.en}
-              </Link>
-            ))}
-          </div>
+* Blog listing page
+* Dynamic article page
 
-          <div className="flex flex-wrap items-center justify-center gap-4">
-            <Link
-              to="/ai-assistant"
-              className="inline-flex items-center gap-2.5 bg-accent hover:bg-accent/90 text-white px-8 py-3.5 rounded-full font-body font-semibold text-sm uppercase tracking-wide transition-all duration-300 hover:shadow-lg hover:shadow-accent/30"
-            >
-              {lang === 'fa' ? 'شروع گفتگو' : lang === 'ar' ? 'ابدأ المحادثة' : 'Start a Conversation'}
-              <Arrow className="w-4 h-4" />
-            </Link>
-            <Link
-              to="/custom-trip"
-              className="inline-flex items-center gap-2 text-white/70 hover:text-white text-sm font-body transition-colors"
-            >
-              {t('hero_cta_custom')} <Arrow className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-        </motion.div>
-      </div>
-    </section>
-  );
-}]
-File C: src/components/home/TravelGoals.jsx
-Error: Cannot find module 'react-router-dom', 'framer-motion', and 'lucide-react'.
-Note: Please check if any imports need adjustment based on the @/ alias.
+Article page should support:
 
-Requirements:
+* Cover image
+* Rich typography
+* Headings
+* Paragraphs
+* Quote blocks
+* Tags/categories
+* Related articles
+* Reading-friendly layout
 
-Update jsconfig.json to suppress the deprecation warning using ignoreDeprecations.
+5. DATA ARCHITECTURE
+   If backend is not ready:
 
-Fix the dynamic indexing error in AITeaser.jsx for the chip[lang] variable.
+* create a clean mock data layer
+* use structured JSON or TS data files
+* separate data from UI
+* avoid hardcoded inline content everywhere
 
-Ensure all imports are consistent with the project's alias settings.
+6. COMPONENT QUALITY
+   Refactor and improve reusable components:
 
-Provide the full corrected code for each file."
+* cards
+* buttons
+* layout wrappers
+* sections
+* loading states
+* empty states
+* navigation elements
+
+Avoid duplicated UI code.
+
+7. UX IMPROVEMENTS
+   Add:
+
+* loading skeletons
+* hover states
+* transitions
+* proper mobile responsiveness
+* graceful empty states
+* fallback images
+* error-safe rendering
+
+8. SEO & STRUCTURE
+   Add proper:
+
+* page titles
+* metadata structure
+* semantic HTML
+* accessibility basics
+* alt texts
+
+9. CLEAN CODE
+   Requirements:
+
+* clean folder structure
+* reusable components
+* readable naming
+* no dead code
+* no console spam
+* avoid huge monolithic files
+
+10. FINAL CHECK
+    Before finishing:
+
+* verify all pages render correctly
+* verify all links work
+* verify no broken routes
+* verify responsive behavior
+* verify build succeeds without errors
+
+At the end:
+
+* provide a concise summary of everything implemented
+* list all newly added pages/components/files
+* mention any remaining backend dependencies
+
+DO NOT stop after creating placeholder pages.
+Make the frontend feel production-ready and fully navigable.

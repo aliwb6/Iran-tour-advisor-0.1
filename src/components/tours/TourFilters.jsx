@@ -1,4 +1,3 @@
-import { motion } from 'framer-motion';
 import { useI18n } from '@/lib/i18n.jsx';
 import { SlidersHorizontal, X } from 'lucide-react';
 

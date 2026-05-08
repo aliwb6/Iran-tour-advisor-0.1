@@ -60,7 +60,7 @@ export default function AITeaser() {
                 className="flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white/80 hover:text-white text-sm font-body px-4 py-2.5 rounded-full transition-all duration-300 backdrop-blur-sm"
               >
                 <MessageSquare className="w-3.5 h-3.5 text-accent shrink-0" />
-                {chip[lang] as keyof typeof chip || chip.en}
+                {chip[lang] || chip.en}
               </Link>
             ))}
           </div>

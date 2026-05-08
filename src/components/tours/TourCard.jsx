@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { Clock, MapPin, Mountain, Sparkles } from 'lucide-react';
 import { useI18n } from '@/lib/i18n.jsx';
 
@@ -21,6 +22,7 @@ const purposeBadgeConfig = {
 
 export default function TourCard({ tour, image, index }) {
   const { lang, t } = useI18n();
+  const navigate = useNavigate();
   const title = tour.title[lang] || tour.title.en;
   const desc = tour.desc[lang] || tour.desc.en;
   const cities = tour.cities[lang] || tour.cities.en;
@@ -30,13 +32,18 @@ export default function TourCard({ tour, image, index }) {
     ? `$${tour.priceFrom.toLocaleString()}`
     : null;
 
+  const handleClick = () => {
+    navigate(`/tours/${tour.slug}`);
+  };
+
   return (
     <motion.article
       initial={{ opacity: 0, y: 30 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ delay: index * 0.07, duration: 0.5 }}
-      className="group relative bg-card rounded-3xl overflow-hidden border border-border/50 hover:border-accent/30 hover:shadow-xl transition-all duration-500"
+      onClick={handleClick}
+      className="group relative bg-card rounded-3xl overflow-hidden border border-border/50 hover:border-accent/30 hover:shadow-xl transition-all duration-500 cursor-pointer"
     >
       {/* Persian carpet border top accent */}
       <div className="absolute top-0 inset-x-0 h-[3px] bg-gradient-to-r from-transparent via-accent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-10" />

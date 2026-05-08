@@ -11,11 +11,14 @@ import { ThemeProvider } from '@/lib/ThemeContext.jsx';
 import Layout from '@/components/layout/Layout';
 import Home from '@/pages/Home';
 import Tours from '@/pages/Tours';
+import TourDetails from '@/pages/TourDetails';
 import Guides from '@/pages/Guides';
+import GuideDetails from '@/pages/GuideDetails';
 import CustomTrip from '@/pages/CustomTrip';
 import AIAssistant from '@/pages/AIAssistant';
 import About from '@/pages/About';
 import Blog from '@/pages/Blog';
+import ArticleDetails from '@/pages/ArticleDetails';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -44,15 +47,18 @@ const AuthenticatedApp = () => {
 
   return (
     <Routes>
-      <Route element={<Layout />}>
-        <Route path="/" element={<Home />} />
-        <Route path="/tours" element={<Tours />} />
-        <Route path="/guides" element={<Guides />} />
-        <Route path="/custom-trip" element={<CustomTrip />} />
-        <Route path="/ai-assistant" element={<AIAssistant />} />
-        <Route path="/about" element={<About />} />
-        <Route path="/blog" element={<Blog />} />
-      </Route>
+<Route element={<Layout />}>
+          <Route path="/" element={<Home />} />
+          <Route path="/tours" element={<Tours />} />
+          <Route path="/tours/:slug" element={<TourDetails />} />
+          <Route path="/guides" element={<Guides />} />
+          <Route path="/guides/:slug" element={<GuideDetails />} />
+          <Route path="/custom-trip" element={<CustomTrip />} />
+          <Route path="/ai-assistant" element={<AIAssistant />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/blog" element={<Blog />} />
+          <Route path="/blog/:slug" element={<ArticleDetails />} />
+        </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
