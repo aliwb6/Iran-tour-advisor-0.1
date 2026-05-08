@@ -4,6 +4,7 @@ const translations = {
   en: {
     nav_home: "Home",
     nav_tours: "Tour Packages",
+    nav_destinations: "Destinations",
     nav_guides: "Local Guides",
     nav_custom: "Custom Trip",
     nav_ai: "AI Assistant",
@@ -94,6 +95,7 @@ const translations = {
   fa: {
     nav_home: "خانه",
     nav_tours: "پکیج‌های سفر",
+    nav_destinations: "مقاصد",
     nav_guides: "راهنمایان محلی",
     nav_custom: "سفر اختصاصی",
     nav_ai: "دستیار هوشمند",
@@ -184,6 +186,7 @@ const translations = {
   ar: {
     nav_home: "الرئيسية",
     nav_tours: "باقات السفر",
+    nav_destinations: "الوجهات",
     nav_guides: "المرشدون المحليون",
     nav_custom: "رحلة مخصصة",
     nav_ai: "المساعد الذكي",
