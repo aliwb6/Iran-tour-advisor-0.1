@@ -1,33 +1,35 @@
-Subject: Project Cleanup & Implementation of "Iran Tour Advisor" Core Identity
+Subject: User Roles Implementation (Tourist/Guide) and UI Flow Correction
 
-Please apply these major structural changes to the project based on the "Iran Tour Advisor" vision:
+Please implement the following features and fixes:
 
-1. Cleanup & Simplification:
+1. Registration Flow (Tourist vs. Guide):
 
-Remove Destinations: Completely remove the "Destinations" section and its related pages/routes.
+Sign-up Page: Create a registration form that defaults to the "Tourist" role.
 
-Simplify Guides: Remove all pre-made guide pages. Keep only one single template for a guide profile to be used as a reference.
+Role Toggle: Add a clear option at the bottom of the form: "Are you a Local Guide? Register as a Guide."
 
-Refactor Packages: Keep only one default package as a sample. This page MUST match the dark-themed cinematic UI from the provided screenshots (Header with overlay, Stats bar, Itinerary timeline, Included/Not Included, and Gallery).
+Tourist Access: Tourists should be able to sign up easily with their email and get immediate access to the site.
 
-2. Table Connection (The Fix):
+Guide Onboarding: When "Guide" is selected, after registration, redirect them to a "Create Your Profile" page where they can enter their bio, expertise, and city.
 
-Ensure the tour data is fetched from the tours table in Supabase. If the 'schema cache' error persists, wrap the fetch call in a way that handles missing tables gracefully or uses a direct API call.
+Admin Approval Logic: Add a hidden is_approved boolean field (default: false) to the Guide's profile in Supabase. Guides' profiles should NOT be visible on the site until an admin manually changes this to true.
 
-3. Home Page Transformation (The Identity):
+2. Tour Packages UI Correction:
 
-Hero Section: Update the landing page to present "Iran Tour Advisor" using the provided text. Focus on the "AI-powered cultural travel platform" and "Discovering the authentic soul of Iran" messaging.
+List View vs. Detail View: Stop the auto-redirect to a single package.
 
-Experience Ways (Dynamic Section): Replace the old "Ways to experience Iran" with a dynamic section for "Popular Packages". For now, create the UI cards and layout, but set it to show a "Coming Soon" or a "Loading" state until we fill the database.
+Tour Index Page: Create a grid of "Tour Cards" based on the provided screenshots. Each card must show the thumbnail, title, price, and duration.
 
-Vision & Philosophy: Add a section that beautifully displays the "Experience Philosophy" (Modern Tech + Authentic Culture + Minimal Luxury).
+Navigation: Only navigate to the "Package Detail" page when a user clicks on a specific card.
 
-4. Design & UX:
+3. Guides Section Cleanup:
 
-Maintain the Cinematic, Premium, and Minimal aesthetic.
+Remove all hardcoded guide profiles.
 
-Ensure full support for the Multilingual Experience (English, Persian, Arabic) with RTL/LTR switching.
+Keep only one template for the Guide Card.
 
-The UI should feel emotionally immersive and storytelling-focused.
+Dynamic Fetching: Set up the Guides page to fetch and display only profiles from the profiles table where role === 'guide' AND is_approved === true.
 
-Please update the routes and the main navigation bar to reflect these removals.
+4. Supabase Integration:
+
+Update the profiles table schema to include role (enum: tourist, guide) and is_approved (boolean).

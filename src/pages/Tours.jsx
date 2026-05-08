@@ -1,210 +1,171 @@
 import { useI18n } from '@/lib/i18n.jsx';
 import { motion } from 'framer-motion';
 import { useTours, FALLBACK_IMAGE } from '@/hooks/useSupabase';
-import { MapPin, Star, Check, X, Calendar } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Clock, MapPin } from 'lucide-react';
+import { TourCardSkeleton } from '@/components/ui/Skeletons';
 
-const SAMPLE_PACKAGE = {
-  header_image: "https://images.unsplash.com/photo-1564960723835-2898c9df9297?w=1920&h=800&fit=crop",
-  title: { en: 'Persia Heritage Trail', fa: 'مسیر میراث پارس', ar: 'طريق تراث فارس' },
-  description: { en: 'A 10-day journey through Tehran, Isfahan, Persepolis, and Shiraz — the beating heart of ancient Persia.', fa: 'سفر ۱۰ روزه از تهران، اصفهان، تخت جمشید و شیراز — قلب تمدن پارس.', ar: 'رحلة 10 أيام عبر طهران وأصفهان وبرسبوليس وشيراز.' },
-  days: 10,
-  cities: 4,
-  price: 2499,
-  highlights: ['Persepolis Ruins', 'Isfahan\'s Naqsh-e Jahan Square', 'Shiraz Poetry Gardens', 'Tehran Museum Quarter'],
-  itinerary: [
-    { day: 1, title: 'Tehran Arrival', description: 'Welcome to Iran. Private transfer, check-in, and evening stroll through Tajrish Bazaar.' },
-    { day: 2, title: 'Tehran Museums', description: 'Visit the National Museum, Glassware Museum, and Golestan Palace.' },
-    { day: 3, title: 'Flight to Isfahan', description: 'Morning flight to Isfahan. Walk across Si-o-se-pol and visit the famous square.' },
-    { day: 4, title: 'Isfahan Heritage', description: 'Naqsh-e Jahan Square, Sheikh Lotfollah Mosque, Ali Qapu Palace.' },
-    { day: 5, title: 'Isfahan Palaces', description: 'Chehel Sotoun, Hasht Behesht, and Armenian Vank Cathedral.' },
-    { day: 6, title: 'Drive to Shiraz via Pasargadae', description: 'Stop at Pasargadae — Cyrus the Great\'s tomb — before arriving in Shiraz.' },
-    { day: 7, title: 'Shiraz Culture', description: 'Persepolis, Naqsh-e Rostam, and sunset at the Pink Mosque.' },
-    { day: 8, title: 'Shiraz Gardens', description: 'Eram Garden, Narenjestan, Hafez Tomb, and the Quran Gate.' },
-    { day: 9, title: 'Return to Tehran', description: 'Domestic flight back to Tehran. Free evening for last-minute exploration.' },
-    { day: 10, title: 'Departure', description: 'Private transfer to IKA airport. Safe travels.' },
-  ],
-  included: ['Private guide throughout', 'All domestic flights', '4-star hotel accommodation', 'Daily breakfast & 5 dinners', 'Entrance fees to all sites', 'Airport transfers'],
-  not_included: ['International flights', 'Travel insurance', 'Visa fee', 'Personal expenses', 'Tipping', 'Lunches'],
-};
+const DEFAULT_FILTERS = { purpose: 'all', theme: 'all', duration: 'all' };
 
 export default function Tours() {
-  const { t, lang, dir } = useI18n();
-  const Arrow = dir === 'rtl' ? '←' : '→';
+  const { t, dir, lang } = useI18n();
+  const navigate = useNavigate();
 
-  const { tours, loading } = useTours({});
-  const pkg = tours.length > 0 ? tours[0] : SAMPLE_PACKAGE;
-  const showDb = tours.length > 0 && tours[0].image_url;
-  const data = showDb ? tours[0] : SAMPLE_PACKAGE;
-
-  const title = showDb ? data.title : (data.title[lang] || data.title.en);
-  const description = showDb ? data.description : (data.description[lang] || data.description.en);
+  const { tours, loading, error } = useTours(DEFAULT_FILTERS);
 
   return (
-    <div dir={dir} className="pt-0 pb-20 min-h-screen bg-background">
-      <div className="relative h-[65vh] min-h-[420px] overflow-hidden">
-        <img
-          src={showDb ? data.cover_image || data.image_url : data.header_image}
-          alt={title}
-          className="w-full h-full object-cover"
-          onError={(e) => { e.target.src = FALLBACK_IMAGE; }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-black/30" />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-transparent to-black/30" />
-
-        <div className="absolute bottom-0 inset-x-0 p-6 sm:p-10 lg:p-14">
-          <div className="max-w-5xl mx-auto">
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-            >
-              <div className="flex flex-wrap gap-2 mb-4">
-                <span className="px-3 py-1.5 rounded-full bg-white/15 backdrop-blur-sm text-white text-xs font-body flex items-center gap-1.5">
-                  <Calendar className="w-3.5 h-3.5" />
-                  {data.days} {t('package_duration')}
-                </span>
-                <span className="px-3 py-1.5 rounded-full bg-white/15 backdrop-blur-sm text-white text-xs font-body flex items-center gap-1.5">
-                  <MapPin className="w-3.5 h-3.5" />
-                  {data.cities} {t('package_cities')}
-                </span>
-              </div>
-              <h1 className="font-heading text-4xl sm:text-5xl lg:text-6xl text-white mb-4">
-                {title}
-              </h1>
-              <p className="font-body text-white/75 text-base lg:text-lg max-w-2xl leading-relaxed">
-                {description}
-              </p>
-            </motion.div>
-          </div>
-        </div>
-      </div>
-
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div dir={dir} className="pt-24 pb-20 min-h-screen">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2, duration: 0.6 }}
-          className="flex flex-wrap items-center justify-between gap-6 p-6 rounded-2xl bg-card border border-border/50 mb-10"
+          transition={{ duration: 0.6 }}
+          className="mb-14"
         >
-          <div className="flex flex-wrap gap-8">
-            <div>
-              <p className="font-body text-xs text-muted-foreground mb-1">{t('package_duration')}</p>
-              <p className="font-heading text-lg font-semibold text-foreground">{data.days} {t('package_duration')}</p>
-            </div>
-            <div>
-              <p className="font-body text-xs text-muted-foreground mb-1">{t('package_cities')}</p>
-              <p className="font-heading text-lg font-semibold text-foreground">{data.cities}</p>
-            </div>
-            <div>
-              <p className="font-body text-xs text-muted-foreground mb-1">
-                {lang === 'fa' ? 'قیمت' : lang === 'ar' ? 'السعر' : 'Price'}
-              </p>
-              <p className="font-heading text-lg font-semibold text-foreground">
-                {data.price ? `$${data.price.toLocaleString()}` : t('package_coming_soon')}
-              </p>
-            </div>
+          <div className="flex items-center gap-3 mb-4">
+            <span className="text-accent text-xl">❖</span>
+            <span className="font-body text-xs uppercase tracking-[0.2em] text-muted-foreground">
+              {lang === 'fa' ? 'پکیج‌های سفر' : lang === 'ar' ? 'باقات السفر' : 'Tour Packages'}
+            </span>
+            <div className="flex-1 h-px bg-gradient-to-r from-border to-transparent" />
           </div>
-          <div className="flex gap-3">
-            <button className="py-2.5 px-6 rounded-xl bg-accent text-white font-body font-semibold text-sm hover:bg-accent/90 transition-colors">
-              {t('package_inquiry')}
-            </button>
-          </div>
+
+          <h1 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-light text-foreground mb-4">
+            {t('packages_title')}
+          </h1>
+          <p className="font-body text-muted-foreground max-w-xl text-base leading-relaxed">
+            {t('packages_subtitle')}
+          </p>
         </motion.div>
 
-        <div className="space-y-12">
-          {data.highlights && data.highlights.length > 0 && (
-            <section>
-              <h2 className="font-heading text-2xl font-semibold text-foreground mb-4">
-                {lang === 'fa' ? 'نکات برجسته' : lang === 'ar' ? 'المرورزات' : 'Highlights'}
-              </h2>
-              <div className="grid grid-cols-2 gap-3">
-                {data.highlights.map((h, i) => (
-                  <div key={i} className="flex items-start gap-2 p-3 rounded-xl bg-secondary/50">
-                    <Star className="w-4 h-4 text-accent mt-0.5 shrink-0" />
-                    <span className="font-body text-sm text-foreground">{h}</span>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <TourCardSkeleton />
+            <TourCardSkeleton />
+            <TourCardSkeleton />
+          </div>
+        ) : error ? (
+          <div className="text-center py-24">
+            <p className="font-heading text-2xl text-muted-foreground font-light">
+              {lang === 'fa' ? 'خطا در بارگذاری' : lang === 'ar' ? 'خطأ في التحميل' : 'Failed to load'}
+            </p>
+          </div>
+        ) : tours.length === 0 ? (
+          <div className="text-center py-24">
+            <div className="w-20 h-20 mx-auto mb-6 rounded-full border-2 border-border flex items-center justify-center">
+              <span className="text-3xl text-accent/40">❋</span>
+            </div>
+            <p className="font-heading text-2xl text-muted-foreground font-light">
+              {lang === 'fa' ? 'توری یافت نشد' : lang === 'ar' ? 'لم يتم العثور على جولات' : 'No tours found'}
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {tours.map((tour, i) => (
+              <TourCard key={tour.id} tour={tour} index={i} />
+            ))}
+          </div>
+        )}
 
-          {data.itinerary && data.itinerary.length > 0 && (
-            <section>
-              <h2 className="font-heading text-2xl font-semibold text-foreground mb-6">
-                {lang === 'fa' ? 'برنامه سفر' : lang === 'ar' ? 'خط الرحلة' : 'Tour Plan'}
-              </h2>
-              <div className="relative">
-                <div className="absolute start-7 top-0 bottom-0 w-px bg-accent/20" />
-                <div className="space-y-4">
-                  {data.itinerary.map((day, i) => (
-                    <motion.div
-                      key={i}
-                      initial={{ opacity: 0, x: -20 }}
-                      whileInView={{ opacity: 1, x: 0 }}
-                      viewport={{ once: true }}
-                      transition={{ delay: i * 0.05, duration: 0.5 }}
-                      className="relative flex gap-4"
-                    >
-                      <div className="relative z-10 w-14 h-14 shrink-0 rounded-2xl bg-accent/10 border border-accent/20 flex flex-col items-center justify-center">
-                        <span className="font-heading text-lg font-bold text-accent">{day.day}</span>
-                        <span className="font-body text-[9px] text-muted-foreground uppercase tracking-wider">
-                          {lang === 'fa' ? 'روز' : lang === 'ar' ? 'يوم' : 'Day'}
-                        </span>
-                      </div>
-                      <div className="flex-1 p-4 rounded-2xl border border-border/50 bg-card">
-                        <h3 className="font-heading text-lg font-semibold text-foreground mb-1.5">{day.title}</h3>
-                        <p className="font-body text-sm text-foreground/65 leading-relaxed">{day.description}</p>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
-            </section>
-          )}
-
-          {(data.included?.length > 0 || data.not_included?.length > 0) && (
-            <section>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <div>
-                  <h3 className="font-heading text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full bg-emerald-500/15 flex items-center justify-center">
-                      <Check className="w-3.5 h-3.5 text-emerald-500" />
-                    </div>
-                    {lang === 'fa' ? 'شامل' : lang === 'ar' ? 'مشمول' : 'Included'}
-                  </h3>
-                  <ul className="space-y-2">
-                    {data.included?.map((item, i) => (
-                      <li key={i} className="flex items-start gap-2 font-body text-sm text-foreground/70">
-                        <Check className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <div>
-                  <h3 className="font-heading text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full bg-red-500/15 flex items-center justify-center">
-                      <X className="w-3.5 h-3.5 text-red-500" />
-                    </div>
-                    {lang === 'fa' ? 'شامل نیست' : lang === 'ar' ? 'غير مشمول' : 'Not Included'}
-                  </h3>
-                  <ul className="space-y-2">
-                    {data.not_included?.map((item, i) => (
-                      <li key={i} className="flex items-start gap-2 font-body text-sm text-foreground/70">
-                        <X className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            </section>
-          )}
-        </div>
+        {tours.length > 0 && (
+          <div className="mt-16 flex items-center gap-4">
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+            <span className="text-accent/40 text-2xl">✦ ❋ ✦</span>
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-  
+function TourCard({ tour, index }) {
+  const { t, lang, dir } = useI18n();
+  const navigate = useNavigate();
 
+  const handleClick = () => {
+    navigate(`/tours/${tour.slug}`);
+  };
+
+  return (
+    <motion.article
+      initial={{ opacity: 0, y: 30 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ delay: index * 0.07, duration: 0.5 }}
+      onClick={handleClick}
+      className="group relative bg-card rounded-3xl overflow-hidden border border-border/50 hover:border-accent/30 hover:shadow-xl transition-all duration-500 cursor-pointer"
+    >
+      <div className="absolute top-0 inset-x-0 h-[3px] bg-gradient-to-r from-transparent via-accent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-10" />
+
+      <div className="relative aspect-[16/9] overflow-hidden">
+        <img
+          src={tour.cover_image || tour.image_url || FALLBACK_IMAGE}
+          alt={tour.title}
+          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+          onError={(e) => { e.target.src = FALLBACK_IMAGE; }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+
+        <div className="absolute top-4 start-4 flex gap-2 flex-wrap">
+          <span className="px-3 py-1.5 rounded-full bg-black/30 backdrop-blur-sm text-white text-xs font-body flex items-center gap-1.5">
+            <Clock className="w-3 h-3" />
+            {tour.duration} {t('package_duration')}
+          </span>
+          <span className="px-3 py-1.5 rounded-full bg-black/30 backdrop-blur-sm text-white text-xs font-body flex items-center gap-1.5">
+            <MapPin className="w-3 h-3" />
+            {tour.city_count || 3} {t('package_cities')}
+          </span>
+        </div>
+
+        {tour.price && (
+          <div className="absolute bottom-4 end-4">
+            <span className="font-heading text-white text-xl font-medium">
+              {lang === 'fa' ? 'از ' : lang === 'ar' ? 'من ' : 'from '}${tour.price.toLocaleString()}
+            </span>
+          </div>
+        )}
+      </div>
+
+      <div className="p-6">
+        <div className="flex items-center gap-2 mb-3">
+          <div className="flex-1 h-px bg-border/50" />
+          <span className="text-accent/40 text-xs">❖</span>
+          <div className="flex-1 h-px bg-border/50" />
+        </div>
+
+        <h2 className="font-heading text-2xl lg:text-3xl font-medium text-foreground mb-1 group-hover:text-accent transition-colors duration-300">
+          {tour.title}
+        </h2>
+        <p className="font-body text-xs text-accent mb-3 tracking-wide">{tour.cities || tour.location}</p>
+        <p className="font-body text-sm text-foreground/65 leading-relaxed mb-4 line-clamp-2">
+          {tour.description}
+        </p>
+
+        {tour.highlights && tour.highlights.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-5">
+            {tour.highlights.slice(0, 3).map((h, j) => (
+              <span key={j} className="px-2.5 py-1 text-xs font-body rounded-lg border border-border/70 text-muted-foreground bg-secondary/50">
+                {h}
+              </span>
+            ))}
+            {tour.highlights.length > 3 && (
+              <span className="px-2.5 py-1 text-xs font-body text-accent">+{tour.highlights.length - 3}</span>
+            )}
+          </div>
+        )}
+
+        <div className="flex items-center justify-between pt-4 border-t border-border/40">
+          <span className="flex items-center gap-1 text-xs font-body text-muted-foreground">
+            <MapPin className="w-3.5 h-3.5 text-accent/60" />
+            {tour.location}
+          </span>
+          <button className="flex items-center gap-1.5 text-sm font-body font-semibold text-accent hover:gap-2.5 transition-all duration-200">
+            {t('package_inquiry')}
+            <span className="text-lg leading-none">→</span>
+          </button>
+        </div>
+      </div>
+    </motion.article>
+  );
+}

@@ -34,13 +34,8 @@ export function useTours(filters = {}) {
 
         const { data, error: supabaseError } = await query.order('created_at', { ascending: false });
 
-        if (supabaseError) {
-          console.warn('Supabase fetch error (table may not exist):', supabaseError.message);
-          if (isMounted) {
-            setTours([]);
-            setError(null);
-          }
-        } else if (isMounted) {
+        if (supabaseError) throw supabaseError;
+        if (isMounted) {
           setTours(data || []);
           setError(null);
         }
@@ -78,13 +73,8 @@ export function useTourBySlug(slug) {
           .eq('slug', slug)
           .single();
 
-        if (supabaseError) {
-          console.warn('Supabase fetch error (table may not exist):', supabaseError.message);
-          if (isMounted) {
-            setTour(null);
-            setError(null);
-          }
-        } else if (isMounted) {
+        if (supabaseError) throw supabaseError;
+        if (isMounted) {
           setTour(data);
           setError(null);
         }
@@ -122,13 +112,8 @@ export function useTourById(id) {
           .eq('id', id)
           .single();
 
-        if (supabaseError) {
-          console.warn('Supabase fetch error (table may not exist):', supabaseError.message);
-          if (isMounted) {
-            setTour(null);
-            setError(null);
-          }
-        } else if (isMounted) {
+        if (supabaseError) throw supabaseError;
+        if (isMounted) {
           setTour(data);
           setError(null);
         }
@@ -295,9 +280,11 @@ export function useGuides() {
     const fetchGuides = async () => {
       try {
         const { data, error: supabaseError } = await supabase
-          .from('guides')
+          .from('profiles')
           .select('*')
-          .order('rating', { ascending: false });
+          .eq('role', 'guide')
+          .eq('is_approved', true)
+          .order('created_at', { ascending: false });
 
         if (supabaseError) throw supabaseError;
         if (isMounted) {

@@ -5,6 +5,8 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
+import Signup from '@/pages/Signup';
+import GuideOnboarding from '@/pages/GuideOnboarding';
 import { I18nProvider } from '@/lib/i18n.jsx';
 import { ThemeProvider } from '@/lib/ThemeContext.jsx';
 
@@ -42,7 +44,7 @@ const AuthenticatedApp = () => {
 
   if (authError) {
     if (authError.type === 'user_not_registered') {
-      return <UserNotRegisteredError />;
+      return <Signup />;
     } else if (authError.type === 'auth_required') {
       navigateToLogin();
       return null;
@@ -66,6 +68,7 @@ const AuthenticatedApp = () => {
           <Route path="/blog/:slug" element={<ArticleDetails />} />
         </Route>
       <Route path="/admin/new-tour" element={<AdminTourForm />} />
+      <Route path="/guide-onboarding" element={<GuideOnboarding />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
