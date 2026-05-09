@@ -56,6 +56,45 @@ export function useTours(filters = {}) {
   return { tours, loading, error };
 }
 
+export function useTopRatedTours(limit = 4) {
+  const [tours, setTours] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    setLoading(true);
+
+    const fetchTopRatedTours = async () => {
+      try {
+        const { data, error: supabaseError } = await supabase
+          .from('tours')
+          .select('*')
+          .order('rating', { ascending: false, nullsLast: true })
+          .limit(limit);
+
+        if (supabaseError) throw supabaseError;
+        if (isMounted) {
+          setTours(data || []);
+          setError(null);
+        }
+      } catch (err) {
+        if (isMounted) {
+          setError(err.message);
+          setTours([]);
+        }
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    fetchTopRatedTours();
+    return () => { isMounted = false; };
+  }, [limit]);
+
+  return { tours, loading, error };
+}
+
 export function useTourBySlug(slug) {
   const [tour, setTour] = useState(null);
   const [loading, setLoading] = useState(true);

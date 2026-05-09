@@ -1,31 +1,23 @@
-I want to update my "Travel Packages" (Tours) page to match the UI shown in the provided screenshots. Please implement a grid of tour cards with the following specifications:
+I want to update the "Featured Tours" section on my homepage to "Featured Packages" (پکیج‌های منتخب). Please perform the following tasks:
 
-1. Card Design:
+1. UI Update:
 
-Image: A large, high-quality cover image with rounded corners (top).
+Change the section heading from "سفرهای منتخب" to "پکیج‌های منتخب".
 
-Badges on Image: Add floating badges on the image: one for the "Category" (e.g., Leisure) on the top-left, and two icons on the top-right for "Duration" (e.g., 10 Days) and "Cities" (e.g., 6 Cities).
+Ensure the styling matches the cinematic and premium aesthetic of Iran Tour Advisor, specifically referring to the card layout in "Screenshot_20260509_231124.jpg".
 
-Price Overlay: Display the starting price (e.g., From $1,800) at the bottom-left corner of the image.
+2. Logic Update (Data Fetching):
 
-Content Area: Below the image, include the Tour Title (e.g., "Jewels of Iran"), Location (e.g., Isfahan, Shiraz, Yazd), and a short description paragraph.
+Modify the fetching logic to retrieve tour packages from the database (PostgreSQL) ordered by their Rating or Score in descending order.
 
-Tags: A row of small, pill-shaped tags showing key highlights (e.g., Naqsh-e Jahan, Persepolis).
+Limit the display to the top 3 or 4 highest-rated packages.
 
-Footer: A "Request Info" (درخواست اطلاعات) link with an arrow and two descriptive icons at the bottom right (e.g., Deep Dive, Adventure).
+If a package doesn't have a rating, treat it as 0 or place it at the end of the list.
 
-2. Layout & Theme:
+3. Component Integration:
 
-Use a dark theme background (#0B0F19 or similar dark navy/black).
+Use the existing TourCard component but ensure it displays the rating star/score if available.
 
-The typography should be Persian (Vazir or any standard sans-serif Persian font).
+The data should be fetched server-side (if using Next.js App Router) or via an API call that specifically queries for top-rated tours.
 
-Maintain a clean, modern aesthetic with plenty of whitespace and subtle borders.
-
-3. Sample Data (The "Sample Package"):
-Please create a hardcoded sample package object in the code to show the employer. Use "Jewels of Iran" as the title, 10 days duration, 6 cities, and a price of $1,800.
-
-4. Header/Filters:
-Ensure the section header says "سفرهای منتخب" with the subtitle and the category filter buttons (All Tours, Business, Leisure, etc.) as seen in the screenshot.
-
-Please provide the updated React/Next.js component code using Tailwind CSS for styling.
+Please update the code in my homepage file (likely page.tsx or Home.tsx) to reflect these changes.
