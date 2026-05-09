@@ -1,29 +1,31 @@
-Subject: Remove Custom Trip Page and Enhance AI Assistant Logic
+I want to update my "Travel Packages" (Tours) page to match the UI shown in the provided screenshots. Please implement a grid of tour cards with the following specifications:
 
-Please apply the following changes to the project:
+1. Card Design:
 
-1. Navigation & Route Cleanup:
+Image: A large, high-quality cover image with rounded corners (top).
 
-Remove Custom Trip: Completely remove the "Custom Trip" page, its route, and its link from the Navigation Bar and Footer.
+Badges on Image: Add floating badges on the image: one for the "Category" (e.g., Leisure) on the top-left, and two icons on the top-right for "Duration" (e.g., 10 Days) and "Cities" (e.g., 6 Cities).
 
-AI Responsibility: The logic for "Building a Personalized Trip" should now be handled exclusively by the AI Assistant.
+Price Overlay: Display the starting price (e.g., From $1,800) at the bottom-left corner of the image.
 
-2. AI Assistant Enhancement:
+Content Area: Below the image, include the Tour Title (e.g., "Jewels of Iran"), Location (e.g., Isfahan, Shiraz, Yazd), and a short description paragraph.
 
-Database Context: Update the AI Assistant's prompt/context so that it knows about our available Tour Packages (from the tours table) and Approved Local Guides.
+Tags: A row of small, pill-shaped tags showing key highlights (e.g., Naqsh-e Jahan, Persepolis).
 
-Functionality: When a user asks for a personalized or custom trip, the AI should suggest elements from existing packages or recommend connecting with a specific local guide.
+Footer: A "Request Info" (درخواست اطلاعات) link with an arrow and two descriptive icons at the bottom right (e.g., Deep Dive, Adventure).
 
-3. User Registration Logic (Tourist vs. Guide):
+2. Layout & Theme:
 
-Role Selection: On the Sign-up page, implement a toggle or radio button to choose between "Tourist" (default) and "Local Guide".
+Use a dark theme background (#0B0F19 or similar dark navy/black).
 
-Guide Onboarding: If a user registers as a Guide, they must be redirected to a Profile Creation form (Bio, City, Specialty).
+The typography should be Persian (Vazir or any standard sans-serif Persian font).
 
-Approval System: Profiles for Guides must have an is_approved status set to false by default and should not appear in the "Local Guides" section until approved by an admin.
+Maintain a clean, modern aesthetic with plenty of whitespace and subtle borders.
 
-4. UI Consistency:
+3. Sample Data (The "Sample Package"):
+Please create a hardcoded sample package object in the code to show the employer. Use "Jewels of Iran" as the title, 10 days duration, 6 cities, and a price of $1,800.
 
-Package Cards: Ensure the "Tour Packages" page shows a grid of cards (as per the dark cinematic design) instead of redirecting to a single detail page immediately.
+4. Header/Filters:
+Ensure the section header says "سفرهای منتخب" with the subtitle and the category filter buttons (All Tours, Business, Leisure, etc.) as seen in the screenshot.
 
-Guide Cards: Show only one template card for now, which will dynamically populate once Guides are approved
+Please provide the updated React/Next.js component code using Tailwind CSS for styling.
