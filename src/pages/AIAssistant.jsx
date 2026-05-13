@@ -1,8 +1,8 @@
 import { useI18n } from '@/lib/i18n.jsx';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useRef, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
-import { Sparkles, Send, Loader2, Landmark, Sun, UtensilsCrossed, BookOpen, Camera, Crown } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Sparkles, Send, Loader2, Landmark, Sun, UtensilsCrossed, BookOpen, Camera, Crown, ArrowLeft } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { useTours, useGuides } from '@/hooks/useSupabase';
 
@@ -63,9 +63,27 @@ Guidelines:
 - If a guide matches the user's interests, recommend reaching out to them
 - Be concise but evocative and storytelling-focused`;
 
-    const response = await base44.integrations.Core.InvokeLLM({
-      prompt: `${systemPrompt}\n\nUser: ${text}`,
+    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${import.meta.env.VITE_OPENROUTER_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: 'openai/gpt-4o-mini',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: text },
+        ],
+      }),
     });
+
+    if (!res.ok) {
+      throw new Error(`OpenRouter API error: ${res.status}`);
+    }
+
+    const data = await res.json();
+    const response = data.choices[0].message.content;
 
     setMessages(prev => [...prev, { role: 'assistant', content: response }]);
     setLoading(false);
@@ -78,7 +96,14 @@ Guidelines:
   return (
     <div dir={dir} className="h-screen flex flex-col">
       {/* Header */}
-      <div className="px-4 sm:px-6 py-6 text-center border-b border-border/30">
+      <div className="relative px-4 sm:px-6 py-6 text-center border-b border-border/30">
+        <Link
+          to="/"
+          className="absolute left-4 sm:left-6 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl bg-secondary hover:bg-accent/10 flex items-center justify-center transition-colors"
+          aria-label="Home"
+        >
+          <ArrowLeft className="w-5 h-5 text-muted-foreground" />
+        </Link>
         <div className="inline-flex items-center gap-2 bg-accent/10 px-4 py-2 rounded-full mb-3">
           <Sparkles className="w-4 h-4 text-accent" />
           <span className="font-body text-xs text-accent font-medium">AI-Powered</span>
