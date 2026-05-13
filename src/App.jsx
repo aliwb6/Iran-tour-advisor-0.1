@@ -57,11 +57,11 @@ const AuthenticatedApp = () => {
           <Route path="/package/:id" element={<PackageDetails />} />
           <Route path="/guides" element={<Guides />} />
           <Route path="/guides/:slug" element={<GuideDetails />} />
-          <Route path="/ai-assistant" element={<AIAssistant />} />
           <Route path="/about" element={<About />} />
           <Route path="/blog" element={<Blog />} />
           <Route path="/blog/:slug" element={<ArticleDetails />} />
         </Route>
+      <Route path="/ai-assistant" element={<AIAssistant />} />
       <Route path="/admin/new-tour" element={<AdminTourForm />} />
       <Route path="/guide-onboarding" element={<GuideOnboarding />} />
       <Route path="*" element={<PageNotFound />} />

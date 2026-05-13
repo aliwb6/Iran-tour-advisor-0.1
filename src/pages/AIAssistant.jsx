@@ -76,7 +76,7 @@ Guidelines:
   };
 
   return (
-    <div dir={dir} className="pt-20 pb-0 h-screen flex flex-col">
+    <div dir={dir} className="h-screen flex flex-col">
       {/* Header */}
       <div className="px-4 sm:px-6 py-6 text-center border-b border-border/30">
         <div className="inline-flex items-center gap-2 bg-accent/10 px-4 py-2 rounded-full mb-3">
@@ -88,7 +88,7 @@ Guidelines:
       </div>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 space-y-4 max-w-3xl mx-auto w-full">
+      <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-6 space-y-4 w-full mx-auto">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full gap-8">
             <div className="w-16 h-16 rounded-2xl bg-accent/10 flex items-center justify-center">
@@ -154,7 +154,7 @@ Guidelines:
 
       {/* Input */}
       <div className="border-t border-border/30 p-4 sm:px-6 bg-background">
-        <div className="max-w-3xl mx-auto flex items-center gap-3">
+        <div className="w-full mx-auto flex items-center gap-3">
           <input
             type="text"
             value={input}
