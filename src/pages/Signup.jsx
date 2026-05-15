@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import { supabase } from '@/supabaseClient';
 import { useI18n } from '@/lib/i18n.jsx';
 import { motion } from 'framer-motion';
-import { User, Mail, Lock, ArrowRight, ArrowLeft, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { User, Mail, Lock, Building2, MapPin, ArrowRight, ArrowLeft, Eye, EyeOff, Loader2 } from 'lucide-react';
 
 export default function Signup() {
   const { t, dir, lang } = useI18n();
@@ -14,12 +14,15 @@ export default function Signup() {
     email: '',
     password: '',
     confirmPassword: '',
+    full_name: '',
     role: 'tourist',
+    city: '',
+    bio: '',
   });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [step, setStep] = useState('register');
+  const [success, setSuccess] = useState(false);
 
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -30,30 +33,59 @@ export default function Signup() {
     setError('');
 
     if (formData.password !== formData.confirmPassword) {
-      setError(lang === 'fa' ? 'رمزهای عبور مطابقت ندارند' : lang === 'ar' ? 'كلمات المرور غير متطابقة' : 'Passwords do not match');
+      setError(lang === 'fa' ? 'رمزهای عبور مطابقت ندارند' : 'Passwords do not match');
       return;
     }
 
     if (formData.password.length < 8) {
-      setError(lang === 'fa' ? 'رمز عبور باید حداقل ۸ کاراکتر باشد' : lang === 'ar' ? 'يجب أن تتكون كلمة المرور من 8 أحرف على الأقل' : 'Password must be at least 8 characters');
+      setError(lang === 'fa' ? 'رمز عبور باید حداقل ۸ کاراکتر باشد' : 'Password must be at least 8 characters');
+      return;
+    }
+
+    if ((formData.role === 'guide' || formData.role === 'agency') && !formData.city) {
+      setError(lang === 'fa' ? 'لطفاً شهر خود را وارد کنید' : 'Please enter your city');
       return;
     }
 
     setLoading(true);
     try {
-      await base44.auth.signUp({
+      // ۱. ثبت‌نام در Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
+        options: {
+          data: { full_name: formData.full_name }
+        }
       });
 
-      if (formData.role === 'guide') {
-        navigate('/guide-onboarding');
+      if (authError) throw authError;
+
+      // ۲. ذخیره اطلاعات پروفایل
+      if (authData.user) {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .upsert({
+            id: authData.user.id,
+            email: formData.email,
+            full_name: formData.full_name,
+            role: formData.role,
+            city: formData.city || null,
+            bio: formData.bio || null,
+          });
+
+        if (profileError) throw profileError;
+      }
+
+      // ۳. redirect بر اساس role
+      if (formData.role === 'guide' || formData.role === 'agency') {
+        navigate('/dashboard');
       } else {
         navigate('/');
         window.location.reload();
       }
+
     } catch (err) {
-      setError(err.message || (lang === 'fa' ? 'خطا در ثبت‌نام' : lang === 'ar' ? 'خطأ في التسجيل' : 'Registration failed'));
+      setError(err.message || (lang === 'fa' ? 'خطا در ثبت‌نام' : 'Registration failed'));
     } finally {
       setLoading(false);
     }
@@ -72,10 +104,10 @@ export default function Signup() {
             <User className="w-8 h-8 text-accent" />
           </div>
           <h1 className="font-heading text-3xl font-bold text-foreground mb-2">
-            {lang === 'fa' ? 'ایجاد حساب کاربری' : lang === 'ar' ? 'إنشاء حساب' : 'Create Account'}
+            {lang === 'fa' ? 'ایجاد حساب کاربری' : 'Create Account'}
           </h1>
           <p className="font-body text-muted-foreground">
-            {lang === 'fa' ? 'به Iran Tour Advisor خوش آمدید' : lang === 'ar' ? 'مرحباً بك في Iran Tour Advisor' : 'Welcome to Iran Tour Advisor'}
+            {lang === 'fa' ? 'به Iran Tour Advisor خوش آمدید' : 'Welcome to Iran Tour Advisor'}
           </p>
         </div>
 
@@ -87,9 +119,29 @@ export default function Signup() {
           )}
 
           <form onSubmit={handleRegister} className="space-y-5">
+
+            {/* نام کامل */}
             <div>
               <label className="block font-body text-sm text-muted-foreground mb-1.5">
-                {lang === 'fa' ? 'ایمیل' : lang === 'ar' ? 'البريد الإلكتروني' : 'Email'}
+                {lang === 'fa' ? 'نام کامل' : 'Full Name'}
+              </label>
+              <div className="relative">
+                <User className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground ${dir === 'rtl' ? 'end-4' : 'start-4'}`} />
+                <input
+                  type="text"
+                  required
+                  value={formData.full_name}
+                  onChange={e => handleChange('full_name', e.target.value)}
+                  className={`w-full ${dir === 'rtl' ? 'pe-11 ps-4' : 'ps-11 pe-4'} py-3 rounded-xl border border-border bg-background font-body text-foreground focus:outline-none focus:ring-2 focus:ring-accent/50`}
+                  placeholder={lang === 'fa' ? 'نام و نام خانوادگی' : 'Your full name'}
+                />
+              </div>
+            </div>
+
+            {/* ایمیل */}
+            <div>
+              <label className="block font-body text-sm text-muted-foreground mb-1.5">
+                {lang === 'fa' ? 'ایمیل' : 'Email'}
               </label>
               <div className="relative">
                 <Mail className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground ${dir === 'rtl' ? 'end-4' : 'start-4'}`} />
@@ -104,9 +156,10 @@ export default function Signup() {
               </div>
             </div>
 
+            {/* رمز عبور */}
             <div>
               <label className="block font-body text-sm text-muted-foreground mb-1.5">
-                {lang === 'fa' ? 'رمز عبور' : lang === 'ar' ? 'كلمة المرور' : 'Password'}
+                {lang === 'fa' ? 'رمز عبور' : 'Password'}
               </label>
               <div className="relative">
                 <Lock className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground ${dir === 'rtl' ? 'end-4' : 'start-4'}`} />
@@ -115,7 +168,7 @@ export default function Signup() {
                   required
                   value={formData.password}
                   onChange={e => handleChange('password', e.target.value)}
-                  className={`w-full ${dir === 'rtl' ? 'pe-11 ps-4' : 'ps-11 pe-11'} py-3 rounded-xl border border-border bg-background font-body text-foreground focus:outline-none focus:ring-2 focus:ring-accent/50`}
+                  className={`w-full ${dir === 'rtl' ? 'pe-11 ps-11' : 'ps-11 pe-11'} py-3 rounded-xl border border-border bg-background font-body text-foreground focus:outline-none focus:ring-2 focus:ring-accent/50`}
                   placeholder="••••••••"
                 />
                 <button
@@ -128,9 +181,10 @@ export default function Signup() {
               </div>
             </div>
 
+            {/* تکرار رمز عبور */}
             <div>
               <label className="block font-body text-sm text-muted-foreground mb-1.5">
-                {lang === 'fa' ? 'تکرار رمز عبور' : lang === 'ar' ? 'تأكيد كلمة المرور' : 'Confirm Password'}
+                {lang === 'fa' ? 'تکرار رمز عبور' : 'Confirm Password'}
               </label>
               <div className="relative">
                 <Lock className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground ${dir === 'rtl' ? 'end-4' : 'start-4'}`} />
@@ -145,45 +199,82 @@ export default function Signup() {
               </div>
             </div>
 
-            <div className="pt-2">
-              <div className="flex rounded-xl border border-border overflow-hidden">
-                <button
-                  type="button"
-                  onClick={() => handleChange('role', 'tourist')}
-                  className={`flex-1 py-3 px-4 font-body text-sm font-medium transition-all duration-200 ${
-                    formData.role === 'tourist'
-                      ? 'bg-accent text-white'
-                      : 'bg-card text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  {lang === 'fa' ? 'گردشگر' : lang === 'ar' ? 'سائح' : 'Tourist'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleChange('role', 'guide')}
-                  className={`flex-1 py-3 px-4 font-body text-sm font-medium transition-all duration-200 ${
-                    formData.role === 'guide'
-                      ? 'bg-accent text-white'
-                      : 'bg-card text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  {lang === 'fa' ? 'راهنمای محلی' : lang === 'ar' ? 'مرشد محلي' : 'Local Guide'}
-                </button>
+            {/* انتخاب نوع حساب */}
+            <div>
+              <label className="block font-body text-sm text-muted-foreground mb-2">
+                {lang === 'fa' ? 'نوع حساب' : 'Account Type'}
+              </label>
+              <div className="grid grid-cols-3 rounded-xl border border-border overflow-hidden">
+                {[
+                  { value: 'tourist', fa: 'گردشگر', en: 'Tourist', icon: User },
+                  { value: 'guide', fa: 'راهنما', en: 'Guide', icon: MapPin },
+                  { value: 'agency', fa: 'آژانس', en: 'Agency', icon: Building2 },
+                ].map(({ value, fa, en, icon: Icon }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => handleChange('role', value)}
+                    className={`flex flex-col items-center gap-1 py-3 px-2 font-body text-xs font-medium transition-all duration-200 ${
+                      formData.role === value
+                        ? 'bg-accent text-white'
+                        : 'bg-card text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    {lang === 'fa' ? fa : en}
+                  </button>
+                ))}
               </div>
-              <p className="font-body text-xs text-muted-foreground mt-2 text-center">
-                {lang === 'fa' ? 'آیا راهنمای محلی هستید؟ به عنوان راهنما ثبت‌نام کنید.' : lang === 'ar' ? 'هل أنت مرشد محلي؟ سجّل كمرشد.' : 'Are you a local guide? Register as a guide.'}
-              </p>
             </div>
 
+            {/* فیلدهای اضافه برای راهنما و آژانس */}
+            {(formData.role === 'guide' || formData.role === 'agency') && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                className="space-y-4 pt-1"
+              >
+                <div>
+                  <label className="block font-body text-sm text-muted-foreground mb-1.5">
+                    {lang === 'fa' ? 'شهر فعالیت' : 'City of Activity'}
+                  </label>
+                  <div className="relative">
+                    <MapPin className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground ${dir === 'rtl' ? 'end-4' : 'start-4'}`} />
+                    <input
+                      type="text"
+                      value={formData.city}
+                      onChange={e => handleChange('city', e.target.value)}
+                      className={`w-full ${dir === 'rtl' ? 'pe-11 ps-4' : 'ps-11 pe-4'} py-3 rounded-xl border border-border bg-background font-body text-foreground focus:outline-none focus:ring-2 focus:ring-accent/50`}
+                      placeholder={lang === 'fa' ? 'مثلاً: تهران، اصفهان' : 'e.g. Tehran, Isfahan'}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-body text-sm text-muted-foreground mb-1.5">
+                    {lang === 'fa' ? 'معرفی کوتاه' : 'Short Bio'}
+                  </label>
+                  <textarea
+                    value={formData.bio}
+                    onChange={e => handleChange('bio', e.target.value)}
+                    rows={3}
+                    className="w-full px-4 py-3 rounded-xl border border-border bg-background font-body text-foreground focus:outline-none focus:ring-2 focus:ring-accent/50 resize-none"
+                    placeholder={lang === 'fa' ? 'درباره خودتان بنویسید...' : 'Tell us about yourself...'}
+                  />
+                </div>
+              </motion.div>
+            )}
+
+            {/* دکمه ثبت‌نام */}
             <button
               type="submit"
               disabled={loading}
               className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-accent text-white font-body font-semibold hover:bg-accent/90 transition-colors disabled:opacity-50"
             >
-              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Arrow className="w-5 h-5" />}
               {loading
-                ? (lang === 'fa' ? 'در حال ثبت‌نام...' : lang === 'ar' ? 'جارٍ التسجيل...' : 'Signing up...')
-                : (lang === 'fa' ? 'ایجاد حساب' : lang === 'ar' ? 'إنشاء حساب' : 'Create Account')}
+                ? (lang === 'fa' ? 'در حال ثبت‌نام...' : 'Signing up...')
+                : (lang === 'fa' ? 'ایجاد حساب' : 'Create Account')}
             </button>
           </form>
         </div>
