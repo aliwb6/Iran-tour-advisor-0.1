@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { supabase } from '@/supabaseClient';
+import { useI18n } from '@/lib/i18n.jsx';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Briefcase, PlusCircle, Bell, MessageCircle,
@@ -99,7 +100,22 @@ function StarRating({ rating }) {
 // ─── Sidebar ─────────────────────────────────────────────────────────────────
 
 function Sidebar({ section, onNavigate, profileExpanded, setProfileExpanded, userName, userRole, onLogout }) {
+  const { t } = useI18n();
   const activeId = section || 'home';
+
+  const NAV_LABELS = {
+    home:        t('dashboard_nav_home'),
+    'my-tours':  t('dashboard_nav_tours'),
+    'add-tour':  t('dashboard_nav_add_tour'),
+    requests:    t('dashboard_nav_requests'),
+    chat:        t('dashboard_nav_chat'),
+    profile:     t('dashboard_nav_profile'),
+    gallery:     t('dashboard_nav_gallery'),
+    bookings:    t('dashboard_nav_bookings'),
+    payment:     t('dashboard_nav_payment'),
+    'my-reviews':t('dashboard_nav_reviews'),
+    settings:    t('dashboard_nav_settings'),
+  };
 
   const isActive = (id) => {
     if (id === 'home') return activeId === 'home';
@@ -149,7 +165,7 @@ function Sidebar({ section, onNavigate, profileExpanded, setProfileExpanded, use
             >
               <span className="flex items-center gap-2.5">
                 <item.Icon className="w-3.5 h-3.5 flex-shrink-0" />
-                {item.label}
+                {NAV_LABELS[item.id] || item.label}
               </span>
               {item.sub && (
                 profileExpanded
@@ -178,7 +194,7 @@ function Sidebar({ section, onNavigate, profileExpanded, setProfileExpanded, use
                           : 'text-white/40 hover:text-white/70'
                       }`}
                     >
-                      {sub.label}
+                      {NAV_LABELS[sub.id] || sub.label}
                     </button>
                   ))}
                 </motion.div>
@@ -195,7 +211,7 @@ function Sidebar({ section, onNavigate, profileExpanded, setProfileExpanded, use
           className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-all"
         >
           <LogOut className="w-3.5 h-3.5" />
-          Sign Out
+          {t('dashboard_sign_out')}
         </button>
       </div>
     </aside>
@@ -205,6 +221,7 @@ function Sidebar({ section, onNavigate, profileExpanded, setProfileExpanded, use
 // ─── HomeView ─────────────────────────────────────────────────────────────────
 
 function HomeView({ profile, tours, reviews, onNavigate }) {
+  const { t } = useI18n();
   const [reqTab, setReqTab] = useState('new');
 
   const upcomingTour = tours.find(t => t.status === 'published');
@@ -227,25 +244,25 @@ function HomeView({ profile, tours, reviews, onNavigate }) {
         {/* Welcome */}
         <div className={`${cardBase} flex flex-col justify-between`}>
           <div>
-            <p className="text-white/40 text-xs mb-1">Welcome back</p>
+            <p className="text-white/40 text-xs mb-1">{t('dashboard_welcome')}</p>
             <h2 className="text-white font-bold text-lg leading-tight">
               {profile?.full_name?.split(' ')[0] || 'Guide'} 👋
             </h2>
             <p className="text-white/50 text-xs mt-2 leading-relaxed">
-              Manage your tours, track requests, and grow your guide business.
+              {t('dashboard_nav_tours')}
             </p>
           </div>
           <button
             onClick={() => onNavigate('add-tour')}
             className="mt-4 w-full py-2 rounded-xl bg-[hsl(178,85%,32%)] text-white text-xs font-semibold hover:bg-[hsl(178,85%,28%)] transition"
           >
-            + Add New Tour
+            + {t('dashboard_add_tour')}
           </button>
         </div>
 
         {/* Upcoming Tour */}
         <div className={cardBase}>
-          <p className="text-white/40 text-xs mb-3">Upcoming Tour</p>
+          <p className="text-white/40 text-xs mb-3">{t('dashboard_upcoming_tour')}</p>
           {upcomingTour ? (
             <div>
               {upcomingTour.image_url && (
@@ -266,7 +283,7 @@ function HomeView({ profile, tours, reviews, onNavigate }) {
               </div>
             </div>
           ) : (
-            <EmptyState Icon={Briefcase} title="No published tours yet" desc="Add and publish a tour to see it here" />
+            <EmptyState Icon={Briefcase} title={t('dashboard_no_upcoming')} desc={t('dashboard_add_tour')} />
           )}
         </div>
 
@@ -274,17 +291,17 @@ function HomeView({ profile, tours, reviews, onNavigate }) {
         <div className={`${cardBase} flex flex-col`}>
           <div className="flex items-center gap-2 mb-3">
             <Shield className="w-4 h-4 text-[hsl(38,62%,58%)]" />
-            <p className="text-white/70 text-xs font-medium">My License</p>
+            <p className="text-white/70 text-xs font-medium">{t('dashboard_my_license')}</p>
           </div>
           <div className="flex-1 flex flex-col items-center justify-center py-4">
             <div className="w-12 h-12 rounded-2xl bg-white/5 border-2 border-dashed border-white/15 flex items-center justify-center mb-3">
               <Upload className="w-5 h-5 text-white/25" />
             </div>
             <p className="text-white/40 text-xs text-center mb-4">
-              Upload your guide license to build trust with travelers
+              {t('dashboard_license_missing')}
             </p>
             <button className="px-4 py-2 rounded-xl border border-white/20 text-white/60 text-xs font-medium hover:border-[hsl(38,62%,58%)] hover:text-[hsl(38,62%,58%)] transition">
-              Upload License
+              {t('dashboard_upload_license')}
             </button>
           </div>
         </div>
@@ -296,7 +313,7 @@ function HomeView({ profile, tours, reviews, onNavigate }) {
         {/* Tour Requests */}
         <div className={`${cardBase} md:col-span-3`}>
           <div className="flex items-center justify-between mb-4">
-            <p className="text-white/70 text-sm font-semibold">Tour Requests</p>
+            <p className="text-white/70 text-sm font-semibold">{t('dashboard_tour_requests')}</p>
             <div className="flex bg-white/[0.06] rounded-lg p-0.5">
               {['new', 'invitations'].map(tab => (
                 <button
@@ -306,25 +323,25 @@ function HomeView({ profile, tours, reviews, onNavigate }) {
                     reqTab === tab ? 'bg-[hsl(178,85%,32%)] text-white' : 'text-white/40 hover:text-white/60'
                   }`}
                 >
-                  {tab === 'new' ? 'New Requests' : 'Invitations'}
+                  {tab === 'new' ? t('dashboard_new_requests') : t('dashboard_invitations')}
                 </button>
               ))}
             </div>
           </div>
           <EmptyState
             Icon={Bell}
-            title={reqTab === 'new' ? 'No new requests' : 'No invitations yet'}
-            desc="When travelers request your tours they'll appear here"
+            title={reqTab === 'new' ? t('dashboard_empty_requests') : t('dashboard_empty_chat')}
+            desc={t('dashboard_no_requests')}
           />
         </div>
 
         {/* Latest Chat */}
         <div className={`${cardBase} md:col-span-2`}>
-          <p className="text-white/70 text-sm font-semibold mb-4">Latest Chat</p>
+          <p className="text-white/70 text-sm font-semibold mb-4">{t('dashboard_latest_chat')}</p>
           <EmptyState
             Icon={MessageSquare}
-            title="No messages yet"
-            desc="Conversations with travelers will appear here"
+            title={t('dashboard_no_messages')}
+            desc={t('dashboard_empty_chat')}
           />
         </div>
       </div>
@@ -334,7 +351,7 @@ function HomeView({ profile, tours, reviews, onNavigate }) {
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2">
             <TrendingUp className="w-4 h-4 text-[hsl(178,85%,45%)]" />
-            <p className="text-white/80 text-sm font-semibold">My Earnings This Year</p>
+            <p className="text-white/80 text-sm font-semibold">{t('dashboard_earnings_title')}</p>
           </div>
           <div className="flex items-center gap-4 text-xs text-white/50">
             <span className="flex items-center gap-1.5">
@@ -381,10 +398,10 @@ function HomeView({ profile, tours, reviews, onNavigate }) {
       {/* ── Row 4: Stats ── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: 'Total Tours', value: totalTours, color: 'text-white', Icon: Briefcase },
-          { label: 'Published', value: publishedCount, color: 'text-emerald-400', Icon: CheckCircle2 },
-          { label: 'Drafts', value: draftCount, color: 'text-yellow-400', Icon: Package },
-          { label: 'Total Reviews', value: totalReviews, extra: avgRating !== '—' ? `Avg ${avgRating}★` : null, color: 'text-[hsl(38,62%,58%)]', Icon: Star },
+          { label: t('dashboard_stat_tours'), value: totalTours, color: 'text-white', Icon: Briefcase },
+          { label: t('dashboard_published'), value: publishedCount, color: 'text-emerald-400', Icon: CheckCircle2 },
+          { label: t('dashboard_draft'), value: draftCount, color: 'text-yellow-400', Icon: Package },
+          { label: t('dashboard_recent_reviews'), value: totalReviews, extra: avgRating !== '—' ? `Avg ${avgRating}★` : null, color: 'text-[hsl(38,62%,58%)]', Icon: Star },
         ].map(stat => (
           <div key={stat.label} className={`${cardBase} flex items-center gap-3`}>
             <div className="w-9 h-9 rounded-xl bg-white/[0.06] flex items-center justify-center flex-shrink-0">
@@ -401,12 +418,12 @@ function HomeView({ profile, tours, reviews, onNavigate }) {
 
       {/* ── Row 5: Recent Reviews ── */}
       <div className={cardBase}>
-        <p className="text-white/70 text-sm font-semibold mb-4">Recent Reviews</p>
+        <p className="text-white/70 text-sm font-semibold mb-4">{t('dashboard_recent_reviews')}</p>
         {reviews.length === 0 ? (
           <EmptyState
             Icon={Star}
-            title="No reviews yet"
-            desc="Reviews from your travelers will appear here after their trips"
+            title={t('dashboard_no_reviews')}
+            desc={t('dashboard_empty_reviews')}
           />
         ) : (
           <div className="space-y-4">
@@ -436,15 +453,16 @@ function HomeView({ profile, tours, reviews, onNavigate }) {
 // ─── MyToursView ──────────────────────────────────────────────────────────────
 
 function MyToursView({ tours, onEdit, onDelete }) {
+  const { t } = useI18n();
   return (
     <div>
       <div className="flex items-center justify-between mb-5">
-        <h2 className="text-white font-bold text-lg">My Tours</h2>
+        <h2 className="text-white font-bold text-lg">{t('dashboard_my_tours')}</h2>
         <span className="text-white/40 text-xs">{tours.length} tour{tours.length !== 1 ? 's' : ''}</span>
       </div>
       {tours.length === 0 ? (
         <div className="bg-[hsl(222,45%,14%)] border border-white/[0.08] rounded-2xl">
-          <EmptyState Icon={Briefcase} title="No tours yet" desc="Add your first tour to start accepting bookings" />
+          <EmptyState Icon={Briefcase} title={t('dashboard_no_tours')} desc={t('dashboard_no_tours_desc')} />
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -466,7 +484,7 @@ function MyToursView({ tours, onEdit, onDelete }) {
                     : 'bg-yellow-500/20 border border-yellow-500/30 text-yellow-300'
                 }`}>
                   <span className={`w-1.5 h-1.5 rounded-full ${tour.status === 'published' ? 'bg-emerald-400' : 'bg-yellow-400'}`} />
-                  {tour.status === 'published' ? 'Published' : 'Draft'}
+                  {tour.status === 'published' ? t('dashboard_published') : t('dashboard_draft')}
                 </div>
               </div>
 
@@ -485,7 +503,7 @@ function MyToursView({ tours, onEdit, onDelete }) {
                     onClick={() => onEdit(tour)}
                     className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-white/60 hover:text-white text-xs font-medium transition"
                   >
-                    <Edit2 className="w-3 h-3" /> Edit
+                    <Edit2 className="w-3 h-3" /> {t('dashboard_edit')}
                   </button>
                   {tour.slug && (
                     <Link
@@ -516,6 +534,7 @@ function MyToursView({ tours, onEdit, onDelete }) {
 // ─── AddTourView ──────────────────────────────────────────────────────────────
 
 function AddTourView({ editing, onDone, onCancel }) {
+  const { t } = useI18n();
   const [form, setForm] = useState(() => {
     if (!editing) return EMPTY_TOUR;
     return {
@@ -606,12 +625,12 @@ function AddTourView({ editing, onDone, onCancel }) {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-white font-bold text-lg">{editing ? 'Edit Tour' : 'Add New Tour'}</h2>
-          <p className="text-white/40 text-xs mt-0.5">Fill in the details below to {editing ? 'update' : 'create'} your tour</p>
+          <h2 className="text-white font-bold text-lg">{editing ? t('dashboard_update_tour') : t('dashboard_add_tour')}</h2>
+          <p className="text-white/40 text-xs mt-0.5">{editing ? t('dashboard_update_tour') : t('dashboard_add_tour')}</p>
         </div>
         {editing && (
           <button onClick={onCancel} className="px-4 py-2 rounded-xl border border-white/15 text-white/50 text-xs hover:text-white hover:border-white/30 transition">
-            ✕ Cancel Edit
+            ✕ {t('dashboard_cancel')}
           </button>
         )}
       </div>
@@ -741,7 +760,7 @@ function AddTourView({ editing, onDone, onCancel }) {
             className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[hsl(178,85%,32%)] text-white font-semibold text-sm hover:bg-[hsl(178,85%,28%)] disabled:opacity-60 transition"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-            {saving ? 'Saving...' : editing ? 'Update Tour' : 'Create Tour'}
+            {saving ? t('dashboard_saving') : editing ? t('dashboard_update_tour') : t('dashboard_save_tour')}
           </button>
         </div>
       </form>
@@ -752,6 +771,7 @@ function AddTourView({ editing, onDone, onCancel }) {
 // ─── ProfileView ──────────────────────────────────────────────────────────────
 
 function ProfileView({ profile, userId, onSave }) {
+  const { t } = useI18n();
   const [form, setForm] = useState({
     full_name:  profile?.full_name || '',
     phone:      profile?.phone || '',
@@ -800,12 +820,12 @@ function ProfileView({ profile, userId, onSave }) {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-white font-bold text-lg">Edit Profile</h2>
-          <p className="text-white/40 text-xs mt-0.5">Keep your profile up to date to attract more travelers</p>
+          <h2 className="text-white font-bold text-lg">{t('dashboard_my_profile')}</h2>
+          <p className="text-white/40 text-xs mt-0.5">{t('dashboard_save_profile')}</p>
         </div>
         {/* Completion */}
         <div className="text-right">
-          <p className="text-white/40 text-xs mb-1.5">Profile {completion}% complete</p>
+          <p className="text-white/40 text-xs mb-1.5">{t('dashboard_profile_completion')} {completion}%</p>
           <div className="w-32 h-1.5 bg-white/10 rounded-full overflow-hidden">
             <div
               className="h-full bg-[hsl(178,85%,32%)] rounded-full transition-all duration-500"
@@ -871,7 +891,7 @@ function ProfileView({ profile, userId, onSave }) {
         <div className="flex items-center justify-between pt-2">
           {saved && (
             <span className="flex items-center gap-1.5 text-emerald-400 text-sm">
-              <CheckCircle2 className="w-4 h-4" /> Profile saved!
+              <CheckCircle2 className="w-4 h-4" /> {t('dashboard_saved')}
             </span>
           )}
           <button
@@ -880,7 +900,7 @@ function ProfileView({ profile, userId, onSave }) {
             className="ms-auto flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[hsl(178,85%,32%)] text-white font-semibold text-sm hover:bg-[hsl(178,85%,28%)] disabled:opacity-60 transition"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-            {saving ? 'Saving...' : 'Save Profile'}
+            {saving ? t('dashboard_saving') : t('dashboard_save_profile')}
           </button>
         </div>
       </form>
@@ -890,27 +910,31 @@ function ProfileView({ profile, userId, onSave }) {
 
 // ─── EmptySection ─────────────────────────────────────────────────────────────
 
-const SECTION_META = {
-  requests:   { Icon: Bell,         title: 'Tour Requests',    desc: 'Booking requests from travelers will appear here' },
-  chat:       { Icon: MessageCircle, title: 'Chat',            desc: 'Your conversations with travelers will appear here' },
-  gallery:    { Icon: ImageIcon,    title: 'My Gallery',       desc: 'Upload photos to showcase your tours and destinations' },
-  bookings:   { Icon: CalendarDays, title: 'My Bookings',      desc: 'Your confirmed bookings will be listed here' },
-  payment:    { Icon: CreditCard,   title: 'Payment History',  desc: 'Your earnings and payment records will appear here' },
-  'my-reviews': { Icon: Star,       title: 'My Reviews',       desc: 'Reviews left by your travelers will appear here' },
-  settings:   { Icon: Settings,     title: 'Settings',         desc: 'Account and notification settings coming soon' },
+const SECTION_ICONS = {
+  requests:    Bell,
+  chat:        MessageCircle,
+  gallery:     ImageIcon,
+  bookings:    CalendarDays,
+  payment:     CreditCard,
+  'my-reviews':Star,
+  settings:    Settings,
 };
 
 function EmptySection({ section }) {
-  const meta = SECTION_META[section] || { Icon: LayoutDashboard, title: 'Coming Soon', desc: 'This section is under construction' };
-  const { Icon } = meta;
+  const { t } = useI18n();
+  const Icon = SECTION_ICONS[section] || LayoutDashboard;
+
+  const titleKey = `dashboard_nav_${section === 'my-reviews' ? 'reviews' : section}`;
+  const descKey = `dashboard_empty_${section === 'my-reviews' ? 'reviews' : section}`;
+
   return (
     <div className="flex items-center justify-center min-h-[60vh]">
       <div className="text-center">
         <div className="w-16 h-16 rounded-2xl bg-white/[0.05] border border-white/10 flex items-center justify-center mx-auto mb-4">
           <Icon className="w-8 h-8 text-white/20" />
         </div>
-        <h2 className="text-white font-bold text-xl mb-2">{meta.title}</h2>
-        <p className="text-white/40 text-sm max-w-xs">{meta.desc}</p>
+        <h2 className="text-white font-bold text-xl mb-2">{t(titleKey)}</h2>
+        <p className="text-white/40 text-sm max-w-xs">{t(descKey)}</p>
       </div>
     </div>
   );
