@@ -8,7 +8,7 @@ import {
   User, Image as ImageIcon, CalendarDays, CreditCard, Star, Settings,
   ChevronDown, ChevronRight, LogOut, Edit2, Trash2, ExternalLink,
   Loader2, Clock, MapPin, DollarSign, Upload, Shield, TrendingUp,
-  MessageSquare, Package, CheckCircle2,
+  MessageSquare, Package, CheckCircle2, X, Plus, Globe, AlertTriangle,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -908,6 +908,448 @@ function ProfileView({ profile, userId, onSave }) {
   );
 }
 
+// ─── GalleryView ─────────────────────────────────────────────────────────────
+
+function GalleryView({ profile, userId, onSave }) {
+  const { t } = useI18n();
+  const [gallery, setGallery] = useState(profile?.gallery_images || []);
+  const [showModal, setShowModal] = useState(false);
+  const [newUrl, setNewUrl] = useState('');
+  const [adding, setAdding] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleAddPhoto = async () => {
+    if (!newUrl.trim() || gallery.length >= 20) return;
+    setAdding(true);
+    setError('');
+    try {
+      const { data, error: fetchErr } = await supabase
+        .from('profiles').select('gallery_images').eq('id', userId).single();
+      if (fetchErr) throw fetchErr;
+      const newGallery = [...(data.gallery_images || []), newUrl.trim()];
+      const { error: updateErr } = await supabase
+        .from('profiles').update({ gallery_images: newGallery }).eq('id', userId);
+      if (updateErr) throw updateErr;
+      setGallery(newGallery);
+      onSave({ ...profile, gallery_images: newGallery });
+      setNewUrl('');
+      setShowModal(false);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const handleDeletePhoto = async (imageUrl) => {
+    if (!window.confirm(t('gallery_delete_confirm'))) return;
+    const filtered = gallery.filter(img => img !== imageUrl);
+    try {
+      const { error: err } = await supabase
+        .from('profiles').update({ gallery_images: filtered }).eq('id', userId);
+      if (err) throw err;
+      setGallery(filtered);
+      onSave({ ...profile, gallery_images: filtered });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-white font-bold text-lg">{t('gallery_title')}</h2>
+          <p className="text-white/40 text-xs mt-0.5">
+            {gallery.length}/20 {t('gallery_max')}
+          </p>
+        </div>
+        {gallery.length < 20 && (
+          <button
+            onClick={() => setShowModal(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[hsl(178,85%,32%)] text-white text-xs font-semibold hover:bg-[hsl(178,85%,28%)] transition"
+          >
+            <Plus className="w-4 h-4" />
+            {t('gallery_add')}
+          </button>
+        )}
+      </div>
+
+      {gallery.length === 0 ? (
+        <div className="bg-[hsl(222,45%,14%)] border border-white/[0.08] rounded-2xl">
+          <EmptyState Icon={ImageIcon} title={t('gallery_empty')} desc={t('gallery_max')} />
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+          {gallery.map((img, i) => (
+            <div key={i} className="relative group aspect-square rounded-2xl overflow-hidden bg-white/[0.05] border border-white/[0.08]">
+              <img src={img} alt={`Gallery ${i + 1}`} className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all duration-200 flex items-center justify-center">
+                <button
+                  onClick={() => handleDeletePhoto(img)}
+                  className="opacity-0 group-hover:opacity-100 w-8 h-8 rounded-full bg-red-500/80 flex items-center justify-center text-white transition-all hover:bg-red-500"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Add Photo Modal */}
+      <AnimatePresence>
+        {showModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
+            onClick={(e) => e.target === e.currentTarget && setShowModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-[hsl(222,55%,10%)] border border-white/10 rounded-2xl p-6 w-full max-w-md"
+            >
+              <div className="flex items-center justify-between mb-5">
+                <h3 className="text-white font-semibold text-base">{t('gallery_add')}</h3>
+                <button onClick={() => setShowModal(false)} className="w-7 h-7 rounded-lg bg-white/[0.06] flex items-center justify-center text-white/50 hover:text-white transition">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {error && (
+                <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/25 text-red-400 text-sm">{error}</div>
+              )}
+
+              <input
+                type="url"
+                value={newUrl}
+                onChange={e => setNewUrl(e.target.value)}
+                placeholder={t('gallery_add_url')}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-white/10 bg-white/[0.05] text-white text-sm placeholder:text-white/25 focus:outline-none focus:border-[hsl(178,85%,32%)] focus:ring-1 focus:ring-[hsl(178,85%,32%)]/50 transition mb-4"
+                onKeyDown={e => e.key === 'Enter' && handleAddPhoto()}
+                autoFocus
+              />
+
+              {newUrl && (
+                <div className="w-full aspect-video rounded-xl overflow-hidden bg-white/5 mb-4">
+                  <img src={newUrl} alt="Preview" className="w-full h-full object-cover" onError={e => { e.currentTarget.style.display = 'none'; }} />
+                </div>
+              )}
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="flex-1 py-2.5 rounded-xl border border-white/15 text-white/50 text-sm hover:text-white hover:border-white/30 transition"
+                >
+                  {t('dashboard_cancel')}
+                </button>
+                <button
+                  onClick={handleAddPhoto}
+                  disabled={!newUrl.trim() || adding}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[hsl(178,85%,32%)] text-white text-sm font-semibold hover:bg-[hsl(178,85%,28%)] disabled:opacity-50 transition"
+                >
+                  {adding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                  {t('gallery_add')}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ─── SettingsView ─────────────────────────────────────────────────────────────
+
+const TIMEZONES = [
+  'UTC-12:00', 'UTC-11:00', 'UTC-10:00', 'UTC-09:00', 'UTC-08:00',
+  'UTC-07:00', 'UTC-06:00', 'UTC-05:00', 'UTC-04:00', 'UTC-03:00',
+  'UTC-02:00', 'UTC-01:00', 'UTC+00:00', 'UTC+01:00', 'UTC+02:00',
+  'UTC+03:00', 'UTC+03:30', 'UTC+04:00', 'UTC+04:30', 'UTC+05:00',
+  'UTC+05:30', 'UTC+05:45', 'UTC+06:00', 'UTC+06:30', 'UTC+07:00',
+  'UTC+08:00', 'UTC+09:00', 'UTC+09:30', 'UTC+10:00', 'UTC+11:00',
+  'UTC+12:00',
+];
+
+const CURRENCIES = ['USD', 'EUR', 'GBP', 'IRR'];
+
+function Toggle({ checked, onChange }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onChange(!checked)}
+      className={`relative w-11 h-6 rounded-full transition-colors duration-200 flex-shrink-0 ${
+        checked ? 'bg-[hsl(178,85%,32%)]' : 'bg-white/15'
+      }`}
+    >
+      <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 ${checked ? 'translate-x-5' : 'translate-x-0'}`} />
+    </button>
+  );
+}
+
+function SettingsView({ profile, userId, onSave }) {
+  const { t } = useI18n();
+  const [tab, setTab] = useState('general');
+
+  const [acceptBookings, setAcceptBookings] = useState(profile?.accept_bookings ?? true);
+  const [currency, setCurrency] = useState(profile?.currency || 'USD');
+  const [timezone, setTimezone] = useState(profile?.timezone || 'UTC+03:30');
+
+  const [notifyRequests, setNotifyRequests] = useState(profile?.notify_requests ?? true);
+  const [notifyArea, setNotifyArea] = useState(profile?.notify_area || 'nearby');
+  const [notifyEmail, setNotifyEmail] = useState(profile?.notify_email ?? true);
+  const [notifyWhatsapp, setNotifyWhatsapp] = useState(profile?.notify_whatsapp ?? false);
+
+  const [isPublic, setIsPublic] = useState(profile?.is_public ?? true);
+  const [showDeactivateModal, setShowDeactivateModal] = useState(false);
+
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSave = async () => {
+    setSaving(true);
+    setError('');
+    try {
+      let payload = {};
+      if (tab === 'general') {
+        payload = { accept_bookings: acceptBookings, currency, timezone };
+      } else if (tab === 'notifications') {
+        payload = { notify_requests: notifyRequests, notify_area: notifyArea, notify_email: notifyEmail, notify_whatsapp: notifyWhatsapp };
+      } else {
+        payload = { is_public: isPublic };
+      }
+      const { error: err } = await supabase.from('profiles').update(payload).eq('id', userId);
+      if (err) throw err;
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+      onSave({ ...profile, ...payload });
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const selectClass = 'w-full px-3.5 py-2.5 rounded-xl border border-white/10 bg-white/[0.05] text-white text-sm focus:outline-none focus:border-[hsl(178,85%,32%)] transition appearance-none cursor-pointer';
+  const labelClass = 'block text-white/50 text-xs mb-1.5 font-medium';
+  const tabs = ['general', 'notifications', 'privacy'];
+
+  return (
+    <div>
+      <h2 className="text-white font-bold text-lg mb-6">{t('dashboard_nav_settings')}</h2>
+
+      {/* Tabs */}
+      <div className="flex bg-white/[0.05] rounded-xl p-1 mb-6 w-fit gap-1">
+        {tabs.map(tabId => (
+          <button
+            key={tabId}
+            onClick={() => setTab(tabId)}
+            className={`px-4 py-2 rounded-lg text-xs font-medium transition-all capitalize ${
+              tab === tabId
+                ? 'bg-[hsl(178,85%,32%)] text-white shadow'
+                : 'text-white/50 hover:text-white'
+            }`}
+          >
+            {t(`settings_${tabId}`)}
+          </button>
+        ))}
+      </div>
+
+      {error && (
+        <div className="mb-5 p-3 rounded-xl bg-red-500/10 border border-red-500/25 text-red-400 text-sm">{error}</div>
+      )}
+
+      <div className="bg-[hsl(222,45%,14%)] border border-white/[0.08] rounded-2xl p-6 space-y-6">
+
+        {/* ── General Tab ── */}
+        {tab === 'general' && (
+          <>
+            {/* Accept bookings toggle */}
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-white text-sm font-medium">{t('settings_accept_bookings')}</p>
+              </div>
+              <Toggle checked={acceptBookings} onChange={setAcceptBookings} />
+            </div>
+
+            {/* Currency */}
+            <div>
+              <label className={labelClass}>{t('settings_currency')}</label>
+              <div className="relative">
+                <select
+                  value={currency}
+                  onChange={e => setCurrency(e.target.value)}
+                  className={`${selectClass} pr-8`}
+                >
+                  {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+                <Globe className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30 pointer-events-none" />
+              </div>
+            </div>
+
+            {/* Timezone */}
+            <div>
+              <label className={labelClass}>{t('settings_timezone')}</label>
+              <div className="relative">
+                <select
+                  value={timezone}
+                  onChange={e => setTimezone(e.target.value)}
+                  className={`${selectClass} pr-8`}
+                >
+                  {TIMEZONES.map(tz => <option key={tz} value={tz}>{tz}</option>)}
+                </select>
+                <Clock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30 pointer-events-none" />
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* ── Notifications Tab ── */}
+        {tab === 'notifications' && (
+          <>
+            <div className="flex items-center justify-between gap-4">
+              <p className="text-white text-sm font-medium">{t('settings_notify_requests')}</p>
+              <Toggle checked={notifyRequests} onChange={setNotifyRequests} />
+            </div>
+
+            <div>
+              <p className="text-white/50 text-xs font-medium mb-3">{t('settings_notify_area')}</p>
+              <div className="space-y-3">
+                {[
+                  { value: 'nearby', label: t('settings_notify_nearby') },
+                  { value: 'mine', label: t('settings_notify_only_mine') },
+                ].map(opt => (
+                  <label key={opt.value} className="flex items-center gap-3 cursor-pointer group">
+                    <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 transition-colors ${
+                      notifyArea === opt.value
+                        ? 'border-[hsl(178,85%,45%)] bg-[hsl(178,85%,32%)]'
+                        : 'border-white/20 group-hover:border-white/40'
+                    }`}>
+                      {notifyArea === opt.value && (
+                        <div className="w-full h-full rounded-full bg-white/80 scale-[0.4]" />
+                      )}
+                    </div>
+                    <span className="text-white/70 text-sm group-hover:text-white transition">{opt.label}</span>
+                    <input
+                      type="radio"
+                      name="notifyArea"
+                      value={opt.value}
+                      checked={notifyArea === opt.value}
+                      onChange={() => setNotifyArea(opt.value)}
+                      className="sr-only"
+                    />
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-5 pt-2 border-t border-white/[0.07]">
+              <div className="flex items-center justify-between gap-4">
+                <p className="text-white text-sm">{t('settings_notify_email')}</p>
+                <Toggle checked={notifyEmail} onChange={setNotifyEmail} />
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <p className="text-white text-sm">{t('settings_notify_whatsapp')}</p>
+                <Toggle checked={notifyWhatsapp} onChange={setNotifyWhatsapp} />
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* ── Privacy Tab ── */}
+        {tab === 'privacy' && (
+          <>
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-white text-sm font-medium">{t('settings_publish_profile')}</p>
+                <p className="text-white/40 text-xs mt-0.5">{t('settings_publish_desc')}</p>
+              </div>
+              <Toggle checked={isPublic} onChange={setIsPublic} />
+            </div>
+
+            <div className="pt-4 border-t border-white/[0.07]">
+              <button
+                type="button"
+                onClick={() => setShowDeactivateModal(true)}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-red-500/30 text-red-400 text-sm font-medium hover:bg-red-500/10 transition"
+              >
+                <AlertTriangle className="w-4 h-4" />
+                {t('settings_deactivate')}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Save button */}
+      <div className="flex items-center justify-end gap-3 mt-5">
+        {saved && (
+          <span className="flex items-center gap-1.5 text-emerald-400 text-sm">
+            <CheckCircle2 className="w-4 h-4" /> {t('dashboard_saved')}
+          </span>
+        )}
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[hsl(178,85%,32%)] text-white font-semibold text-sm hover:bg-[hsl(178,85%,28%)] disabled:opacity-60 transition"
+        >
+          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+          {saving ? t('dashboard_saving') : t('settings_save_all')}
+        </button>
+      </div>
+
+      {/* Deactivate Confirmation Modal */}
+      <AnimatePresence>
+        {showDeactivateModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
+            onClick={e => e.target === e.currentTarget && setShowDeactivateModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-[hsl(222,55%,10%)] border border-white/10 rounded-2xl p-6 w-full max-w-sm"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-red-500/15 flex items-center justify-center flex-shrink-0">
+                  <AlertTriangle className="w-5 h-5 text-red-400" />
+                </div>
+                <div>
+                  <h3 className="text-white font-semibold text-sm">{t('settings_deactivate')}</h3>
+                  <p className="text-white/40 text-xs mt-0.5">This action cannot be undone.</p>
+                </div>
+              </div>
+              <div className="flex gap-3 mt-5">
+                <button
+                  onClick={() => setShowDeactivateModal(false)}
+                  className="flex-1 py-2.5 rounded-xl border border-white/15 text-white/50 text-sm hover:text-white hover:border-white/30 transition"
+                >
+                  {t('dashboard_cancel')}
+                </button>
+                <button
+                  className="flex-1 py-2.5 rounded-xl bg-red-500/80 text-white text-sm font-semibold hover:bg-red-500 transition"
+                >
+                  {t('settings_deactivate')}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 // ─── EmptySection ─────────────────────────────────────────────────────────────
 
 const SECTION_ICONS = {
@@ -1025,6 +1467,10 @@ export default function Dashboard() {
         return <MyToursView tours={tours} onEdit={setEditingTour} onDelete={handleDeleteTour} />;
       case 'profile':
         return <ProfileView profile={profile} userId={authUser?.id} onSave={handleProfileSaved} />;
+      case 'gallery':
+        return <GalleryView profile={profile} userId={authUser?.id} onSave={handleProfileSaved} />;
+      case 'settings':
+        return <SettingsView profile={profile} userId={authUser?.id} onSave={handleProfileSaved} />;
       default:
         return <EmptySection section={section} />;
     }
