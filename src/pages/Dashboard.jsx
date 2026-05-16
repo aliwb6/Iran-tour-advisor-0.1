@@ -39,26 +39,26 @@ const NAV = [
 ];
 
 const THEMES = [
-  { value: 'nature',   icon: '🌿', label: 'طبیعت‌گردی و حیات وحش' },
-  { value: 'cultural', icon: '🏛️', label: 'فرهنگی و تاریخی' },
-  { value: 'coastal',  icon: '🏖️', label: 'ساحلی و دریایی' },
-  { value: 'urban',    icon: '🏙️', label: 'شهری و مدرن' },
-  { value: 'rural',    icon: '🏡', label: 'روستایی و بوم‌گردی' },
-  { value: 'luxury',   icon: '👑', label: 'لاکچری و VIP' },
-  { value: 'budget',   icon: '🎒', label: 'اقتصادی و کوله‌گردی' },
+  { value: 'nature',    en: 'Nature & Wildlife 🌿',        fa: 'طبیعت‌گردی و حیات وحش 🌿', ar: 'الطبيعة والحياة البرية 🌿' },
+  { value: 'cultural',  en: 'Cultural & Historical 🏛️',    fa: 'فرهنگی و تاریخی 🏛️',       ar: 'ثقافي وتاريخي 🏛️' },
+  { value: 'coastal',   en: 'Coastal & Marine 🏖️',         fa: 'ساحلی و دریایی 🏖️',        ar: 'ساحلي وبحري 🏖️' },
+  { value: 'urban',     en: 'Urban & Modern 🏙️',           fa: 'شهری و مدرن 🏙️',           ar: 'حضري وعصري 🏙️' },
+  { value: 'rural',     en: 'Rural & Eco 🏡',              fa: 'روستایی و بوم‌گردی 🏡',     ar: 'ريفي وبيئي 🏡' },
+  { value: 'luxury',    en: 'Luxury & VIP 👑',             fa: 'لاکچری و VIP 👑',           ar: 'فاخر و VIP 👑' },
+  { value: 'budget',    en: 'Budget & Backpacking 🎒',     fa: 'اقتصادی و کوله‌گردی 🎒',   ar: 'اقتصادي وحقيبة ظهر 🎒' },
 ];
 
 const PURPOSES = [
-  { value: 'leisure',     icon: '🌅', label: 'تفریحی و استراحت' },
-  { value: 'adventure',   icon: '🧗', label: 'ماجراجویی و هیجان' },
-  { value: 'religious',   icon: '🕌', label: 'زیارتی و مذهبی' },
-  { value: 'educational', icon: '📚', label: 'آموزشی و پژوهشی' },
-  { value: 'medical',     icon: '🏥', label: 'سلامت و درمانی' },
-  { value: 'business',    icon: '💼', label: 'تجاری و نمایشگاهی' },
-  { value: 'honeymoon',   icon: '💑', label: 'ماه عسل' },
-  { value: 'sports',      icon: '⚽', label: 'ورزشی' },
-  { value: 'photography', icon: '📸', label: 'عکاسی' },
-  { value: 'architecture',icon: '🏰', label: 'معماری' },
+  { value: 'leisure',      en: 'Leisure & Relaxation 🌅',    fa: 'تفریحی و استراحت 🌅',      ar: 'ترفيه واسترخاء 🌅' },
+  { value: 'adventure',    en: 'Adventure & Thrill 🧗',       fa: 'ماجراجویی و هیجان 🧗',     ar: 'مغامرة وإثارة 🧗' },
+  { value: 'religious',    en: 'Religious & Pilgrimage 🕌',   fa: 'زیارتی و مذهبی 🕌',        ar: 'ديني وزيارات 🕌' },
+  { value: 'educational',  en: 'Educational & Research 📚',   fa: 'آموزشی و پژوهشی 📚',       ar: 'تعليمي وبحثي 📚' },
+  { value: 'medical',      en: 'Medical Tourism 🏥',          fa: 'سلامت و درمانی 🏥',         ar: 'سياحة علاجية 🏥' },
+  { value: 'business',     en: 'Business & Exhibition 💼',    fa: 'تجاری و نمایشگاهی 💼',     ar: 'تجاري ومعارض 💼' },
+  { value: 'honeymoon',    en: 'Honeymoon 💑',                fa: 'ماه عسل 💑',                ar: 'شهر عسل 💑' },
+  { value: 'sports',       en: 'Sports ⚽',                   fa: 'ورزشی ⚽',                  ar: 'رياضي ⚽' },
+  { value: 'photography',  en: 'Photography 📸',              fa: 'عکاسی 📸',                  ar: 'تصوير 📸' },
+  { value: 'architecture', en: 'Architecture 🏰',             fa: 'معماری 🏰',                 ar: 'عمارة 🏰' },
 ];
 
 const EMPTY_TOUR = {
@@ -534,7 +534,7 @@ function MyToursView({ tours, onEdit, onDelete }) {
 // ─── AddTourView ──────────────────────────────────────────────────────────────
 
 function AddTourView({ editing, onDone, onCancel }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const fileRef    = useRef(null);
   const galleryRef = useRef(null);
 
@@ -767,7 +767,7 @@ function AddTourView({ editing, onDone, onCancel }) {
             {THEMES.map(th => (
               <button type="button" key={th.value} onClick={() => toggleTheme(th.value)}
                 className={selectedThemes.includes(th.value) ? tagOn : tagOff}>
-                {th.icon} {th.label}
+                {th[lang] || th.en}
               </button>
             ))}
             {selectedThemes.filter(v => !THEMES.find(th => th.value === v)).map(v => (
@@ -792,7 +792,7 @@ function AddTourView({ editing, onDone, onCancel }) {
             {PURPOSES.map(pu => (
               <button type="button" key={pu.value} onClick={() => togglePurpose(pu.value)}
                 className={selectedPurposes.includes(pu.value) ? tagOn : tagOff}>
-                {pu.icon} {pu.label}
+                {pu[lang] || pu.en}
               </button>
             ))}
             {selectedPurposes.filter(v => !PURPOSES.find(pu => pu.value === v)).map(v => (
