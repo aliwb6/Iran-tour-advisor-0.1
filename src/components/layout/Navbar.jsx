@@ -5,7 +5,7 @@ import { useAuth } from '@/lib/AuthContext';
 import LanguageSwitcher from './LanguageSwitcher';
 import ThemeToggle from './ThemeToggle';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, Compass, ArrowRight, LogOut, LayoutDashboard } from 'lucide-react';
+import { Menu, X, Compass, ArrowRight, LogOut, LayoutDashboard, Shield } from 'lucide-react';
 
 export default function Navbar() {
   const { t, dir } = useI18n();
@@ -139,6 +139,20 @@ export default function Navbar() {
                       <LayoutDashboard className="w-3.5 h-3.5" />
                       {dir === 'rtl' ? 'داشبورد' : 'Dashboard'}
                     </Link>
+                    {/* Admin Panel link */}
+                    {profile?.is_admin && (
+                      <Link
+                        to="/admin"
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-body font-medium transition-all ${
+                          isLight
+                            ? 'bg-white/10 text-white hover:bg-white/20'
+                            : 'bg-muted/60 text-foreground hover:bg-muted'
+                        }`}
+                      >
+                        <Shield className="w-3.5 h-3.5" />
+                        {dir === 'rtl' ? 'پنل ادمین' : 'Admin'}
+                      </Link>
+                    )}
                     {/* Logout */}
                     <button
                       onClick={() => logout()}
@@ -263,6 +277,15 @@ export default function Navbar() {
                       <LayoutDashboard className="w-3.5 h-3.5" />
                       {dir === 'rtl' ? 'داشبورد' : 'Dashboard'}
                     </Link>
+                    {profile?.is_admin && (
+                      <Link
+                        to="/admin"
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border/50 font-body text-xs font-medium text-foreground hover:bg-muted/50 transition"
+                      >
+                        <Shield className="w-3.5 h-3.5" />
+                        {dir === 'rtl' ? 'ادمین' : 'Admin'}
+                      </Link>
+                    )}
                     <button
                       onClick={() => logout()}
                       className="w-8 h-8 rounded-lg border border-border/50 flex items-center justify-center text-muted-foreground hover:text-destructive transition"

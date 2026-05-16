@@ -19,6 +19,7 @@ import Tours from '@/pages/Tours';
 import TourDetails from '@/pages/TourDetails';
 import PackageDetails from '@/pages/PackageDetails';
 import AdminTourForm from '@/pages/AdminTourForm';
+import AdminPanel from '@/pages/AdminPanel';
 import Guides from '@/pages/Guides';
 import GuideDetails from '@/pages/GuideDetails';
 import AIAssistant from '@/pages/AIAssistant';
@@ -66,6 +67,7 @@ const AuthenticatedApp = () => {
         </Route>
       <Route path="/ai-assistant" element={<AIAssistant />} />
       <Route path="/admin/new-tour" element={<AdminTourForm />} />
+      <Route path="/admin" element={<AdminPanel />} />
       <Route path="/guide-onboarding" element={<GuideOnboarding />} />
       <Route path="/register" element={<Register />} />
       <Route path="/login" element={<Login />} />

@@ -478,14 +478,21 @@ function MyToursView({ tours, onEdit, onDelete }) {
                   </div>
                 )}
                 {/* Status badge */}
-                <div className={`absolute top-2.5 end-2.5 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold backdrop-blur-sm ${
-                  tour.status === 'published'
-                    ? 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-300'
-                    : 'bg-yellow-500/20 border border-yellow-500/30 text-yellow-300'
-                }`}>
-                  <span className={`w-1.5 h-1.5 rounded-full ${tour.status === 'published' ? 'bg-emerald-400' : 'bg-yellow-400'}`} />
-                  {tour.status === 'published' ? t('dashboard_published') : t('dashboard_draft')}
-                </div>
+                {(() => {
+                  const STATUS_CFG = {
+                    published:      { label: t('dashboard_published'), dot: 'bg-emerald-400', wrap: 'bg-emerald-500/20 border-emerald-500/30 text-emerald-300' },
+                    pending_review: { label: lang === 'fa' ? 'در انتظار تایید' : 'Pending Review', dot: 'bg-yellow-400', wrap: 'bg-yellow-500/20 border-yellow-500/30 text-yellow-300' },
+                    draft:          { label: t('dashboard_draft'), dot: 'bg-gray-400',    wrap: 'bg-gray-500/20   border-gray-500/30   text-gray-300'   },
+                    rejected:       { label: lang === 'fa' ? 'رد شده' : 'Rejected',        dot: 'bg-red-400',     wrap: 'bg-red-500/20    border-red-500/30    text-red-300'    },
+                  };
+                  const cfg = STATUS_CFG[tour.status] || STATUS_CFG.draft;
+                  return (
+                    <div className={`absolute top-2.5 end-2.5 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold backdrop-blur-sm border ${cfg.wrap}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
+                      {cfg.label}
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Info */}
@@ -665,7 +672,7 @@ function AddTourView({ editing, onDone, onCancel }) {
       } else {
         const { data: { user } } = await supabase.auth.getUser();
         const { data: created, error: err } = await supabase
-          .from('tours').insert({ ...payload, owner_id: user.id }).select().single();
+          .from('tours').insert({ ...payload, status: 'pending_review', owner_id: user.id }).select().single();
         if (err) throw err;
         setSuccess(true);
         setTimeout(() => {
@@ -914,7 +921,9 @@ function AddTourView({ editing, onDone, onCancel }) {
           <label className={labelClass}>Status</label>
           <select name="status" value={form.status} onChange={handleChange} className={`${inputClass} w-48 appearance-none cursor-pointer`}>
             <option value="draft">Draft</option>
+            <option value="pending_review">Pending Review</option>
             <option value="published">Published</option>
+            <option value="rejected">Rejected</option>
           </select>
         </div>
 
