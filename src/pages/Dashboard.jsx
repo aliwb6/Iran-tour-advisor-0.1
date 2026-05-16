@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { supabase } from '@/supabaseClient';
 import { useI18n } from '@/lib/i18n.jsx';
@@ -38,27 +38,27 @@ const NAV = [
   { id: 'settings',   label: 'Settings',         Icon: Settings },
 ];
 
-const PURPOSES = [
-  { value: '', label: '— Select purpose —' },
-  { value: 'architecture', label: 'Architecture' },
-  { value: 'history',      label: 'History' },
-  { value: 'culture',      label: 'Culture' },
-  { value: 'photography',  label: 'Photography' },
-  { value: 'food',         label: 'Food & Cuisine' },
-  { value: 'nature',       label: 'Nature' },
-  { value: 'desert',       label: 'Desert Safari' },
-  { value: 'luxury',       label: 'Luxury' },
-  { value: 'research',     label: 'Research' },
+const THEMES = [
+  { value: 'nature',   icon: '🌿', label: 'طبیعت‌گردی و حیات وحش' },
+  { value: 'cultural', icon: '🏛️', label: 'فرهنگی و تاریخی' },
+  { value: 'coastal',  icon: '🏖️', label: 'ساحلی و دریایی' },
+  { value: 'urban',    icon: '🏙️', label: 'شهری و مدرن' },
+  { value: 'rural',    icon: '🏡', label: 'روستایی و بوم‌گردی' },
+  { value: 'luxury',   icon: '👑', label: 'لاکچری و VIP' },
+  { value: 'budget',   icon: '🎒', label: 'اقتصادی و کوله‌گردی' },
 ];
 
-const THEMES = [
-  { value: '', label: '— Select theme —' },
-  { value: 'cultural',   label: 'Cultural' },
-  { value: 'adventure',  label: 'Adventure' },
-  { value: 'luxury',     label: 'Luxury' },
-  { value: 'budget',     label: 'Budget' },
-  { value: 'family',     label: 'Family' },
-  { value: 'solo',       label: 'Solo' },
+const PURPOSES = [
+  { value: 'leisure',     icon: '🌅', label: 'تفریحی و استراحت' },
+  { value: 'adventure',   icon: '🧗', label: 'ماجراجویی و هیجان' },
+  { value: 'religious',   icon: '🕌', label: 'زیارتی و مذهبی' },
+  { value: 'educational', icon: '📚', label: 'آموزشی و پژوهشی' },
+  { value: 'medical',     icon: '🏥', label: 'سلامت و درمانی' },
+  { value: 'business',    icon: '💼', label: 'تجاری و نمایشگاهی' },
+  { value: 'honeymoon',   icon: '💑', label: 'ماه عسل' },
+  { value: 'sports',      icon: '⚽', label: 'ورزشی' },
+  { value: 'photography', icon: '📸', label: 'عکاسی' },
+  { value: 'architecture',icon: '🏰', label: 'معماری' },
 ];
 
 const EMPTY_TOUR = {
@@ -535,6 +535,9 @@ function MyToursView({ tours, onEdit, onDelete }) {
 
 function AddTourView({ editing, onDone, onCancel }) {
   const { t } = useI18n();
+  const fileRef    = useRef(null);
+  const galleryRef = useRef(null);
+
   const [form, setForm] = useState(() => {
     if (!editing) return EMPTY_TOUR;
     return {
@@ -546,20 +549,38 @@ function AddTourView({ editing, onDone, onCancel }) {
       location:    editing.location || '',
       city:        editing.city || '',
       cities:      Array.isArray(editing.cities) ? editing.cities.join(', ') : (editing.cities || ''),
-      purpose:     editing.purpose || '',
-      theme:       editing.theme || '',
       highlights:  Array.isArray(editing.highlights) ? editing.highlights.join('\n') : (editing.highlights || ''),
       itinerary:   editing.itinerary || '',
       included:    Array.isArray(editing.included) ? editing.included.join('\n') : (editing.included || ''),
       excluded:    Array.isArray(editing.excluded) ? editing.excluded.join('\n') : (editing.excluded || ''),
-      image_url:   editing.image_url || '',
-      gallery:     Array.isArray(editing.gallery) ? editing.gallery.join(', ') : (editing.gallery || ''),
       status:      editing.status || 'draft',
     };
   });
-  const [saving, setSaving] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState('');
+
+  const [selectedThemes, setSelectedThemes] = useState(() => {
+    if (!editing) return [];
+    if (Array.isArray(editing.theme)) return editing.theme;
+    return editing.theme ? [editing.theme] : [];
+  });
+  const [selectedPurposes, setSelectedPurposes] = useState(() => {
+    if (!editing) return [];
+    if (Array.isArray(editing.purpose)) return editing.purpose;
+    return editing.purpose ? [editing.purpose] : [];
+  });
+
+  const [imageUrl,     setImageUrl]     = useState(editing?.image_url || '');
+  const [galleryUrls,  setGalleryUrls]  = useState(() => {
+    if (!editing) return [];
+    if (Array.isArray(editing.gallery)) return editing.gallery;
+    return editing.gallery ? editing.gallery.split(',').map(s => s.trim()).filter(Boolean) : [];
+  });
+  const [uploadingMain,    setUploadingMain]    = useState(false);
+  const [uploadingGallery, setUploadingGallery] = useState(false);
+  const [saving,   setSaving]   = useState(false);
+  const [success,  setSuccess]  = useState(false);
+  const [error,    setError]    = useState('');
+  const [customTheme,   setCustomTheme]   = useState('');
+  const [customPurpose, setCustomPurpose] = useState('');
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -570,6 +591,45 @@ function AddTourView({ editing, onDone, onCancel }) {
       }
       return updated;
     });
+  };
+
+  const toggleTheme   = (v) => setSelectedThemes(p => p.includes(v) ? p.filter(x => x !== v) : [...p, v]);
+  const togglePurpose = (v) => setSelectedPurposes(p => p.includes(v) ? p.filter(x => x !== v) : [...p, v]);
+
+  const addCustomTheme = () => {
+    const v = customTheme.trim();
+    if (v) { setSelectedThemes(p => p.includes(v) ? p : [...p, v]); setCustomTheme(''); }
+  };
+  const addCustomPurpose = () => {
+    const v = customPurpose.trim();
+    if (v) { setSelectedPurposes(p => p.includes(v) ? p : [...p, v]); setCustomPurpose(''); }
+  };
+
+  const uploadFile = async (file) => {
+    const fileName = `${Date.now()}-${file.name.replace(/\s/g, '-')}`;
+    const { error: uploadErr } = await supabase.storage.from('tour-images').upload(fileName, file);
+    if (uploadErr) throw uploadErr;
+    const { data } = supabase.storage.from('tour-images').getPublicUrl(fileName);
+    return data.publicUrl;
+  };
+
+  const handleImageUpload = async (file) => {
+    if (!file) return;
+    setUploadingMain(true);
+    try { setImageUrl(await uploadFile(file)); }
+    catch (err) { setError(err.message); }
+    finally { setUploadingMain(false); }
+  };
+
+  const handleGalleryUpload = async (files) => {
+    const arr = Array.from(files).slice(0, 10 - galleryUrls.length);
+    if (!arr.length) return;
+    setUploadingGallery(true);
+    try {
+      const urls = await Promise.all(arr.map(uploadFile));
+      setGalleryUrls(prev => [...prev, ...urls.filter(Boolean)]);
+    } catch (err) { setError(err.message); }
+    finally { setUploadingGallery(false); }
   };
 
   const handleSubmit = async (e) => {
@@ -586,14 +646,14 @@ function AddTourView({ editing, onDone, onCancel }) {
         location:    form.location,
         city:        form.city,
         cities:      form.cities.split(',').map(s => s.trim()).filter(Boolean),
-        purpose:     form.purpose,
-        theme:       form.theme,
+        theme:       selectedThemes,
+        purpose:     selectedPurposes,
         highlights:  form.highlights.split('\n').filter(Boolean),
         itinerary:   form.itinerary,
         included:    form.included.split('\n').filter(Boolean),
         excluded:    form.excluded.split('\n').filter(Boolean),
-        image_url:   form.image_url,
-        gallery:     form.gallery.split(',').map(s => s.trim()).filter(Boolean),
+        image_url:   imageUrl,
+        gallery:     galleryUrls,
         status:      form.status,
       };
 
@@ -608,7 +668,14 @@ function AddTourView({ editing, onDone, onCancel }) {
           .from('tours').insert({ ...payload, owner_id: user.id }).select().single();
         if (err) throw err;
         setSuccess(true);
-        setTimeout(() => { setSuccess(false); setForm(EMPTY_TOUR); }, 2000);
+        setTimeout(() => {
+          setSuccess(false);
+          setForm(EMPTY_TOUR);
+          setSelectedThemes([]);
+          setSelectedPurposes([]);
+          setImageUrl('');
+          setGalleryUrls([]);
+        }, 2000);
         onDone(created, true);
       }
     } catch (err) {
@@ -620,6 +687,9 @@ function AddTourView({ editing, onDone, onCancel }) {
 
   const inputClass = 'w-full px-3.5 py-2.5 rounded-xl border border-white/10 bg-white/[0.05] text-white text-sm placeholder:text-white/25 focus:outline-none focus:border-[hsl(178,85%,32%)] focus:ring-1 focus:ring-[hsl(178,85%,32%)]/50 transition';
   const labelClass = 'block text-white/50 text-xs mb-1.5 font-medium';
+  const tagBase    = 'rounded-full px-3 py-1.5 text-sm cursor-pointer flex items-center gap-1.5 border transition';
+  const tagOn      = `${tagBase} border-teal-400 bg-teal-400/20 text-white`;
+  const tagOff     = `${tagBase} border-white/20 text-white/70 hover:border-teal-400`;
 
   return (
     <div>
@@ -636,11 +706,8 @@ function AddTourView({ editing, onDone, onCancel }) {
       </div>
 
       {error && (
-        <div className="mb-5 p-3 rounded-xl bg-red-500/10 border border-red-500/25 text-red-400 text-sm">
-          {error}
-        </div>
+        <div className="mb-5 p-3 rounded-xl bg-red-500/10 border border-red-500/25 text-red-400 text-sm">{error}</div>
       )}
-
       {success && (
         <div className="mb-5 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-sm flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4 flex-shrink-0" /> Tour created successfully!
@@ -693,19 +760,53 @@ function AddTourView({ editing, onDone, onCancel }) {
           <input name="cities" value={form.cities} onChange={handleChange} className={inputClass} placeholder="Tehran, Isfahan, Shiraz" />
         </div>
 
-        {/* Purpose + Theme */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className={labelClass}>Purpose</label>
-            <select name="purpose" value={form.purpose} onChange={handleChange} className={`${inputClass} appearance-none cursor-pointer`}>
-              {PURPOSES.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
-            </select>
+        {/* Theme tag chips */}
+        <div>
+          <label className={labelClass}>Theme (select multiple)</label>
+          <div className="flex flex-wrap gap-2 mb-2">
+            {THEMES.map(th => (
+              <button type="button" key={th.value} onClick={() => toggleTheme(th.value)}
+                className={selectedThemes.includes(th.value) ? tagOn : tagOff}>
+                {th.icon} {th.label}
+              </button>
+            ))}
+            {selectedThemes.filter(v => !THEMES.find(th => th.value === v)).map(v => (
+              <button type="button" key={v} onClick={() => toggleTheme(v)} className={tagOn}>✏️ {v}</button>
+            ))}
           </div>
-          <div>
-            <label className={labelClass}>Theme</label>
-            <select name="theme" value={form.theme} onChange={handleChange} className={`${inputClass} appearance-none cursor-pointer`}>
-              {THEMES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-            </select>
+          <div className="flex gap-2">
+            <input type="text" value={customTheme} onChange={e => setCustomTheme(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addCustomTheme())}
+              className={inputClass} placeholder="+ Add custom theme..." />
+            <button type="button" onClick={addCustomTheme}
+              className="px-4 py-2.5 rounded-xl border border-white/20 text-white/70 text-sm hover:border-teal-400 hover:text-white transition whitespace-nowrap">
+              Add
+            </button>
+          </div>
+        </div>
+
+        {/* Purpose tag chips */}
+        <div>
+          <label className={labelClass}>Purpose (select multiple)</label>
+          <div className="flex flex-wrap gap-2 mb-2">
+            {PURPOSES.map(pu => (
+              <button type="button" key={pu.value} onClick={() => togglePurpose(pu.value)}
+                className={selectedPurposes.includes(pu.value) ? tagOn : tagOff}>
+                {pu.icon} {pu.label}
+              </button>
+            ))}
+            {selectedPurposes.filter(v => !PURPOSES.find(pu => pu.value === v)).map(v => (
+              <button type="button" key={v} onClick={() => togglePurpose(v)} className={tagOn}>✏️ {v}</button>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <input type="text" value={customPurpose} onChange={e => setCustomPurpose(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addCustomPurpose())}
+              className={inputClass} placeholder="+ Add custom purpose..." />
+            <button type="button" onClick={addCustomPurpose}
+              className="px-4 py-2.5 rounded-xl border border-white/20 text-white/70 text-sm hover:border-teal-400 hover:text-white transition whitespace-nowrap">
+              Add
+            </button>
           </div>
         </div>
 
@@ -724,23 +825,88 @@ function AddTourView({ editing, onDone, onCancel }) {
         {/* Included / Excluded */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className={labelClass}>What's Included (one per line)</label>
+            <label className={labelClass}>What&#39;s Included (one per line)</label>
             <textarea name="included" value={form.included} onChange={handleChange} rows={4} className={`${inputClass} resize-none`} placeholder={"Hotel accommodation\nBreakfast daily\nPrivate transport"} />
           </div>
           <div>
-            <label className={labelClass}>What's Not Included (one per line)</label>
+            <label className={labelClass}>What&#39;s Not Included (one per line)</label>
             <textarea name="excluded" value={form.excluded} onChange={handleChange} rows={4} className={`${inputClass} resize-none`} placeholder={"International flights\nTravel insurance\nLunch and dinner"} />
           </div>
         </div>
 
-        {/* Images */}
+        {/* Main Image drag-and-drop upload */}
         <div>
-          <label className={labelClass}>Main Image URL</label>
-          <input name="image_url" value={form.image_url} onChange={handleChange} className={inputClass} placeholder="https://..." />
+          <label className={labelClass}>Main Image</label>
+          <div
+            onDrop={e => { e.preventDefault(); handleImageUpload(e.dataTransfer.files[0]); }}
+            onDragOver={e => e.preventDefault()}
+            onClick={() => fileRef.current?.click()}
+            className="border-2 border-dashed border-white/20 rounded-xl p-8 text-center cursor-pointer hover:border-teal-400 transition-all"
+          >
+            {uploadingMain ? (
+              <div className="flex flex-col items-center gap-2 text-white/50">
+                <Loader2 className="w-6 h-6 animate-spin" />
+                <p className="text-sm">Uploading...</p>
+              </div>
+            ) : imageUrl ? (
+              <div className="relative" onClick={e => e.stopPropagation()}>
+                <img src={imageUrl} className="w-full h-48 object-cover rounded-lg" alt="main" />
+                <button type="button" onClick={() => setImageUrl('')}
+                  className="absolute top-2 right-2 p-1.5 rounded-full bg-black/60 text-white hover:bg-red-500/80 transition">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-2 text-white/40">
+                <Upload className="w-8 h-8" />
+                <p className="text-sm">📷 Drop image here or click to browse</p>
+                <p className="text-xs">JPG, PNG, WEBP</p>
+              </div>
+            )}
+            <input ref={fileRef} type="file" accept="image/*" className="hidden"
+              onChange={e => handleImageUpload(e.target.files[0])} />
+          </div>
         </div>
+
+        {/* Gallery multi-image upload */}
         <div>
-          <label className={labelClass}>Gallery Images (comma separated URLs)</label>
-          <input name="gallery" value={form.gallery} onChange={handleChange} className={inputClass} placeholder="https://..., https://..." />
+          <label className={labelClass}>Gallery Images ({galleryUrls.length}/10)</label>
+          {galleryUrls.length > 0 && (
+            <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 mb-3">
+              {galleryUrls.map((url, i) => (
+                <div key={i} className="relative aspect-square rounded-xl overflow-hidden border border-white/10 group">
+                  <img src={url} alt={`g${i}`} className="w-full h-full object-cover" />
+                  <button type="button"
+                    onClick={() => setGalleryUrls(prev => prev.filter((_, idx) => idx !== i))}
+                    className="absolute top-1 right-1 p-1 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition hover:bg-red-500/80">
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          {galleryUrls.length < 10 && (
+            <div
+              onDrop={e => { e.preventDefault(); handleGalleryUpload(e.dataTransfer.files); }}
+              onDragOver={e => e.preventDefault()}
+              onClick={() => galleryRef.current?.click()}
+              className="border-2 border-dashed border-white/20 rounded-xl p-6 text-center cursor-pointer hover:border-teal-400 transition-all"
+            >
+              {uploadingGallery ? (
+                <div className="flex flex-col items-center gap-2 text-white/50">
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <p className="text-sm">Uploading...</p>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-2 text-white/40">
+                  <Upload className="w-6 h-6" />
+                  <p className="text-sm">Add up to {10 - galleryUrls.length} more images</p>
+                </div>
+              )}
+              <input ref={galleryRef} type="file" accept="image/*" multiple className="hidden"
+                onChange={e => handleGalleryUpload(e.target.files)} />
+            </div>
+          )}
         </div>
 
         {/* Status */}
@@ -754,11 +920,8 @@ function AddTourView({ editing, onDone, onCancel }) {
 
         {/* Submit */}
         <div className="flex justify-end pt-2">
-          <button
-            type="submit"
-            disabled={saving}
-            className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[hsl(178,85%,32%)] text-white font-semibold text-sm hover:bg-[hsl(178,85%,28%)] disabled:opacity-60 transition"
-          >
+          <button type="submit" disabled={saving}
+            className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[hsl(178,85%,32%)] text-white font-semibold text-sm hover:bg-[hsl(178,85%,28%)] disabled:opacity-60 transition">
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
             {saving ? t('dashboard_saving') : editing ? t('dashboard_update_tour') : t('dashboard_save_tour')}
           </button>
