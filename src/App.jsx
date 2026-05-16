@@ -8,6 +8,7 @@ import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import Signup from '@/pages/Signup';
 import Register from '@/pages/Register';
 import Login from '@/pages/Login';
+import Dashboard from '@/pages/Dashboard';
 import GuideOnboarding from '@/pages/GuideOnboarding';
 import { I18nProvider } from '@/lib/i18n.jsx';
 import { ThemeProvider } from '@/lib/ThemeContext.jsx';
@@ -68,6 +69,8 @@ const AuthenticatedApp = () => {
       <Route path="/guide-onboarding" element={<GuideOnboarding />} />
       <Route path="/register" element={<Register />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/dashboard/:section" element={<Dashboard />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
