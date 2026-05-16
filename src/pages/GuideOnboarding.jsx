@@ -18,7 +18,7 @@ const SPECIALTY_OPTIONS = [
 ];
 
 export default function GuideOnboarding() {
-  const { t, dir, lang } = useI18n();
+  const { dir, lang } = useI18n();
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({

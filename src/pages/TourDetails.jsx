@@ -297,7 +297,7 @@ export default function TourDetails() {
               {lang === 'fa' ? 'توراهای مرتبط' : lang === 'ar' ? 'جولات ذات صلة' : 'Related Tours'}
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {relatedTours.map((related, i) => (
+              {relatedTours.map((related) => (
                 <Link 
                   key={related.id} 
                   to={`/tours/${related.slug}`}

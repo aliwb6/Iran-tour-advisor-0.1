@@ -28,7 +28,7 @@ const CITY_IMAGE_MAP = {
 };
 
 export default function Destinations() {
-  const { t, dir, lang } = useI18n();
+  const { dir, lang } = useI18n();
   const navigate = useNavigate();
   const Arrow = dir === 'rtl' ? ArrowLeft : ArrowRight;
 

@@ -1,6 +1,6 @@
 import { useI18n } from '@/lib/i18n.jsx';
 import { motion } from 'framer-motion';
-import { MapPin, ArrowRight, ArrowLeft, Clock, Loader2 } from 'lucide-react';
+import { MapPin, Clock, Loader2 } from 'lucide-react';
 
 const SAMPLE_IMAGES = [
   "https://images.unsplash.com/photo-1564960723835-2898c9df9297?w=600&h=400&fit=crop",
@@ -34,8 +34,6 @@ const COMING_SOON_PACKAGES = [
 
 export default function PopularPackages() {
   const { t, dir, lang } = useI18n();
-  const Arrow = dir === 'rtl' ? ArrowLeft : ArrowRight;
-
   return (
     <section dir={dir} className="section-gap bg-sand/30">
       <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-10">
