@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useI18n } from '@/lib/i18n.jsx';
+import { useAuth } from '@/lib/AuthContext';
 import LanguageSwitcher from './LanguageSwitcher';
 import ThemeToggle from './ThemeToggle';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, Compass, ArrowRight } from 'lucide-react';
+import { Menu, X, Compass, ArrowRight, LogOut, LayoutDashboard } from 'lucide-react';
 
 export default function Navbar() {
   const { t, dir } = useI18n();
+  const { isAuthenticated, isLoadingAuth, user, profile, logout } = useAuth();
   const location = useLocation();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -30,6 +32,18 @@ export default function Navbar() {
 
   const isActive = (path) => location.pathname === path;
   const isHome = location.pathname === '/';
+  const isLight = !scrolled && isHome;
+
+  const fullName = profile?.full_name || user?.user_metadata?.full_name || '';
+  const initials = fullName
+    .split(' ')
+    .filter(Boolean)
+    .map(n => n[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase() || '?';
+  const role = profile?.role || user?.user_metadata?.role;
+  const dashboardPath = (role === 'guide' || role === 'agency') ? '/dashboard' : '/';
 
   return (
     <>
@@ -56,9 +70,9 @@ export default function Navbar() {
               </div>
               <div className="flex flex-col leading-none">
                 <span className={`font-heading text-base font-semibold tracking-wide transition-colors ${
-                  !scrolled && isHome ? 'text-white' : 'text-foreground'
+                  isLight ? 'text-white' : 'text-foreground'
                 }`}>Iran Tour Advisor</span>
-                <span className={`font-body text-[9px] uppercase tracking-[0.18em] text-gold/80`}>AI-Powered</span>
+                <span className="font-body text-[9px] uppercase tracking-[0.18em] text-gold/80">AI-Powered</span>
               </div>
             </Link>
 
@@ -71,7 +85,7 @@ export default function Navbar() {
                   className={`relative px-3.5 py-2 text-[13px] font-body font-medium rounded-lg transition-all duration-300 ${
                     isActive(link.path)
                       ? 'text-accent'
-                      : !scrolled && isHome
+                      : isLight
                         ? 'text-white/80 hover:text-white'
                         : 'text-muted-foreground hover:text-foreground'
                   }`}
@@ -93,20 +107,94 @@ export default function Navbar() {
                 <ThemeToggle />
                 <LanguageSwitcher />
               </div>
-<Link
-                  to="/ai-assistant"
-                  className={`hidden lg:inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-body font-semibold uppercase tracking-wider transition-all duration-300 ${
-                    !scrolled && isHome
-                      ? 'bg-white/15 text-white border border-white/30 hover:bg-white/25'
-                      : 'bg-accent text-white hover:bg-accent/90'
-                  }`}
-                >
+
+              {/* Auth buttons — desktop */}
+              {!isLoadingAuth && (
+                isAuthenticated ? (
+                  <div className="hidden lg:flex items-center gap-1.5">
+                    {/* Avatar + name */}
+                    <div className={`flex items-center gap-2 px-2.5 py-1.5 rounded-xl transition-colors ${
+                      isLight ? 'bg-white/10' : 'bg-muted/60'
+                    }`}>
+                      <div className="w-6 h-6 rounded-full bg-accent flex items-center justify-center flex-shrink-0">
+                        <span className="font-body text-[10px] font-bold text-white">{initials}</span>
+                      </div>
+                      {fullName && (
+                        <span className={`font-body text-xs font-medium max-w-[80px] truncate ${
+                          isLight ? 'text-white' : 'text-foreground'
+                        }`}>
+                          {fullName.split(' ')[0]}
+                        </span>
+                      )}
+                    </div>
+                    {/* Dashboard */}
+                    <Link
+                      to={dashboardPath}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-body font-medium transition-all ${
+                        isLight
+                          ? 'bg-white/10 text-white hover:bg-white/20'
+                          : 'bg-muted/60 text-foreground hover:bg-muted'
+                      }`}
+                    >
+                      <LayoutDashboard className="w-3.5 h-3.5" />
+                      {dir === 'rtl' ? 'داشبورد' : 'Dashboard'}
+                    </Link>
+                    {/* Logout */}
+                    <button
+                      onClick={() => logout()}
+                      className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${
+                        isLight
+                          ? 'text-white/70 hover:text-white hover:bg-white/10'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
+                      }`}
+                      title={dir === 'rtl' ? 'خروج' : 'Sign out'}
+                    >
+                      <LogOut className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="hidden lg:flex items-center gap-1.5">
+                    <Link
+                      to="/login"
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-body font-medium transition-all ${
+                        isLight
+                          ? 'text-white/80 hover:text-white hover:bg-white/10'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
+                      }`}
+                    >
+                      {dir === 'rtl' ? 'ورود' : 'Sign In'}
+                    </Link>
+                    <Link
+                      to="/register"
+                      className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-body font-semibold transition-all ${
+                        isLight
+                          ? 'bg-white/15 text-white border border-white/30 hover:bg-white/25'
+                          : 'bg-accent text-white hover:bg-accent/90'
+                      }`}
+                    >
+                      {dir === 'rtl' ? 'ثبت‌نام رایگان' : 'Join Free'}
+                    </Link>
+                  </div>
+                )
+              )}
+
+              {/* AI Assistant CTA — desktop only */}
+              <Link
+                to="/ai-assistant"
+                className={`hidden lg:inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-body font-semibold uppercase tracking-wider transition-all duration-300 ${
+                  isLight
+                    ? 'bg-white/15 text-white border border-white/30 hover:bg-white/25'
+                    : 'bg-accent text-white hover:bg-accent/90'
+                }`}
+              >
                 {t('hero_cta_custom')}
               </Link>
+
+              {/* Hamburger */}
               <button
                 onClick={() => setMobileOpen(!mobileOpen)}
                 className={`lg:hidden w-9 h-9 rounded-full flex items-center justify-center border transition-all ${
-                  !scrolled && isHome
+                  isLight
                     ? 'border-white/30 text-white bg-white/10'
                     : 'border-border/60 bg-background/60 text-foreground'
                 }`}
@@ -130,11 +218,10 @@ export default function Navbar() {
             transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
             className="fixed inset-0 z-40 bg-background/97 backdrop-blur-2xl lg:hidden overflow-y-auto"
           >
-            {/* Carpet border top */}
             <div className="absolute top-0 inset-x-0 h-0.5 carpet-border" />
 
             <div className="pt-20 pb-10 px-6">
-              {/* Links */}
+              {/* Nav links */}
               <div className="space-y-1 mb-8">
                 {[{ path: '/', label: t('nav_home') }, ...navLinks].map((link, i) => (
                   <motion.div
@@ -157,6 +244,50 @@ export default function Navbar() {
                   </motion.div>
                 ))}
               </div>
+
+              {/* Mobile auth section */}
+              {!isLoadingAuth && (
+                isAuthenticated ? (
+                  <div className="flex items-center gap-3 mb-6 p-4 rounded-2xl bg-muted/50 border border-border/30">
+                    <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center flex-shrink-0">
+                      <span className="font-body text-sm font-bold text-white">{initials}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-body text-sm font-medium text-foreground truncate">{fullName || 'User'}</p>
+                      <p className="font-body text-xs text-muted-foreground capitalize">{role || 'traveler'}</p>
+                    </div>
+                    <Link
+                      to={dashboardPath}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-accent text-white font-body text-xs font-medium"
+                    >
+                      <LayoutDashboard className="w-3.5 h-3.5" />
+                      {dir === 'rtl' ? 'داشبورد' : 'Dashboard'}
+                    </Link>
+                    <button
+                      onClick={() => logout()}
+                      className="w-8 h-8 rounded-lg border border-border/50 flex items-center justify-center text-muted-foreground hover:text-destructive transition"
+                      title={dir === 'rtl' ? 'خروج' : 'Sign out'}
+                    >
+                      <LogOut className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex gap-3 mb-6">
+                    <Link
+                      to="/login"
+                      className="flex-1 text-center py-3 rounded-xl border border-border/60 font-body text-sm font-medium text-foreground hover:bg-muted/50 transition"
+                    >
+                      {dir === 'rtl' ? 'ورود' : 'Sign In'}
+                    </Link>
+                    <Link
+                      to="/register"
+                      className="flex-1 text-center py-3 rounded-xl bg-accent font-body text-sm font-semibold text-white hover:bg-accent/90 transition"
+                    >
+                      {dir === 'rtl' ? 'ثبت‌نام رایگان' : 'Join Free'}
+                    </Link>
+                  </div>
+                )
+              )}
 
               {/* Mobile controls */}
               <div className="flex items-center gap-3 pt-2">
