@@ -185,42 +185,26 @@ export default function Navbar() {
                     </button>
                   </div>
                 ) : (
-                  <div className="hidden lg:flex items-center gap-1.5">
+                  <div className="hidden lg:flex items-center gap-2">
                     <Link
                       to="/login"
-                      className={`px-3.5 py-1.5 rounded-xl text-xs font-body font-medium transition-all ${
+                      className={`px-4 py-2 rounded-full text-xs font-body font-medium border transition-all ${
                         isLight
-                          ? 'text-white/80 hover:text-white hover:bg-white/10'
-                          : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
+                          ? 'border-white/40 text-white hover:bg-white/10'
+                          : 'border-border/60 text-foreground hover:bg-muted'
                       }`}
                     >
                       {dir === 'rtl' ? 'ورود' : 'Sign In'}
                     </Link>
                     <Link
-                      to="/register"
-                      className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-body font-semibold transition-all ${
-                        isLight
-                          ? 'bg-white/15 text-white border border-white/30 hover:bg-white/25'
-                          : 'bg-accent text-white hover:bg-accent/90'
-                      }`}
+                      to="/signup"
+                      className="px-4 py-2 rounded-full text-xs font-body font-semibold bg-accent text-white hover:bg-accent/90 transition-colors"
                     >
-                      {dir === 'rtl' ? 'ثبت‌نام رایگان' : 'Join Free'}
+                      {dir === 'rtl' ? 'ثبت‌نام' : 'Sign Up'}
                     </Link>
                   </div>
                 )
               )}
-
-              {/* AI Assistant CTA — desktop only */}
-              <Link
-                to="/ai-assistant"
-                className={`hidden lg:inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-body font-semibold uppercase tracking-wider transition-all duration-300 ${
-                  isLight
-                    ? 'bg-white/15 text-white border border-white/30 hover:bg-white/25'
-                    : 'bg-accent text-white hover:bg-accent/90'
-                }`}
-              >
-                {t('hero_cta_custom')}
-              </Link>
 
               {/* Hamburger */}
               <button
@@ -332,10 +316,10 @@ export default function Navbar() {
                       {dir === 'rtl' ? 'ورود' : 'Sign In'}
                     </Link>
                     <Link
-                      to="/register"
+                      to="/signup"
                       className="flex-1 text-center py-3 rounded-xl bg-accent font-body text-sm font-semibold text-white hover:bg-accent/90 transition"
                     >
-                      {dir === 'rtl' ? 'ثبت‌نام رایگان' : 'Join Free'}
+                      {dir === 'rtl' ? 'ثبت‌نام' : 'Sign Up'}
                     </Link>
                   </div>
                 )
@@ -345,12 +329,6 @@ export default function Navbar() {
               <div className="flex items-center gap-3 pt-2">
                 <ThemeToggle />
                 <LanguageSwitcher />
-                <Link
-                  to="/ai-assistant"
-                  className="ms-auto inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-accent text-white text-sm font-body font-medium"
-                >
-                  {t('hero_cta_ai')}
-                </Link>
               </div>
             </div>
           </motion.div>

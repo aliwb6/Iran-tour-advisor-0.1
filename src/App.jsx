@@ -54,6 +54,7 @@ const AuthenticatedApp = () => {
       <Route path="/ai-assistant" element={<AIAssistant />} />
       <Route path="/signup" element={<Signup />} />
       <Route path="/login" element={<Signup />} />
+      <Route path="/register" element={<Signup />} />
       <Route path="/admin/new-tour" element={<AdminTourForm />} />
       <Route path="/guide-onboarding" element={<GuideOnboarding />} />
       <Route path="*" element={<PageNotFound />} />

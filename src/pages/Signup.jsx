@@ -34,6 +34,7 @@ export default function Signup() {
     setMode(newMode);
     setError('');
     setSuccess('');
+    navigate(newMode === 'login' ? '/login' : '/signup');
   };
 
   const handleLogin = async (e) => {
