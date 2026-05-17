@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
 import { supabase } from '@/supabaseClient';
 import { useI18n } from '@/lib/i18n.jsx';
 import { motion } from 'framer-motion';
@@ -45,11 +44,12 @@ export default function GuideOnboarding() {
 
     setLoading(true);
     try {
-      const user = await base44.auth.me();
-      if (!user?.id) throw new Error('User not found');
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user?.id) throw new Error('User not authenticated. Please log in.');
+      const userId = session.user.id;
 
       const { error: supabaseError } = await supabase.from('profiles').insert({
-        id: user.id,
+        id: userId,
         full_name: formData.full_name,
         bio: formData.bio,
         city: formData.city,

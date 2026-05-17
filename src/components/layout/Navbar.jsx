@@ -5,7 +5,7 @@ import { useAuth } from '@/lib/AuthContext';
 import LanguageSwitcher from './LanguageSwitcher';
 import ThemeToggle from './ThemeToggle';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, Compass, ArrowRight, LogOut, LayoutDashboard, Shield } from 'lucide-react';
+import { Menu, X, Compass, ArrowRight, LogOut, LayoutDashboard, Shield, User } from 'lucide-react';
 
 export default function Navbar() {
   const { t, dir } = useI18n();
@@ -43,7 +43,9 @@ export default function Navbar() {
     .slice(0, 2)
     .toUpperCase() || '?';
   const role = profile?.role || user?.user_metadata?.role;
-  const dashboardPath = (role === 'guide' || role === 'agency') ? '/dashboard' : '/';
+  const isAdmin = profile?.role === 'admin';
+  const isGuideOrAgency = role === 'guide' || role === 'agency';
+  const isTourist = role === 'tourist';
 
   return (
     <>
@@ -127,22 +129,10 @@ export default function Navbar() {
                         </span>
                       )}
                     </div>
-                    {/* Dashboard */}
-                    <Link
-                      to={dashboardPath}
-                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-body font-medium transition-all ${
-                        isLight
-                          ? 'bg-white/10 text-white hover:bg-white/20'
-                          : 'bg-muted/60 text-foreground hover:bg-muted'
-                      }`}
-                    >
-                      <LayoutDashboard className="w-3.5 h-3.5" />
-                      {dir === 'rtl' ? 'داشبورد' : 'Dashboard'}
-                    </Link>
-                    {/* Admin Panel link */}
-                    {profile?.is_admin && (
+                    {/* Admin Panel — admin only */}
+                    {isAdmin && (
                       <Link
-                        to="/admin"
+                        to="/admin/new-tour"
                         className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-body font-medium transition-all ${
                           isLight
                             ? 'bg-white/10 text-white hover:bg-white/20'
@@ -150,7 +140,35 @@ export default function Navbar() {
                         }`}
                       >
                         <Shield className="w-3.5 h-3.5" />
-                        {dir === 'rtl' ? 'پنل ادمین' : 'Admin'}
+                        {dir === 'rtl' ? 'پنل ادمین' : 'Admin Panel'}
+                      </Link>
+                    )}
+                    {/* Dashboard — guide/agency only */}
+                    {isGuideOrAgency && (
+                      <Link
+                        to="/dashboard"
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-body font-medium transition-all ${
+                          isLight
+                            ? 'bg-white/10 text-white hover:bg-white/20'
+                            : 'bg-muted/60 text-foreground hover:bg-muted'
+                        }`}
+                      >
+                        <LayoutDashboard className="w-3.5 h-3.5" />
+                        {dir === 'rtl' ? 'داشبورد' : 'Dashboard'}
+                      </Link>
+                    )}
+                    {/* Profile — tourist only */}
+                    {isTourist && (
+                      <Link
+                        to="/profile"
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-body font-medium transition-all ${
+                          isLight
+                            ? 'bg-white/10 text-white hover:bg-white/20'
+                            : 'bg-muted/60 text-foreground hover:bg-muted'
+                        }`}
+                      >
+                        <User className="w-3.5 h-3.5" />
+                        {dir === 'rtl' ? 'پروفایل' : 'Profile'}
                       </Link>
                     )}
                     {/* Logout */}
@@ -270,20 +288,31 @@ export default function Navbar() {
                       <p className="font-body text-sm font-medium text-foreground truncate">{fullName || 'User'}</p>
                       <p className="font-body text-xs text-muted-foreground capitalize">{role || 'traveler'}</p>
                     </div>
-                    <Link
-                      to={dashboardPath}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-accent text-white font-body text-xs font-medium"
-                    >
-                      <LayoutDashboard className="w-3.5 h-3.5" />
-                      {dir === 'rtl' ? 'داشبورد' : 'Dashboard'}
-                    </Link>
-                    {profile?.is_admin && (
+                    {isAdmin && (
                       <Link
-                        to="/admin"
+                        to="/admin/new-tour"
                         className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border/50 font-body text-xs font-medium text-foreground hover:bg-muted/50 transition"
                       >
                         <Shield className="w-3.5 h-3.5" />
-                        {dir === 'rtl' ? 'ادمین' : 'Admin'}
+                        {dir === 'rtl' ? 'پنل ادمین' : 'Admin Panel'}
+                      </Link>
+                    )}
+                    {isGuideOrAgency && (
+                      <Link
+                        to="/dashboard"
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-accent text-white font-body text-xs font-medium"
+                      >
+                        <LayoutDashboard className="w-3.5 h-3.5" />
+                        {dir === 'rtl' ? 'داشبورد' : 'Dashboard'}
+                      </Link>
+                    )}
+                    {isTourist && (
+                      <Link
+                        to="/profile"
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-accent text-white font-body text-xs font-medium"
+                      >
+                        <User className="w-3.5 h-3.5" />
+                        {dir === 'rtl' ? 'پروفایل' : 'Profile'}
                       </Link>
                     )}
                     <button

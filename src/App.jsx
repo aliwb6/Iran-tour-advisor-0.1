@@ -4,11 +4,7 @@ import { queryClientInstance } from '@/lib/query-client'
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
-import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import Signup from '@/pages/Signup';
-import Register from '@/pages/Register';
-import Login from '@/pages/Login';
-import Dashboard from '@/pages/Dashboard';
 import GuideOnboarding from '@/pages/GuideOnboarding';
 import { I18nProvider } from '@/lib/i18n.jsx';
 import { ThemeProvider } from '@/lib/ThemeContext.jsx';
@@ -19,7 +15,6 @@ import Tours from '@/pages/Tours';
 import TourDetails from '@/pages/TourDetails';
 import PackageDetails from '@/pages/PackageDetails';
 import AdminTourForm from '@/pages/AdminTourForm';
-import AdminPanel from '@/pages/AdminPanel';
 import Guides from '@/pages/Guides';
 import GuideDetails from '@/pages/GuideDetails';
 import AIAssistant from '@/pages/AIAssistant';
@@ -28,9 +23,9 @@ import Blog from '@/pages/Blog';
 import ArticleDetails from '@/pages/ArticleDetails';
 
 const AuthenticatedApp = () => {
-  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
+  const { isLoadingAuth } = useAuth();
 
-  if (isLoadingPublicSettings || isLoadingAuth) {
+  if (isLoadingAuth) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
@@ -43,36 +38,23 @@ const AuthenticatedApp = () => {
     );
   }
 
-  if (authError) {
-    if (authError.type === 'user_not_registered') {
-      return <Signup />;
-    } else if (authError.type === 'auth_required') {
-      navigateToLogin();
-      return null;
-    }
-  }
-
   return (
     <Routes>
-<Route element={<Layout />}>
-          <Route path="/" element={<Home />} />
-          <Route path="/tours" element={<Tours />} />
-          <Route path="/tours/:slug" element={<TourDetails />} />
-          <Route path="/package/:id" element={<PackageDetails />} />
-          <Route path="/guides" element={<Guides />} />
-          <Route path="/guides/:slug" element={<GuideDetails />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/blog" element={<Blog />} />
-          <Route path="/blog/:slug" element={<ArticleDetails />} />
-        </Route>
+      <Route element={<Layout />}>
+        <Route path="/" element={<Home />} />
+        <Route path="/tours" element={<Tours />} />
+        <Route path="/tours/:slug" element={<TourDetails />} />
+        <Route path="/package/:id" element={<PackageDetails />} />
+        <Route path="/guides" element={<Guides />} />
+        <Route path="/guides/:slug" element={<GuideDetails />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/blog" element={<Blog />} />
+        <Route path="/blog/:slug" element={<ArticleDetails />} />
+      </Route>
       <Route path="/ai-assistant" element={<AIAssistant />} />
+      <Route path="/signup" element={<Signup />} />
       <Route path="/admin/new-tour" element={<AdminTourForm />} />
-      <Route path="/admin" element={<AdminPanel />} />
       <Route path="/guide-onboarding" element={<GuideOnboarding />} />
-      <Route path="/register" element={<Register />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/dashboard" element={<Dashboard />} />
-      <Route path="/dashboard/:section" element={<Dashboard />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
