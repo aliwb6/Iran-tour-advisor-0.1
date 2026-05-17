@@ -53,7 +53,12 @@ export default function Login() {
       const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
       if (signInError) throw signInError;
 
-      const role = data.user?.user_metadata?.role;
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', data.user.id)
+        .single();
+      const role = profileData?.role ?? data.user?.user_metadata?.role;
       if (role === 'guide' || role === 'agency') navigate('/dashboard');
       else navigate('/');
     } catch (err) {

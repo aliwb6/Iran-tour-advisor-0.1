@@ -5,6 +5,7 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import Signup from '@/pages/Signup';
+import Login from '@/pages/Login';
 import GuideOnboarding from '@/pages/GuideOnboarding';
 import { I18nProvider } from '@/lib/i18n.jsx';
 import { ThemeProvider } from '@/lib/ThemeContext.jsx';
@@ -54,11 +55,12 @@ const AuthenticatedApp = () => {
       </Route>
       <Route path="/ai-assistant" element={<AIAssistant />} />
       <Route path="/signup" element={<Signup />} />
-      <Route path="/login" element={<Signup />} />
+      <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Signup />} />
       <Route path="/admin/new-tour" element={<AdminTourForm />} />
       <Route path="/guide-onboarding" element={<GuideOnboarding />} />
       <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/dashboard/:section" element={<Dashboard />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
