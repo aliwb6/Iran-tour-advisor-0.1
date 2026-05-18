@@ -15,7 +15,6 @@ import Home from '@/pages/Home';
 import Tours from '@/pages/Tours';
 import TourDetails from '@/pages/TourDetails';
 import PackageDetails from '@/pages/PackageDetails';
-import AdminTourForm from '@/pages/AdminTourForm';
 import Dashboard from '@/pages/Dashboard';
 import AdminDashboard from '@/pages/AdminDashboard';
 import Guides from '@/pages/Guides';
@@ -59,7 +58,6 @@ const AuthenticatedApp = () => {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Signup />} />
       <Route path="/admin" element={<AdminDashboard />} />
-      <Route path="/admin/new-tour" element={<AdminTourForm />} />
       <Route path="/guide-onboarding" element={<GuideOnboarding />} />
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/dashboard/:section" element={<Dashboard />} />
