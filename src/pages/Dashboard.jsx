@@ -672,7 +672,7 @@ function AddTourView({ editing, onDone, onCancel }) {
       } else {
         const { data: { user } } = await supabase.auth.getUser();
         const { data: created, error: err } = await supabase
-          .from('tours').insert({ ...payload, status: 'pending_review', owner_id: user.id }).select().single();
+          .from('tours').insert({ ...payload, status: 'draft', owner_id: user.id }).select().single();
         if (err) throw err;
         setSuccess(true);
         setTimeout(() => {
