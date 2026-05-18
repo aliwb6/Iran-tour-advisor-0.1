@@ -453,7 +453,7 @@ function HomeView({ profile, tours, reviews, onNavigate }) {
 // ─── MyToursView ──────────────────────────────────────────────────────────────
 
 function MyToursView({ tours, onEdit, onDelete }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   return (
     <div>
       <div className="flex items-center justify-between mb-5">
