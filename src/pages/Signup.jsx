@@ -16,6 +16,7 @@ export default function Signup() {
     confirmPassword: '',
     full_name: '',
     role: 'tourist',
+    gender: '',
     city: '',
     bio: '',
   });
@@ -46,6 +47,11 @@ export default function Signup() {
       return;
     }
 
+    if (!formData.gender) {
+      setError(lang === 'fa' ? 'لطفاً جنسیت خود را انتخاب کنید' : 'Please select your gender');
+      return;
+    }
+
     setLoading(true);
     try {
       // ۱. ثبت‌نام در Supabase Auth
@@ -68,6 +74,7 @@ export default function Signup() {
             email: formData.email,
             full_name: formData.full_name,
             role: formData.role,
+            gender: formData.gender,
             city: formData.city || null,
             bio: formData.bio || null,
           });
@@ -223,6 +230,43 @@ export default function Signup() {
                     {lang === 'fa' ? fa : en}
                   </button>
                 ))}
+              </div>
+            </div>
+
+            {/* جنسیت */}
+            <div>
+              <label className="block font-body text-sm text-muted-foreground mb-2">
+                {lang === 'fa' ? 'جنسیت' : 'Gender'}
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { value: 'male', fa: 'آقا', en: 'Male', img: '/avatars/default-male.png' },
+                  { value: 'female', fa: 'خانم', en: 'Female', img: '/avatars/default-female.png' },
+                ].map(({ value, fa, en, img }) => {
+                  const selected = formData.gender === value;
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => handleChange('gender', value)}
+                      aria-pressed={selected}
+                      className={`flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all duration-200 ${
+                        selected
+                          ? 'border-accent bg-accent/10 shadow-sm scale-[1.02]'
+                          : 'border-border bg-background hover:border-accent/40 hover:bg-accent/5'
+                      }`}
+                    >
+                      <img
+                        src={img}
+                        alt={en}
+                        className={`w-16 h-16 rounded-full object-cover transition-opacity ${selected ? 'opacity-100' : 'opacity-80'}`}
+                      />
+                      <span className={`font-body text-sm font-semibold ${selected ? 'text-accent' : 'text-foreground'}`}>
+                        {lang === 'fa' ? fa : en}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 

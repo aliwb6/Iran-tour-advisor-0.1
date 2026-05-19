@@ -3,7 +3,9 @@ import { motion } from 'framer-motion';
 import { Search, Star, MessageCircle } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { guides } from '@/data/guides';
+import { useGuides } from '@/hooks/useSupabase';
+import { avatarFor } from '@/lib/avatar';
+import { useAuth } from '@/lib/AuthContext';
 
 const cityColors = ['bg-accent/10 text-accent', 'bg-gold/20 text-gold', 'bg-primary/10 text-primary'];
 
@@ -11,11 +13,27 @@ export default function Guides() {
   const { t, dir, lang } = useI18n();
   const [search, setSearch] = useState('');
   const navigate = useNavigate();
+  const { guides, loading, error } = useGuides();
+  const { isAuthenticated } = useAuth();
 
-  const filtered = guides.filter(g => {
-    const city = g.city[lang] || g.city.en;
-    return city.toLowerCase().includes(search.toLowerCase()) || g.name.toLowerCase().includes(search.toLowerCase());
+  const openChat = (guideId) => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+    navigate(`/chat/${guideId}`);
+  };
+
+  const filtered = guides.filter((g) => {
+    const name = (g.full_name || '').toLowerCase();
+    const city = (g.city || '').toLowerCase();
+    const q = search.toLowerCase();
+    return name.includes(q) || city.includes(q);
   });
+
+  const loadingText = lang === 'fa' ? 'در حال بارگذاری راهنماها...' : lang === 'ar' ? 'جار تحميل المرشدين...' : 'Loading guides...';
+  const errorText = lang === 'fa' ? 'بارگذاری راهنماها با خطا مواجه شد' : lang === 'ar' ? 'فشل تحميل المرشدين' : 'Failed to load guides';
+  const emptyText = lang === 'fa' ? 'راهنمایی یافت نشد' : lang === 'ar' ? 'لم يتم العثور على مرشدين' : 'No guides found';
 
   return (
     <div dir={dir} className="pt-24 pb-16">
@@ -46,59 +64,88 @@ export default function Guides() {
           </div>
         </motion.div>
 
-        {/* Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filtered.map((guide, i) => (
-            <motion.div
-              key={guide.id}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.05 }}
-              onClick={() => navigate(`/guides/${guide.slug}`)}
-              className="p-6 rounded-2xl border border-border/50 bg-card hover:shadow-lg hover:border-gold/30 transition-all duration-300 cursor-pointer"
-            >
-              {/* Avatar & Name */}
-              <div className="flex items-start gap-4 mb-4">
-                <img 
-                  src={guide.photo} 
-                  alt={guide.name}
-                  className="w-14 h-14 rounded-full border-2 border-gold object-cover shrink-0"
-                />
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-heading text-lg font-semibold text-foreground">{guide.name}</h3>
-                  <p className="font-body text-sm text-muted-foreground">{guide.city[lang] || guide.city.en}</p>
-                  <div className="flex items-center gap-1 mt-1">
-                    <Star className="w-3.5 h-3.5 fill-gold text-gold" />
-                    <span className="font-body text-sm font-medium text-foreground">{guide.rating}</span>
-                    <span className="font-body text-xs text-muted-foreground">({guide.reviews} {t('guides_reviews')})</span>
+        {/* States */}
+        {loading ? (
+          <p className="font-body text-muted-foreground text-center py-16">{loadingText}</p>
+        ) : error ? (
+          <div className="text-center py-16">
+            <p className="font-body text-destructive mb-2">{errorText}</p>
+            <p className="font-body text-xs text-muted-foreground">{error}</p>
+          </div>
+        ) : filtered.length === 0 ? (
+          <p className="font-body text-muted-foreground text-center py-16">{emptyText}</p>
+        ) : (
+          /* Grid */
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filtered.map((guide, i) => {
+              const specialties = Array.isArray(guide.specialties) ? guide.specialties : [];
+              return (
+                <motion.div
+                  key={guide.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.05 }}
+                  onClick={() => navigate(`/guides/${guide.id}`)}
+                  className="p-6 rounded-2xl border border-border/50 bg-card hover:shadow-lg hover:border-gold/30 transition-all duration-300 cursor-pointer"
+                >
+                  {/* Avatar & Name */}
+                  <div className="flex items-start gap-4 mb-4">
+                    <img
+                      src={avatarFor(guide)}
+                      alt={guide.full_name || ''}
+                      className="w-14 h-14 rounded-full border-2 border-gold object-cover shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-heading text-lg font-semibold text-foreground">{guide.full_name}</h3>
+                      {guide.city && (
+                        <p className="font-body text-sm text-muted-foreground">{guide.city}</p>
+                      )}
+                      {guide.rating != null && (
+                        <div className="flex items-center gap-1 mt-1">
+                          <Star className="w-3.5 h-3.5 fill-gold text-gold" />
+                          <span className="font-body text-sm font-medium text-foreground">{guide.rating}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </div>
 
-              {/* Bio */}
-              <p className="font-body text-sm text-foreground/70 leading-relaxed mb-4 line-clamp-3">
-                {guide.bio[lang] || guide.bio.en}
-              </p>
+                  {/* Bio */}
+                  {guide.bio && (
+                    <p className="font-body text-sm text-foreground/70 leading-relaxed mb-4 line-clamp-3">
+                      {guide.bio}
+                    </p>
+                  )}
 
-              {/* Specialties */}
-              <div className="mb-5">
-                <span className="font-body text-xs text-muted-foreground font-medium mb-2 block">{t('guides_specialties')}</span>
-                <div className="flex flex-wrap gap-1.5">
-                  {(guide.specialties[lang] || guide.specialties.en).map((s, j) => (
-                    <span key={j} className={`px-2.5 py-0.5 rounded-full text-xs font-body font-medium ${cityColors[j % cityColors.length]}`}>{s}</span>
-                  ))}
-                </div>
-              </div>
+                  {/* Specialties */}
+                  {specialties.length > 0 && (
+                    <div className="mb-5">
+                      <span className="font-body text-xs text-muted-foreground font-medium mb-2 block">{t('guides_specialties')}</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {specialties.map((s, j) => (
+                          <span key={j} className={`px-2.5 py-0.5 rounded-full text-xs font-body font-medium ${cityColors[j % cityColors.length]}`}>{s}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
-              {/* Connect */}
-              <button className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-accent/10 text-accent font-body text-sm font-medium hover:bg-accent hover:text-white transition-all duration-300">
-                <MessageCircle className="w-4 h-4" />
-                {t('guides_connect')}
-              </button>
-            </motion.div>
-          ))}
-        </div>
+                  {/* Connect */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openChat(guide.id);
+                    }}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-accent/10 text-accent font-body text-sm font-medium hover:bg-accent hover:text-white transition-all duration-300"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    {t('guides_connect')}
+                  </button>
+                </motion.div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

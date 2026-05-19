@@ -5,9 +5,11 @@ import { motion } from 'framer-motion';
 import {
   LayoutDashboard, Clock, Briefcase, Users, MessageSquare, Shield,
   Loader2, LogOut, CheckCircle2, XCircle, Edit2, Trash2, X, MapPin,
-  DollarSign, Star, AlertTriangle, Send, Image as ImageIcon, Package,
-  Search,
+  DollarSign, Star, AlertTriangle, Send, Image as ImageIcon,
+  Search, Sparkles, PlusCircle,
 } from 'lucide-react';
+import { avatarFor } from '@/lib/avatar';
+import TourForm from '@/components/dashboard/TourForm';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -15,6 +17,7 @@ const NAV = [
   { id: 'overview', label: 'Overview',       Icon: LayoutDashboard },
   { id: 'pending',  label: 'Pending Tours',  Icon: Clock },
   { id: 'tours',    label: 'All Tours',      Icon: Briefcase },
+  { id: 'platform', label: 'Platform Tours', Icon: Sparkles },
   { id: 'guides',   label: 'All Guides',     Icon: Users },
   { id: 'comments', label: 'Comments',       Icon: MessageSquare },
 ];
@@ -96,6 +99,7 @@ function Sidebar({ section, onNavigate, counts, profile, onLogout }) {
   const badgeFor = (id) => {
     if (id === 'pending')  return counts.pending;
     if (id === 'tours')    return counts.tours;
+    if (id === 'platform') return counts.platform;
     if (id === 'guides')   return counts.guides;
     if (id === 'comments') return counts.comments;
     return null;
@@ -266,6 +270,119 @@ function OverviewView({ tours, guides, reviews, loading }) {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// ─── Platform Tours ──────────────────────────────────────────────────────────
+
+function PlatformToursView({ tours, loading, busyId, onSaved, onDelete }) {
+  const [creating, setCreating] = useState(false);
+  const [editing, setEditing]   = useState(null);
+
+  if (loading) return <SectionLoader />;
+
+  if (creating || editing) {
+    return (
+      <div className="space-y-4">
+        <button
+          onClick={() => { setCreating(false); setEditing(null); }}
+          className="text-white/40 text-xs hover:text-white transition"
+        >
+          ← Back to Platform Tours
+        </button>
+        <TourForm
+          key={editing?.id || 'new'}
+          editing={editing}
+          isPlatform={true}
+          onDone={(saved, isNew) => {
+            onSaved(saved, isNew);
+            if (!isNew) { setEditing(null); }
+          }}
+          onCancel={() => { setCreating(false); setEditing(null); }}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-white font-bold text-lg">Platform Tours</h2>
+          <p className="text-white/40 text-xs mt-0.5">Tours owned and curated by the platform itself</p>
+        </div>
+        <button
+          onClick={() => setCreating(true)}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[hsl(178,85%,32%)] text-white text-sm font-semibold hover:bg-[hsl(178,85%,28%)] transition"
+        >
+          <PlusCircle className="w-4 h-4" />
+          Add Platform Tour
+        </button>
+      </div>
+
+      {tours.length === 0 ? (
+        <EmptyState
+          Icon={Sparkles}
+          title="No platform tours yet"
+          desc="Create your first curated platform tour — it will be auto-published and featured on the homepage."
+        />
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {tours.map(tour => {
+            const busy = busyId === tour.id;
+            return (
+              <div key={tour.id} className={`${CARD} overflow-hidden flex flex-col`}>
+                <div className="aspect-[16/9] bg-white/[0.04] relative overflow-hidden">
+                  {tour.image_url ? (
+                    <img src={tour.image_url} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <ImageIcon className="w-8 h-8 text-white/15" />
+                    </div>
+                  )}
+                  <div className="absolute top-2 start-2 flex items-center gap-1.5 px-2 py-1 rounded-full bg-[hsl(38,62%,52%)]/20 border border-[hsl(38,62%,52%)]/30 text-[hsl(38,62%,75%)] text-[10px] font-semibold">
+                    <Sparkles className="w-3 h-3" />
+                    Platform
+                  </div>
+                  <div className="absolute top-2 end-2">
+                    <StatusPill status={tour.status || 'published'} />
+                  </div>
+                </div>
+                <div className="p-4 flex-1 flex flex-col">
+                  <p className="text-white font-semibold text-sm truncate">{tour.title || 'Untitled'}</p>
+                  <p className="text-white/40 text-[11px] truncate mt-0.5">
+                    {tour.location || '—'}
+                    {tour.duration ? ` · ${tour.duration} days` : ''}
+                  </p>
+                  {tour.price != null && (
+                    <p className="text-[hsl(178,85%,55%)] text-xs font-semibold mt-2">
+                      ${Number(tour.price).toLocaleString()}
+                    </p>
+                  )}
+                  <div className="flex items-center gap-2 mt-3 pt-3 border-t border-white/[0.06]">
+                    <button
+                      disabled={busy}
+                      onClick={() => setEditing(tour)}
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-white/[0.06] text-white/70 text-xs font-medium hover:bg-white/[0.12] hover:text-white transition disabled:opacity-50"
+                    >
+                      <Edit2 className="w-3 h-3" />
+                      Edit
+                    </button>
+                    <button
+                      disabled={busy}
+                      onClick={() => onDelete(tour.id)}
+                      className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-red-500/10 text-red-400 text-xs font-medium hover:bg-red-500/20 transition disabled:opacity-50"
+                    >
+                      {busy ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -579,13 +696,7 @@ function GuidesView({ guides, loading, onToggleApproval, busyId }) {
               <div key={guide.id} className={`${CARD} p-4`}>
                 <div className="flex items-start gap-3 mb-4">
                   <div className="w-11 h-11 rounded-xl bg-[hsl(178,85%,32%)]/20 border border-[hsl(178,85%,32%)]/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                    {guide.avatar_url ? (
-                      <img src={guide.avatar_url} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="text-[hsl(178,85%,55%)] font-bold text-sm">
-                        {guide.full_name?.[0]?.toUpperCase() || '?'}
-                      </span>
-                    )}
+                    <img src={avatarFor(guide)} alt="" className="w-full h-full object-cover" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-white font-semibold text-sm truncate">{guide.full_name || 'Unnamed'}</p>
@@ -935,11 +1046,36 @@ export default function AdminDashboard() {
     navigate('/');
   };
 
+  const platformTours = tours.filter(t => t.is_platform_tour);
+
   const counts = {
     pending:  tours.filter(t => t.status === 'pending_review' || t.status === 'draft').length,
     tours:    tours.length,
+    platform: platformTours.length,
     guides:   guides.length,
     comments: reviews.length,
+  };
+
+  const handlePlatformTourSaved = (saved, isNew) => {
+    setTours(prev => {
+      if (isNew) return [saved, ...prev];
+      return prev.map(t => t.id === saved.id ? { ...t, ...saved, profiles: t.profiles } : t);
+    });
+  };
+
+  const handlePlatformTourDelete = async (id) => {
+    if (!window.confirm('Delete this platform tour? This cannot be undone.')) return;
+    setBusyId(id);
+    setError('');
+    try {
+      const { error: err } = await supabase.from('tours').delete().eq('id', id);
+      if (err) throw err;
+      setTours(prev => prev.filter(t => t.id !== id));
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusyId(null);
+    }
   };
 
   // ── Loading splash while auth verifies ──
@@ -986,6 +1122,16 @@ export default function AdminDashboard() {
             onApprove={(id) => changeTourStatus(id, 'published')}
             onReject={(id) => changeTourStatus(id, 'rejected')}
             onEdit={setEditingTour}
+          />
+        );
+      case 'platform':
+        return (
+          <PlatformToursView
+            tours={platformTours}
+            loading={loadingTours}
+            busyId={busyId}
+            onSaved={handlePlatformTourSaved}
+            onDelete={handlePlatformTourDelete}
           />
         );
       case 'guides':

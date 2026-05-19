@@ -132,7 +132,7 @@ export default function Navbar() {
                     {/* Admin Panel — admin only */}
                     {isAdmin && (
                       <Link
-                        to="/admin/new-tour"
+                        to="/admin"
                         className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-body font-medium transition-all ${
                           isLight
                             ? 'bg-white/10 text-white hover:bg-white/20'
@@ -274,7 +274,7 @@ export default function Navbar() {
                     </div>
                     {isAdmin && (
                       <Link
-                        to="/admin/new-tour"
+                        to="/admin"
                         className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border/50 font-body text-xs font-medium text-foreground hover:bg-muted/50 transition"
                       >
                         <Shield className="w-3.5 h-3.5" />

@@ -1,28 +1,51 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useI18n } from '@/lib/i18n.jsx';
 import { motion, AnimatePresence } from 'framer-motion';
 import TourFilters from '@/components/tours/TourFilters';
 import TourCard from '@/components/tours/TourCard';
-import { tours, TOUR_IMAGES } from '@/data/tours';
+import { useTours, FALLBACK_IMAGE } from '@/hooks/useSupabase';
 
 const DEFAULT_FILTERS = { purpose: 'all', theme: 'all', duration: 'all' };
+
+// TourCard expects multilingual objects ({ en, fa, ar }) for title/desc/cities/highlights.
+// Supabase stores flat strings, so we wrap them here without changing the TourCard UI.
+const toMultilangText = (val) => {
+  if (val && typeof val === 'object' && !Array.isArray(val)) return val;
+  const v = val ?? '';
+  return { en: v, fa: v, ar: v };
+};
+
+const toMultilangArray = (val) => {
+  if (val && typeof val === 'object' && !Array.isArray(val) && (val.en || val.fa || val.ar)) return val;
+  const arr = Array.isArray(val) ? val : [];
+  return { en: arr, fa: arr, ar: arr };
+};
+
+const normalizeTour = (tour) => ({
+  ...tour,
+  title: toMultilangText(tour.title),
+  desc: toMultilangText(tour.desc ?? tour.description),
+  cities: toMultilangText(tour.cities),
+  highlights: toMultilangArray(tour.highlights),
+  cityCount: tour.cityCount ?? tour.city_count ?? 0,
+  priceFrom: tour.priceFrom ?? tour.price_from ?? null,
+});
+
+const pickImage = (tour) => {
+  if (tour.cover_image) return tour.cover_image;
+  if (tour.image_url) return tour.image_url;
+  if (tour.image) return tour.image;
+  if (Array.isArray(tour.gallery) && tour.gallery[0]) return tour.gallery[0];
+  return FALLBACK_IMAGE;
+};
 
 export default function Tours() {
   const { t, dir, lang } = useI18n();
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  const { tours, loading, error } = useTours(filters);
 
-  const filtered = useMemo(() => {
-    return tours.filter(tour => {
-      if (filters.purpose !== 'all' && tour.purpose !== filters.purpose) return false;
-      if (filters.theme !== 'all' && tour.theme !== filters.theme) return false;
-      if (filters.duration !== 'all') {
-        if (filters.duration === 'short' && tour.duration > 7) return false;
-        if (filters.duration === 'medium' && (tour.duration < 8 || tour.duration > 11)) return false;
-        if (filters.duration === 'long' && tour.duration < 12) return false;
-      }
-      return true;
-    });
-  }, [filters]);
+  const loadingText = lang === 'fa' ? 'در حال بارگذاری تورها...' : lang === 'ar' ? 'جار تحميل الرحلات...' : 'Loading tours...';
+  const errorTitle = lang === 'fa' ? 'بارگذاری تورها با خطا مواجه شد' : lang === 'ar' ? 'فشل تحميل الرحلات' : 'Failed to load tours';
 
   return (
     <div dir={dir} className="pt-24 pb-20 min-h-screen">
@@ -64,54 +87,72 @@ export default function Tours() {
         </div>
 
         {/* Filters */}
-        <TourFilters filters={filters} onChange={setFilters} resultCount={filtered.length} />
+        <TourFilters filters={filters} onChange={setFilters} resultCount={tours.length} />
 
-        {/* Tour Grid */}
-        <AnimatePresence mode="wait">
-          {filtered.length === 0 ? (
-            <motion.div
-              key="empty"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="text-center py-24"
-            >
-              {/* Persian carpet medallion decoration */}
-              <div className="w-20 h-20 mx-auto mb-6 rounded-full border-2 border-border flex items-center justify-center">
-                <span className="text-3xl text-accent/40">❋</span>
-              </div>
-              <p className="font-heading text-2xl text-muted-foreground font-light">
-                {lang === 'fa' ? 'توری با این فیلترها یافت نشد' : lang === 'ar' ? 'لا توجد رحلات بهذه المعايير' : 'No tours match these filters'}
-              </p>
-              <button
-                onClick={() => setFilters(DEFAULT_FILTERS)}
-                className="mt-4 text-sm font-body text-accent hover:underline"
+        {/* States */}
+        {loading ? (
+          <div className="text-center py-24">
+            <div className="w-20 h-20 mx-auto mb-6 rounded-full border-2 border-border flex items-center justify-center animate-pulse">
+              <span className="text-3xl text-accent/40">❋</span>
+            </div>
+            <p className="font-heading text-xl text-muted-foreground font-light">{loadingText}</p>
+          </div>
+        ) : error ? (
+          <div className="text-center py-24">
+            <div className="w-20 h-20 mx-auto mb-6 rounded-full border-2 border-destructive/40 flex items-center justify-center">
+              <span className="text-3xl text-destructive/60">!</span>
+            </div>
+            <p className="font-heading text-2xl text-muted-foreground font-light">{errorTitle}</p>
+            <p className="font-body text-sm text-destructive mt-2">{error}</p>
+          </div>
+        ) : (
+          /* Tour Grid */
+          <AnimatePresence mode="wait">
+            {tours.length === 0 ? (
+              <motion.div
+                key="empty"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="text-center py-24"
               >
-                {lang === 'fa' ? 'پاک کردن فیلترها' : lang === 'ar' ? 'مسح الفلاتر' : 'Clear all filters'}
-              </button>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="grid"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-10"
-            >
-              {filtered.map((tour, i) => (
-                <TourCard
-                  key={tour.id}
-                  tour={tour}
-                  image={TOUR_IMAGES[(tour.id - 1) % TOUR_IMAGES.length]}
-                  index={i}
-                />
-              ))}
-            </motion.div>
-          )}
-        </AnimatePresence>
+                {/* Persian carpet medallion decoration */}
+                <div className="w-20 h-20 mx-auto mb-6 rounded-full border-2 border-border flex items-center justify-center">
+                  <span className="text-3xl text-accent/40">❋</span>
+                </div>
+                <p className="font-heading text-2xl text-muted-foreground font-light">
+                  {lang === 'fa' ? 'توری با این فیلترها یافت نشد' : lang === 'ar' ? 'لا توجد رحلات بهذه المعايير' : 'No tours match these filters'}
+                </p>
+                <button
+                  onClick={() => setFilters(DEFAULT_FILTERS)}
+                  className="mt-4 text-sm font-body text-accent hover:underline"
+                >
+                  {lang === 'fa' ? 'پاک کردن فیلترها' : lang === 'ar' ? 'مسح الفلاتر' : 'Clear all filters'}
+                </button>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="grid"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-10"
+              >
+                {tours.map((tour, i) => (
+                  <TourCard
+                    key={tour.id}
+                    tour={normalizeTour(tour)}
+                    image={pickImage(tour)}
+                    index={i}
+                  />
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        )}
 
         {/* Bottom Persian carpet border */}
-        {filtered.length > 0 && (
+        {!loading && !error && tours.length > 0 && (
           <div className="mt-16 flex items-center gap-4">
             <div className="flex-1 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
             <span className="text-accent/40 text-2xl">✦ ❋ ✦</span>

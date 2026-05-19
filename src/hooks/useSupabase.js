@@ -321,8 +321,7 @@ export function useGuides() {
         const { data, error: supabaseError } = await supabase
           .from('profiles')
           .select('*')
-          .eq('role', 'guide')
-          .eq('is_approved', true)
+          .in('role', ['guide', 'agency'])
           .order('created_at', { ascending: false });
 
         if (supabaseError) throw supabaseError;

@@ -61,6 +61,7 @@ export default function Register() {
     password: '',
     phone: '',
     country: '',
+    gender: '',
   });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -79,6 +80,9 @@ export default function Register() {
       return lang === 'fa'
         ? 'رمز عبور باید حداقل ۸ کاراکتر باشد'
         : 'Password must be at least 8 characters';
+    }
+    if (!formData.gender) {
+      return lang === 'fa' ? 'لطفاً جنسیت خود را انتخاب کنید' : 'Please select your gender';
     }
     return null;
   };
@@ -113,6 +117,7 @@ export default function Register() {
           email: formData.email,
           full_name: `${formData.firstName} ${formData.lastName}`.trim(),
           role,
+          gender: formData.gender,
           phone: formData.phone || null,
           country: formData.country || null,
         });
@@ -397,6 +402,43 @@ export default function Register() {
                   autoComplete="tel"
                   dir="ltr"
                 />
+              </div>
+            </div>
+
+            {/* Gender */}
+            <div>
+              <label className="block font-body text-xs text-muted-foreground mb-2">
+                {lang === 'fa' ? 'جنسیت' : 'Gender'} *
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { value: 'male', fa: 'آقا', en: 'Male', img: '/avatars/default-male.png' },
+                  { value: 'female', fa: 'خانم', en: 'Female', img: '/avatars/default-female.png' },
+                ].map(({ value, fa, en, img }) => {
+                  const selected = formData.gender === value;
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => set('gender', value)}
+                      aria-pressed={selected}
+                      className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all duration-200 ${
+                        selected
+                          ? 'border-accent bg-accent/10 shadow-sm scale-[1.02]'
+                          : 'border-border bg-background hover:border-accent/40 hover:bg-accent/5'
+                      }`}
+                    >
+                      <img
+                        src={img}
+                        alt={en}
+                        className={`w-14 h-14 rounded-full object-cover transition-opacity ${selected ? 'opacity-100' : 'opacity-80'}`}
+                      />
+                      <span className={`font-body text-sm font-semibold ${selected ? 'text-accent' : 'text-foreground'}`}>
+                        {lang === 'fa' ? fa : en}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 

@@ -23,6 +23,7 @@ import AIAssistant from '@/pages/AIAssistant';
 import About from '@/pages/About';
 import Blog from '@/pages/Blog';
 import ArticleDetails from '@/pages/ArticleDetails';
+import Chat from '@/pages/Chat';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth } = useAuth();
@@ -48,7 +49,7 @@ const AuthenticatedApp = () => {
         <Route path="/tours/:slug" element={<TourDetails />} />
         <Route path="/package/:id" element={<PackageDetails />} />
         <Route path="/guides" element={<Guides />} />
-        <Route path="/guides/:slug" element={<GuideDetails />} />
+        <Route path="/guides/:id" element={<GuideDetails />} />
         <Route path="/about" element={<About />} />
         <Route path="/blog" element={<Blog />} />
         <Route path="/blog/:slug" element={<ArticleDetails />} />
@@ -61,6 +62,7 @@ const AuthenticatedApp = () => {
       <Route path="/guide-onboarding" element={<GuideOnboarding />} />
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/dashboard/:section" element={<Dashboard />} />
+      <Route path="/chat/:guideId" element={<Chat />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
