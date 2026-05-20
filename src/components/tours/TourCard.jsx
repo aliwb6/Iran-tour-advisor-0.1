@@ -20,16 +20,66 @@ const purposeBadgeConfig = {
   spiritual: { en: 'Spiritual', fa: 'معنوی', ar: 'روحاني', color: 'bg-amber-500/15 text-amber-700 dark:text-amber-400' },
 };
 
+// Tour rows can arrive in two shapes:
+//  - Raw Supabase row: title="…", cities=["Tehran","Isfahan"], price/price_usd
+//  - Normalised fixture/wrapped row: title={en,fa,ar}, cities={en:[…], fa:[…], ar:[…]}, priceFrom
+// These helpers tolerate both without changing visual output.
+const pickText = (val, lang) => {
+  if (val == null) return '';
+  if (Array.isArray(val)) return val.join(' · ');
+  if (typeof val === 'object') {
+    const inner = val[lang] ?? val.en;
+    if (Array.isArray(inner)) return inner.join(' · ');
+    return inner ?? '';
+  }
+  return String(val);
+};
+
+const pickArray = (val, lang) => {
+  if (!val) return [];
+  if (Array.isArray(val)) return val;
+  if (typeof val === 'object') {
+    const inner = val[lang] ?? val.en;
+    if (Array.isArray(inner)) return inner;
+    if (typeof inner === 'string') return inner.split(/[,·]/).map(s => s.trim()).filter(Boolean);
+  }
+  if (typeof val === 'string') return val.split(/[,·]/).map(s => s.trim()).filter(Boolean);
+  return [];
+};
+
+const computeCityCount = (tour, lang) => {
+  const c = tour.cities;
+  if (Array.isArray(c)) return c.length;
+  if (c && typeof c === 'object') {
+    const inner = c[lang] ?? c.en;
+    if (Array.isArray(inner)) return inner.length;
+    if (typeof inner === 'string' && inner.trim()) {
+      return inner.split(/[,·]/).filter(s => s.trim()).length;
+    }
+  }
+  if (typeof c === 'string' && c.trim()) {
+    return c.split(/[,·]/).filter(s => s.trim()).length;
+  }
+  if (tour.cityCount != null) return Number(tour.cityCount) || 0;
+  if (tour.city_count != null) return Number(tour.city_count) || 0;
+  if (tour.city) return 1;
+  return 0;
+};
+
 export default function TourCard({ tour, image, index }) {
   const { lang, t } = useI18n();
   const navigate = useNavigate();
-  const title = tour.title[lang] || tour.title.en;
-  const desc = tour.desc[lang] || tour.desc.en;
-  const cities = tour.cities[lang] || tour.cities.en;
-  const highlights = tour.highlights[lang] || tour.highlights.en;
 
-  const priceDisplay = tour.priceFrom
-    ? `$${tour.priceFrom.toLocaleString()}`
+  const title = pickText(tour.title, lang);
+  const desc = pickText(tour.desc ?? tour.description, lang);
+  const cities = pickText(tour.cities, lang) || tour.city || tour.location || '';
+  const highlights = pickArray(tour.highlights, lang);
+  const cityCount = computeCityCount(tour, lang);
+
+  // Price: prefer normalised price_usd, fall back to numeric price, then fixture priceFrom.
+  const rawPrice = tour.price_usd ?? tour.price ?? tour.priceFrom ?? null;
+  const priceDisplay = rawPrice != null && rawPrice !== ''
+    ? `$${Number(rawPrice).toLocaleString()}`
     : null;
 
   const handleClick = () => {
@@ -65,14 +115,18 @@ export default function TourCard({ tour, image, index }) {
 
         {/* Top badges */}
         <div className="absolute top-4 start-4 flex gap-2 flex-wrap">
-          <span className="px-3 py-1.5 rounded-full bg-black/30 backdrop-blur-sm text-white text-xs font-body flex items-center gap-1.5">
-            <Clock className="w-3 h-3" />
-            {tour.duration} {t('package_duration')}
-          </span>
-          <span className="px-3 py-1.5 rounded-full bg-black/30 backdrop-blur-sm text-white text-xs font-body flex items-center gap-1.5">
-            <MapPin className="w-3 h-3" />
-            {tour.cityCount} {t('package_cities')}
-          </span>
+          {tour.duration != null && tour.duration !== '' && (
+            <span className="px-3 py-1.5 rounded-full bg-black/30 backdrop-blur-sm text-white text-xs font-body flex items-center gap-1.5">
+              <Clock className="w-3 h-3" />
+              {tour.duration} {t('package_duration')}
+            </span>
+          )}
+          {cityCount > 0 && (
+            <span className="px-3 py-1.5 rounded-full bg-black/30 backdrop-blur-sm text-white text-xs font-body flex items-center gap-1.5">
+              <MapPin className="w-3 h-3" />
+              {cityCount === 1 ? '1 City' : `${cityCount} Cities`}
+            </span>
+          )}
         </div>
 
         {/* Purpose badge */}
@@ -126,15 +180,21 @@ export default function TourCard({ tour, image, index }) {
         {/* Footer row */}
         <div className="flex items-center justify-between pt-4 border-t border-border/40">
           <div className="flex gap-3 items-center">
-            <span className="flex items-center gap-1 text-xs font-body text-muted-foreground">
-              <Mountain className="w-3.5 h-3.5 text-accent/60" />
-              {t(`difficulty_${tour.difficulty}`)}
-            </span>
-            <span className="w-1 h-1 rounded-full bg-border" />
-            <span className="flex items-center gap-1 text-xs font-body text-muted-foreground">
-              <Sparkles className="w-3.5 h-3.5 text-accent/60" />
-              {t(`cultural_${tour.cultural}`)}
-            </span>
+            {tour.difficulty && (
+              <span className="flex items-center gap-1 text-xs font-body text-muted-foreground">
+                <Mountain className="w-3.5 h-3.5 text-accent/60" />
+                {t(`difficulty_${tour.difficulty}`)}
+              </span>
+            )}
+            {tour.difficulty && (tour.cultural || tour.cultural_intensity) && (
+              <span className="w-1 h-1 rounded-full bg-border" />
+            )}
+            {(tour.cultural || tour.cultural_intensity) && (
+              <span className="flex items-center gap-1 text-xs font-body text-muted-foreground">
+                <Sparkles className="w-3.5 h-3.5 text-accent/60" />
+                {t(`cultural_${tour.cultural || tour.cultural_intensity}`)}
+              </span>
+            )}
           </div>
           <button className="flex items-center gap-1.5 text-sm font-body font-semibold text-accent hover:gap-2.5 transition-all duration-200">
             {t('package_inquiry')}

@@ -36,6 +36,31 @@ const pickHeroImage = (tour) => {
   return tour.cover_image || tour.image_url || tour.image || FALLBACK_IMAGE;
 };
 
+// The dashboard TourForm currently stores `itinerary` as a free-text string
+// like "Day 1: Arrival…\nDay 2: …". Parse that into structured days so the
+// detail page can render it the same way as the fixture data.
+const parseItineraryString = (text) => {
+  if (typeof text !== 'string' || !text.trim()) return [];
+  const dayRe = /^\s*Day\s+(\d+)\s*[:\-–.]\s*(.*)$/i;
+  const result = [];
+  let current = null;
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line) continue;
+    const m = line.match(dayRe);
+    if (m) {
+      if (current) result.push(current);
+      current = { day: Number(m[1]), title: m[2].trim(), description: '' };
+    } else if (current) {
+      current.description = current.description ? `${current.description} ${line}` : line;
+    } else {
+      current = { day: 1, title: line, description: '' };
+    }
+  }
+  if (current) result.push(current);
+  return result;
+};
+
 export default function TourDetails() {
   const { slug } = useParams();
   const { t, lang, dir } = useI18n();
@@ -68,13 +93,38 @@ export default function TourDetails() {
 
   const title = pickLang(tour.title, lang);
   const desc = pickLang(tour.desc ?? tour.description, lang);
-  const location = pickLang(tour.location, lang);
+
+  // Location for the hero badge — prefer explicit `location`, else cities array, else single city.
+  const citiesArr = Array.isArray(tour.cities)
+    ? tour.cities
+    : (typeof tour.cities === 'string' && tour.cities
+        ? tour.cities.split(/[,·]/).map(s => s.trim()).filter(Boolean)
+        : []);
+  const location = pickLang(tour.location, lang)
+    || (citiesArr.length ? citiesArr.join(' · ') : '')
+    || tour.city
+    || '';
+
   const highlights = pickLangArray(tour.highlights, lang);
   const included = pickLangArray(tour.included, lang);
-  const excluded = pickLangArray(tour.excluded, lang);
-  const itinerary = Array.isArray(tour.itinerary) ? tour.itinerary : [];
-  const cityCount = tour.cityCount ?? tour.city_count ?? 0;
-  const priceFrom = tour.priceFrom ?? tour.price_from ?? null;
+  // Guides save under either `excluded` or `not_included` — accept either.
+  const excluded = pickLangArray(tour.excluded ?? tour.not_included, lang);
+  const itinerary = Array.isArray(tour.itinerary)
+    ? tour.itinerary
+    : (typeof tour.itinerary === 'string' ? parseItineraryString(tour.itinerary) : []);
+
+  // City count — compute from the cities array when present, else fall back.
+  const cityCount = citiesArr.length || tour.cityCount || tour.city_count || (tour.city ? 1 : 0);
+
+  // Price — accept fixture `priceFrom`, normalised `price_from`, DB `price_usd` or `price`.
+  const priceFrom = tour.priceFrom ?? tour.price_from ?? tour.price_usd ?? tour.price ?? null;
+
+  // Cultural intensity comes from `cultural` (fixture) or `cultural_intensity` (DB).
+  const cultural = tour.cultural || tour.cultural_intensity || null;
+
+  // Tour themes — text[] in DB, shown as small tags.
+  const themes = Array.isArray(tour.theme) ? tour.theme : (tour.theme ? [tour.theme] : []);
+
   const heroImage = pickHeroImage(tour);
 
   return (
@@ -165,10 +215,10 @@ export default function TourDetails() {
                 <p className="font-heading text-lg font-semibold text-foreground">{t(`difficulty_${tour.difficulty}`)}</p>
               </div>
             )}
-            {tour.cultural && (
+            {cultural && (
               <div>
                 <p className="font-body text-xs text-muted-foreground mb-1">{t('package_cultural')}</p>
-                <p className="font-heading text-lg font-semibold text-foreground">{t(`cultural_${tour.cultural}`)}</p>
+                <p className="font-heading text-lg font-semibold text-foreground">{t(`cultural_${cultural}`)}</p>
               </div>
             )}
           </div>
@@ -197,6 +247,25 @@ export default function TourDetails() {
                 <p className="font-body text-foreground/70 leading-relaxed">
                   {desc}
                 </p>
+              </section>
+            )}
+
+            {/* Themes */}
+            {themes.length > 0 && (
+              <section>
+                <h2 className="font-heading text-2xl font-semibold text-foreground mb-4">
+                  {lang === 'fa' ? 'موضوع تور' : lang === 'ar' ? 'موضوع الرحلة' : 'Tour Themes'}
+                </h2>
+                <div className="flex flex-wrap gap-2">
+                  {themes.map((th, i) => (
+                    <span
+                      key={i}
+                      className="px-3 py-1.5 rounded-full bg-accent/10 border border-accent/20 text-accent text-xs font-body font-medium"
+                    >
+                      {th}
+                    </span>
+                  ))}
+                </div>
               </section>
             )}
 

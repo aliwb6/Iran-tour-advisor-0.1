@@ -26,7 +26,6 @@ export default function Navbar() {
     { path: '/tours', label: t('nav_tours') },
     { path: '/guides', label: t('nav_guides') },
     { path: '/ai-assistant', label: t('nav_ai') },
-    { path: '/about', label: t('nav_about') },
     { path: '/blog', label: t('nav_blog') },
   ];
 
@@ -234,8 +233,6 @@ export default function Navbar() {
             transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
             className="fixed inset-0 z-40 bg-background/97 backdrop-blur-2xl lg:hidden overflow-y-auto"
           >
-            <div className="absolute top-0 inset-x-0 h-0.5 carpet-border" />
-
             <div className="pt-20 pb-10 px-6">
               {/* Nav links */}
               <div className="space-y-1 mb-8">

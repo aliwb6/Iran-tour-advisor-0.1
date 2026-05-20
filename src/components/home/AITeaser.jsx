@@ -24,10 +24,6 @@ export default function AITeaser() {
         <div className="absolute inset-0 carpet-texture" />
       </div>
 
-      {/* Persian carpet border */}
-      <div className="absolute top-0 inset-x-0 h-1 carpet-border" />
-      <div className="absolute bottom-0 inset-x-0 h-1 carpet-border" />
-
       <div className="relative z-10 max-w-4xl mx-auto px-5 sm:px-8 lg:px-10 text-center">
         <motion.div
           initial={{ opacity: 0, y: 28 }}

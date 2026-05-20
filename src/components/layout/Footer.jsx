@@ -20,9 +20,6 @@ export default function Footer() {
 
   return (
     <footer dir={dir} className="bg-navy text-primary-foreground">
-      {/* Top carpet border */}
-      <div className="h-1 carpet-border" />
-
       <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-10 pt-16 pb-8">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 mb-14">
           {/* Brand */}

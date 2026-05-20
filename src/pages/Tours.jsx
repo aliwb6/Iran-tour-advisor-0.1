@@ -51,17 +51,8 @@ export default function Tours() {
     <div dir={dir} className="pt-24 pb-20 min-h-screen">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-        {/* Hero Header with Persian carpet border motif */}
+        {/* Hero Header */}
         <div className="relative mb-14">
-          {/* Top Persian ornamental border */}
-          <div className="absolute -top-4 inset-x-0 h-1 overflow-hidden">
-            <div className="w-full h-full"
-              style={{
-                backgroundImage: 'repeating-linear-gradient(90deg, hsl(var(--accent)) 0px, hsl(var(--accent)) 4px, transparent 4px, transparent 12px, hsl(var(--gold)) 12px, hsl(var(--gold)) 14px, transparent 14px, transparent 20px)',
-                opacity: 0.5
-              }} />
-          </div>
-
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}

@@ -24,9 +24,9 @@ const COUNTRIES = [
 ];
 
 const ROLES = [
-  { value: 'traveler', en: 'Traveler', fa: 'مسافر', icon: Compass },
-  { value: 'guide', en: 'Guide', fa: 'راهنما', icon: MapPin },
-  { value: 'agency', en: 'Agency', fa: 'آژانس', icon: Building2 },
+  { value: 'traveler', en: 'Traveler',        fa: 'مسافر',           icon: Compass },
+  { value: 'guide',    en: 'Travelers Guide', fa: 'راهنمای مسافران', icon: MapPin },
+  { value: 'agency',   en: 'Travel Agency',   fa: 'آژانس مسافرتی',   icon: Building2 },
 ];
 
 const BENEFITS = [

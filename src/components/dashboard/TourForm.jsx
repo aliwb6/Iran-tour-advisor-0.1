@@ -26,11 +26,17 @@ export const PURPOSES = [
   { value: 'architecture', en: 'Architecture 🏰',             fa: 'معماری 🏰',                 ar: 'عمارة 🏰' },
 ];
 
+export const DIFFICULTY_OPTIONS = [
+  { value: 'easy',        en: 'Easy',        fa: 'آسان',   ar: 'سهل' },
+  { value: 'moderate',    en: 'Moderate',    fa: 'متوسط',  ar: 'متوسط' },
+  { value: 'challenging', en: 'Challenging', fa: 'دشوار',  ar: 'صعب' },
+];
+
 export const EMPTY_TOUR = {
   title: '', slug: '', description: '', duration: '', price: '',
   location: '', city: '', cities: '', purpose: '', theme: '',
   highlights: '', itinerary: '', included: '', excluded: '',
-  image_url: '', gallery: '', status: 'draft',
+  image_url: '', gallery: '', status: 'draft', difficulty: '',
 };
 
 export default function TourForm({ editing, onDone, onCancel, isPlatform = false }) {
@@ -56,6 +62,7 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
       included:    Array.isArray(editing.included) ? editing.included.join('\n') : (editing.included || ''),
       excluded:    Array.isArray(editing.excluded) ? editing.excluded.join('\n') : (editing.excluded || ''),
       status:      editing.status || initialStatus,
+      difficulty:  editing.difficulty || '',
     };
   });
 
@@ -137,6 +144,16 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    if (!form.difficulty) {
+      setError(
+        lang === 'fa' ? 'لطفاً سطح دشواری را انتخاب کنید.'
+        : lang === 'ar' ? 'يرجى اختيار مستوى الصعوبة.'
+        : 'Please select a difficulty level.'
+      );
+      return;
+    }
+
     setSaving(true);
     try {
       const payload = {
@@ -150,6 +167,7 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
         cities:      form.cities.split(',').map(s => s.trim()).filter(Boolean),
         theme:       selectedThemes,
         purpose:     selectedPurposes,
+        difficulty:  form.difficulty,
         highlights:  form.highlights.split('\n').filter(Boolean),
         itinerary:   form.itinerary,
         included:    form.included.split('\n').filter(Boolean),
@@ -181,7 +199,7 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
         setSuccess(true);
         setTimeout(() => {
           setSuccess(false);
-          setForm({ ...EMPTY_TOUR, status: initialStatus });
+          setForm({ ...EMPTY_TOUR, status: initialStatus, difficulty: '' });
           setSelectedThemes([]);
           setSelectedPurposes([]);
           setImageUrl('');
@@ -269,6 +287,26 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
         <div>
           <label className={labelClass}>Cities Covered (comma separated)</label>
           <input name="cities" value={form.cities} onChange={handleChange} className={inputClass} placeholder="Tehran, Isfahan, Shiraz" />
+        </div>
+
+        {/* Difficulty (required) */}
+        <div>
+          <label className={labelClass}>
+            Difficulty <span className="text-red-400">*</span>
+            <span className="ml-1 text-white/40 text-[10px] font-normal">(Required)</span>
+          </label>
+          <select
+            name="difficulty"
+            required
+            value={form.difficulty}
+            onChange={handleChange}
+            className={`${inputClass} w-full md:w-72 appearance-none cursor-pointer`}
+          >
+            <option value="" disabled>Select a difficulty level…</option>
+            {DIFFICULTY_OPTIONS.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt[lang] || opt.en}</option>
+            ))}
+          </select>
         </div>
 
         {/* Theme tag chips */}

@@ -11,10 +11,14 @@ const HERO_IMAGES = [
 ];
 
 const DESTINATIONS = [
-  { en: "Isfahan", fa: "اصفهان", ar: "أصفهان" },
-  { en: "Persepolis", fa: "تخت جمشید", ar: "برسبوليس" },
-  { en: "Lut Desert", fa: "کویر لوت", ar: "صحراء لوت" },
-  { en: "Shiraz", fa: "شیراز", ar: "شيراز" },
+  { en: "Isfahan",    fa: "اصفهان",      ar: "أصفهان" },
+  { en: "Shiraz",     fa: "شیراز",       ar: "شيراز" },
+  { en: "Persepolis", fa: "تخت جمشید",   ar: "برسبوليس" },
+  { en: "Yazd",       fa: "یزد",         ar: "يزد" },
+  { en: "Lut Desert", fa: "کویر لوت",    ar: "صحراء لوت" },
+  { en: "Tabriz",     fa: "تبریز",       ar: "تبريز" },
+  { en: "Tehran",     fa: "تهران",       ar: "طهران" },
+  { en: "Kashan",     fa: "کاشان",       ar: "كاشان" },
 ];
 
 const STATS = [
@@ -56,9 +60,6 @@ export default function HeroSection() {
       {/* Cinematic layered overlay */}
       <div className="absolute inset-0 bg-gradient-to-b from-navy/30 via-navy/20 to-navy/80 z-[1]" />
       <div className="absolute inset-0 bg-gradient-to-r from-navy/40 via-transparent to-transparent z-[1]" />
-
-      {/* Persian carpet top accent */}
-      <div className="absolute top-0 inset-x-0 z-[2] h-1 carpet-border" />
 
       {/* Content */}
       <div className="relative z-10 flex flex-col justify-end flex-1 max-w-7xl mx-auto w-full px-5 sm:px-8 lg:px-10 pb-16 lg:pb-20 pt-28">
