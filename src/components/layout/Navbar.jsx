@@ -6,6 +6,7 @@ import LanguageSwitcher from './LanguageSwitcher';
 import ThemeToggle from './ThemeToggle';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, Compass, ArrowRight, LogOut, LayoutDashboard, Shield, User } from 'lucide-react';
+import UserDropdown from '@/components/navbar/UserDropdown';
 
 export default function Navbar() {
   const { t, dir } = useI18n();
@@ -44,7 +45,7 @@ export default function Navbar() {
   const role = profile?.role || user?.user_metadata?.role;
   const isAdmin = profile?.role === 'admin';
   const isGuideOrAgency = role === 'guide' || role === 'agency';
-  const isTourist = role === 'tourist';
+  const isTourist = role === 'tourist' || role === 'traveler';
 
   return (
     <>
@@ -113,21 +114,6 @@ export default function Navbar() {
               {!isLoadingAuth && (
                 isAuthenticated ? (
                   <div className="hidden lg:flex items-center gap-1.5">
-                    {/* Avatar + name */}
-                    <div className={`flex items-center gap-2 px-2.5 py-1.5 rounded-xl transition-colors ${
-                      isLight ? 'bg-white/10' : 'bg-muted/60'
-                    }`}>
-                      <div className="w-6 h-6 rounded-full bg-accent flex items-center justify-center flex-shrink-0">
-                        <span className="font-body text-[10px] font-bold text-white">{initials}</span>
-                      </div>
-                      {fullName && (
-                        <span className={`font-body text-xs font-medium max-w-[80px] truncate ${
-                          isLight ? 'text-white' : 'text-foreground'
-                        }`}>
-                          {fullName.split(' ')[0]}
-                        </span>
-                      )}
-                    </div>
                     {/* Admin Panel — admin only */}
                     {isAdmin && (
                       <Link
@@ -156,32 +142,24 @@ export default function Navbar() {
                         {t('nav_dashboard')}
                       </Link>
                     )}
-                    {/* Profile — tourist only */}
-                    {isTourist && (
-                      <Link
-                        to="/profile"
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-body font-medium transition-all ${
+
+                    {/* Traveler: avatar dropdown with Profile / Bookings / Requests / Settings / Sign out */}
+                    {isTourist && <UserDropdown isLight={isLight} />}
+
+                    {/* Admin/guide still need a quick sign-out */}
+                    {!isTourist && (
+                      <button
+                        onClick={() => logout()}
+                        className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${
                           isLight
-                            ? 'bg-white/10 text-white hover:bg-white/20'
-                            : 'bg-muted/60 text-foreground hover:bg-muted'
+                            ? 'text-white/70 hover:text-white hover:bg-white/10'
+                            : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
                         }`}
+                        title={t('auth_signout')}
                       >
-                        <User className="w-3.5 h-3.5" />
-                        {t('nav_profile')}
-                      </Link>
+                        <LogOut className="w-4 h-4" />
+                      </button>
                     )}
-                    {/* Logout */}
-                    <button
-                      onClick={() => logout()}
-                      className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${
-                        isLight
-                          ? 'text-white/70 hover:text-white hover:bg-white/10'
-                          : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
-                      }`}
-                      title={t('auth_signout')}
-                    >
-                      <LogOut className="w-4 h-4" />
-                    </button>
                   </div>
                 ) : (
                   <div className="hidden lg:flex items-center gap-2">

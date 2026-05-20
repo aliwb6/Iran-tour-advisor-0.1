@@ -24,6 +24,10 @@ import About from '@/pages/About';
 import Blog from '@/pages/Blog';
 import ArticleDetails from '@/pages/ArticleDetails';
 import Chat from '@/pages/Chat';
+import ProfilePage from '@/pages/profile/ProfilePage';
+import SettingsPage from '@/pages/profile/SettingsPage';
+import BookingsPage from '@/pages/profile/BookingsPage';
+import RequestsPage from '@/pages/profile/RequestsPage';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth } = useAuth();
@@ -53,6 +57,10 @@ const AuthenticatedApp = () => {
         <Route path="/about" element={<About />} />
         <Route path="/blog" element={<Blog />} />
         <Route path="/blog/:slug" element={<ArticleDetails />} />
+        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/profile/settings" element={<SettingsPage />} />
+        <Route path="/profile/bookings" element={<BookingsPage />} />
+        <Route path="/profile/requests" element={<RequestsPage />} />
       </Route>
       <Route path="/ai-assistant" element={<AIAssistant />} />
       <Route path="/signup" element={<Signup />} />
