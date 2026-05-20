@@ -18,7 +18,6 @@ export const ACCOMMODATION_TYPES = [
 export const HOTEL_STAR_LEVELS = [2, 3, 4, 5];
 
 export const TRANSPORTATION_OPTIONS = [
-  { value: 'airport_transfer', en: 'Airport Transfer',       fa: 'ترانسفر فرودگاهی',  ar: 'النقل من المطار' },
   { value: 'private_car',      en: 'Private Car / Van',      fa: 'خودرو / ون اختصاصی', ar: 'سيارة / فان خاص' },
   { value: 'public_transit',   en: 'Public Transportation',  fa: 'حمل‌ونقل عمومی',     ar: 'النقل العام' },
   { value: 'bus_intercity',    en: 'Intercity Bus',          fa: 'اتوبوس بین‌شهری',    ar: 'حافلة بين المدن' },

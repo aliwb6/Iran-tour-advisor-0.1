@@ -1,21 +1,27 @@
 import { useI18n } from '@/lib/i18n.jsx';
 import { SlidersHorizontal, X } from 'lucide-react';
 
+// IMPORTANT: keys must match the slug values that guides actually save via
+// TourForm (THEMES / PURPOSES catalogs). The DB columns `tours.theme[]` and
+// `tours.purpose[]` are text[] arrays of these slugs, and the Tours page
+// filter uses array-containment to match rows.
 const purposeOptions = [
-  { key: 'all', icon: '✦', en: 'All Journeys', fa: 'همه سفرها', ar: 'كل الرحلات' },
-  { key: 'leisure', icon: '☀', en: 'Leisure & Fun', fa: 'تفریح و سرگرمی', ar: 'ترفيه ومتعة' },
-  { key: 'work', icon: '◈', en: 'Business', fa: 'کسب‌وکار', ar: 'أعمال' },
-  { key: 'research', icon: '◎', en: 'Research & Education', fa: 'تحقیق و آموزش', ar: 'بحث وتعليم' },
-  { key: 'spiritual', icon: '✿', en: 'Spiritual & Religious', fa: 'معنوی و زیارتی', ar: 'روحاني وديني' },
+  { key: 'all',         icon: '✦', en: 'All Journeys',          fa: 'همه سفرها',          ar: 'كل الرحلات' },
+  { key: 'leisure',     icon: '☀', en: 'Leisure & Fun',         fa: 'تفریح و سرگرمی',     ar: 'ترفيه ومتعة' },
+  { key: 'business',    icon: '◈', en: 'Business',              fa: 'کسب‌وکار',            ar: 'أعمال' },
+  { key: 'educational', icon: '◎', en: 'Research & Education',  fa: 'تحقیق و آموزش',       ar: 'بحث وتعليم' },
+  { key: 'religious',   icon: '✿', en: 'Spiritual & Religious', fa: 'معنوی و زیارتی',      ar: 'روحاني وديني' },
 ];
 
 const themeOptions = [
-  { key: 'all', en: 'All Themes', fa: 'همه تم‌ها', ar: 'كل الأنواع' },
-  { key: 'history', en: 'History & Heritage', fa: 'تاریخ و میراث', ar: 'التاريخ والتراث' },
-  { key: 'desert', en: 'Desert & Nature', fa: 'کویر و طبیعت', ar: 'الصحراء والطبيعة' },
-  { key: 'food', en: 'Culinary', fa: 'آشپزی', ar: 'الطهي' },
-  { key: 'photography', en: 'Photography', fa: 'عکاسی', ar: 'التصوير' },
-  { key: 'culture', en: 'Art & Culture', fa: 'هنر و فرهنگ', ar: 'الفن والثقافة' },
+  { key: 'all',      en: 'All Themes',           fa: 'همه تم‌ها',                  ar: 'كل الأنواع' },
+  { key: 'nature',   en: 'Nature & Wildlife',    fa: 'طبیعت‌گردی و حیات وحش',     ar: 'الطبيعة والحياة البرية' },
+  { key: 'cultural', en: 'Cultural & Historical', fa: 'فرهنگی و تاریخی',           ar: 'ثقافي وتاريخي' },
+  { key: 'coastal',  en: 'Coastal & Marine',     fa: 'ساحلی و دریایی',             ar: 'ساحلي وبحري' },
+  { key: 'urban',    en: 'Urban & Modern',       fa: 'شهری و مدرن',                ar: 'حضري وعصري' },
+  { key: 'rural',    en: 'Rural & Eco',          fa: 'روستایی و بوم‌گردی',          ar: 'ريفي وبيئي' },
+  { key: 'luxury',   en: 'Luxury & VIP',         fa: 'لاکچری و VIP',                ar: 'فاخر و VIP' },
+  { key: 'budget',   en: 'Budget & Backpacking', fa: 'اقتصادی و کوله‌گردی',         ar: 'اقتصادي وحقيبة ظهر' },
 ];
 
 const durationOptions = [

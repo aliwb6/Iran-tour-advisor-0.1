@@ -16,11 +16,15 @@ export function useTours(filters = {}) {
       try {
         let query = supabase.from('tours').select('*');
 
+        // tours.purpose and tours.theme are `text[]` in Supabase, so we use
+        // PostgREST array-containment (`@>`) via `.contains([value])`. A
+        // simple `.eq` would compare against an exact array literal and never
+        // match multi-value rows.
         if (filters.purpose && filters.purpose !== 'all') {
-          query = query.eq('purpose', filters.purpose);
+          query = query.contains('purpose', [filters.purpose]);
         }
         if (filters.theme && filters.theme !== 'all') {
-          query = query.eq('theme', filters.theme);
+          query = query.contains('theme', [filters.theme]);
         }
         if (filters.duration) {
           if (filters.duration === 'short') {

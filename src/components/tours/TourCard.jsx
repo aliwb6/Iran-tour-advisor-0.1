@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Clock, MapPin, Mountain, Sparkles } from 'lucide-react';
 import { useI18n } from '@/lib/i18n.jsx';
+import { THEMES, PURPOSES } from '@/components/dashboard/TourForm';
 
 // Persian carpet corner motif as SVG
 const CarpetMotif = ({ className = '' }) => (
@@ -13,11 +14,27 @@ const CarpetMotif = ({ className = '' }) => (
   </svg>
 );
 
-const purposeBadgeConfig = {
-  leisure: { en: 'Leisure', fa: 'تفریحی', ar: 'ترفيه', color: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400' },
-  work: { en: 'Business', fa: 'کسب‌وکار', ar: 'أعمال', color: 'bg-blue-500/15 text-blue-700 dark:text-blue-400' },
-  research: { en: 'Research', fa: 'تحقیقاتی', ar: 'بحثي', color: 'bg-violet-500/15 text-violet-700 dark:text-violet-400' },
-  spiritual: { en: 'Spiritual', fa: 'معنوی', ar: 'روحاني', color: 'bg-amber-500/15 text-amber-700 dark:text-amber-400' },
+// Slug → localised label. Custom tags (free text added via "+ Add custom…"
+// in TourForm) won't appear in the catalog — for those we fall back to the
+// raw value so custom themes/purposes still render as chips.
+const THEME_INDEX   = new Map(THEMES.map(t => [t.value, t]));
+const PURPOSE_INDEX = new Map(PURPOSES.map(p => [p.value, p]));
+
+const themeLabel   = (slug, lang) => {
+  const entry = THEME_INDEX.get(slug);
+  return entry ? (entry[lang] || entry.en) : slug;
+};
+const purposeLabel = (slug, lang) => {
+  const entry = PURPOSE_INDEX.get(slug);
+  return entry ? (entry[lang] || entry.en) : slug;
+};
+
+// Helper: coerce a value into an array of strings whether it arrived as
+// text[] (DB) or as a single scalar (old fixture rows).
+const toTagArray = (val) => {
+  if (Array.isArray(val)) return val.filter(Boolean);
+  if (typeof val === 'string' && val.trim()) return [val.trim()];
+  return [];
 };
 
 // Tour rows can arrive in two shapes:
@@ -75,6 +92,8 @@ export default function TourCard({ tour, image, index }) {
   const cities = pickText(tour.cities, lang) || tour.city || tour.location || '';
   const highlights = pickArray(tour.highlights, lang);
   const cityCount = computeCityCount(tour, lang);
+  const themes = toTagArray(tour.theme);
+  const purposes = toTagArray(tour.purpose);
 
   // Price: prefer normalised price_usd, fall back to numeric price, then fixture priceFrom.
   const rawPrice = tour.price_usd ?? tour.price ?? tour.priceFrom ?? null;
@@ -129,15 +148,6 @@ export default function TourCard({ tour, image, index }) {
           )}
         </div>
 
-        {/* Purpose badge */}
-        {tour.purpose && tour.purpose !== 'all' && (
-          <div className="absolute top-4 end-4">
-            <span className={`px-3 py-1.5 rounded-full text-xs font-body font-medium ${purposeBadgeConfig[tour.purpose]?.color}`}>
-              {purposeBadgeConfig[tour.purpose]?.[lang] || purposeBadgeConfig[tour.purpose]?.en}
-            </span>
-          </div>
-        )}
-
         {/* Price bottom of image */}
         {priceDisplay && (
           <div className="absolute bottom-4 end-4">
@@ -161,6 +171,31 @@ export default function TourCard({ tour, image, index }) {
           {title}
         </h2>
         <p className="font-body text-xs text-accent mb-3 tracking-wide">{cities}</p>
+
+        {/* Theme + Purpose chips — pulled from tour.theme[] and tour.purpose[].
+            Custom values that aren't in the catalog render their raw text. */}
+        {(themes.length > 0 || purposes.length > 0) && (
+          <div className="flex flex-wrap gap-1.5 mb-3">
+            {themes.map((slug, j) => (
+              <span
+                key={`th-${j}`}
+                className="px-2 py-0.5 text-[11px] font-body rounded-full bg-accent/10 border border-accent/20 text-accent"
+              >
+                {themeLabel(slug, lang)}
+              </span>
+            ))}
+            {purposes.map((slug, j) => (
+              <span
+                key={`pu-${j}`}
+                className="px-2 py-0.5 text-[11px] font-body rounded-full bg-gold/10 border border-gold/30 text-gold-foreground"
+                style={{ color: 'hsl(var(--gold))' }}
+              >
+                {purposeLabel(slug, lang)}
+              </span>
+            ))}
+          </div>
+        )}
+
         <p className="font-body text-sm text-foreground/65 leading-relaxed mb-4 line-clamp-2">{desc}</p>
 
         {/* Highlights — styled like carpet pattern tags */}
