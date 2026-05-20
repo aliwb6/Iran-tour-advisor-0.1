@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react';
 import { supabase } from '@/supabaseClient';
 import { useI18n } from '@/lib/i18n.jsx';
-import { CheckCircle2, Loader2, Upload, X } from 'lucide-react';
+import { CheckCircle2, Loader2, Upload, X, Check } from 'lucide-react';
+import { INCLUDED_GROUPS, NOT_INCLUDED_GROUPS, HOTEL_STAR_LEVELS } from '@/lib/tourInclusions';
 
 export const THEMES = [
   { value: 'nature',    en: 'Nature & Wildlife 🌿',        fa: 'طبیعت‌گردی و حیات وحش 🌿', ar: 'الطبيعة والحياة البرية 🌿' },
@@ -34,8 +35,8 @@ export const DIFFICULTY_OPTIONS = [
 
 export const EMPTY_TOUR = {
   title: '', slug: '', description: '', duration: '', price: '',
-  location: '', city: '', cities: '', purpose: '', theme: '',
-  highlights: '', itinerary: '', included: '', excluded: '',
+  location: '', city: '', purpose: '', theme: '',
+  highlights: '', itinerary: '',
   image_url: '', gallery: '', status: 'draft', difficulty: '',
 };
 
@@ -56,15 +57,37 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
       price:       editing.price != null ? String(editing.price) : '',
       location:    editing.location || '',
       city:        editing.city || '',
-      cities:      Array.isArray(editing.cities) ? editing.cities.join(', ') : (editing.cities || ''),
       highlights:  Array.isArray(editing.highlights) ? editing.highlights.join('\n') : (editing.highlights || ''),
       itinerary:   editing.itinerary || '',
-      included:    Array.isArray(editing.included) ? editing.included.join('\n') : (editing.included || ''),
-      excluded:    Array.isArray(editing.excluded) ? editing.excluded.join('\n') : (editing.excluded || ''),
       status:      editing.status || initialStatus,
       difficulty:  editing.difficulty || '',
     };
   });
+
+  // Cities as a chip list — typed name → Enter → chip; chips are removable.
+  const [cities, setCities] = useState(() => {
+    if (!editing) return [];
+    if (Array.isArray(editing.cities)) return editing.cities.filter(Boolean);
+    if (typeof editing.cities === 'string' && editing.cities.trim()) {
+      return editing.cities.split(',').map(s => s.trim()).filter(Boolean);
+    }
+    return [];
+  });
+  const [cityInput, setCityInput] = useState('');
+
+  // Structured inclusion selections — stored as slug arrays.
+  const initialIncluded = Array.isArray(editing?.included) ? editing.included : [];
+  const initialNotIncluded = Array.isArray(editing?.excluded)
+    ? editing.excluded
+    : (Array.isArray(editing?.not_included) ? editing.not_included : []);
+  const [includedSlugs, setIncludedSlugs] = useState(initialIncluded);
+  const [notIncludedSlugs, setNotIncludedSlugs] = useState(initialNotIncluded);
+  // Hotel stars — derived from any existing hotel_*star slug at mount.
+  const initialHotelStars = (() => {
+    const match = initialIncluded.find(s => /^hotel_\d+star$/.test(s));
+    return match ? Number(match.split('_')[1].replace('star', '')) : 4;
+  })();
+  const [hotelStars, setHotelStars] = useState(initialHotelStars);
 
   const [selectedThemes, setSelectedThemes] = useState(() => {
     if (!editing) return [];
@@ -104,6 +127,53 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
 
   const toggleTheme   = (v) => setSelectedThemes(p => p.includes(v) ? p.filter(x => x !== v) : [...p, v]);
   const togglePurpose = (v) => setSelectedPurposes(p => p.includes(v) ? p.filter(x => x !== v) : [...p, v]);
+
+  // Cities chip input — Enter / comma adds a chip, X removes it.
+  const addCity = () => {
+    const v = cityInput.trim();
+    if (!v) return;
+    setCities(prev => prev.includes(v) ? prev : [...prev, v]);
+    setCityInput('');
+  };
+  const removeCity = (name) => setCities(prev => prev.filter(c => c !== name));
+  const onCityKeyDown = (e) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      addCity();
+    } else if (e.key === 'Backspace' && !cityInput && cities.length) {
+      setCities(prev => prev.slice(0, -1));
+    }
+  };
+
+  // Inclusion checkboxes — the hotel slug is special-cased because it carries
+  // a star sub-select. Picking hotel adds `hotel_{N}star` based on current
+  // `hotelStars`; toggling stars while hotel is selected swaps the slug.
+  const isIncluded = (slug) => {
+    if (slug === 'hotel') return includedSlugs.some(s => /^hotel_\d+star$/.test(s));
+    return includedSlugs.includes(slug);
+  };
+  const toggleIncluded = (slug) => {
+    if (slug === 'hotel') {
+      setIncludedSlugs(prev => {
+        const hasHotel = prev.some(s => /^hotel_\d+star$/.test(s));
+        if (hasHotel) return prev.filter(s => !/^hotel_\d+star$/.test(s));
+        return [...prev, `hotel_${hotelStars}star`];
+      });
+      return;
+    }
+    setIncludedSlugs(prev => prev.includes(slug) ? prev.filter(s => s !== slug) : [...prev, slug]);
+  };
+  const setHotelStarsAndSync = (stars) => {
+    setHotelStars(stars);
+    setIncludedSlugs(prev => {
+      const withoutHotel = prev.filter(s => !/^hotel_\d+star$/.test(s));
+      const hadHotel = prev.length !== withoutHotel.length;
+      return hadHotel ? [...withoutHotel, `hotel_${stars}star`] : prev;
+    });
+  };
+
+  const toggleNotIncluded = (slug) =>
+    setNotIncludedSlugs(prev => prev.includes(slug) ? prev.filter(s => s !== slug) : [...prev, slug]);
 
   const addCustomTheme = () => {
     const v = customTheme.trim();
@@ -156,6 +226,9 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
 
     setSaving(true);
     try {
+      // Note: `status` is not part of the form anymore (guides shouldn't set it).
+      // It's assigned by the create/edit branches below — preserved on edit,
+      // defaulted on create.
       const payload = {
         title:       form.title,
         slug:        form.slug,
@@ -164,20 +237,21 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
         price:       form.price ? Number(form.price) : null,
         location:    form.location,
         city:        form.city,
-        cities:      form.cities.split(',').map(s => s.trim()).filter(Boolean),
+        cities,
         theme:       selectedThemes,
         purpose:     selectedPurposes,
         difficulty:  form.difficulty,
         highlights:  form.highlights.split('\n').filter(Boolean),
         itinerary:   form.itinerary,
-        included:    form.included.split('\n').filter(Boolean),
-        excluded:    form.excluded.split('\n').filter(Boolean),
+        included:    includedSlugs,
+        excluded:    notIncludedSlugs,
         image_url:   imageUrl,
         gallery:     galleryUrls,
-        status:      form.status,
       };
 
       if (editing) {
+        // Preserve existing status on edit. Platform-tour admin edits also
+        // force-publish (existing behaviour).
         const updatePayload = isPlatform
           ? { ...payload, status: 'published', owner_id: null, is_platform_tour: true }
           : payload;
@@ -202,6 +276,11 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
           setForm({ ...EMPTY_TOUR, status: initialStatus, difficulty: '' });
           setSelectedThemes([]);
           setSelectedPurposes([]);
+          setCities([]);
+          setCityInput('');
+          setIncludedSlugs([]);
+          setNotIncludedSlugs([]);
+          setHotelStars(4);
           setImageUrl('');
           setGalleryUrls([]);
         }, 2000);
@@ -274,7 +353,7 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
             <input name="price" type="number" min="0" value={form.price} onChange={handleChange} className={inputClass} placeholder="1200" />
           </div>
           <div>
-            <label className={labelClass}>Location</label>
+            <label className={labelClass}>Locations</label>
             <input name="location" value={form.location} onChange={handleChange} className={inputClass} placeholder="Isfahan, Iran" />
           </div>
           <div>
@@ -283,10 +362,37 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
           </div>
         </div>
 
-        {/* Cities covered */}
+        {/* Cities — chip input. Press Enter or comma to add, X (or Backspace on empty) to remove. */}
         <div>
-          <label className={labelClass}>Cities Covered (comma separated)</label>
-          <input name="cities" value={form.cities} onChange={handleChange} className={inputClass} placeholder="Tehran, Isfahan, Shiraz" />
+          <label className={labelClass}>Cities</label>
+          <div className="flex flex-wrap items-center gap-2 px-2 py-1.5 rounded-xl border border-white/10 bg-white/[0.05] focus-within:border-[hsl(178,85%,32%)] focus-within:ring-1 focus-within:ring-[hsl(178,85%,32%)]/50 transition">
+            {cities.map(c => (
+              <span
+                key={c}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-teal-400/15 border border-teal-400/30 text-white text-xs"
+              >
+                {c}
+                <button
+                  type="button"
+                  onClick={() => removeCity(c)}
+                  className="text-white/60 hover:text-white"
+                  aria-label={`Remove ${c}`}
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            ))}
+            <input
+              type="text"
+              value={cityInput}
+              onChange={e => setCityInput(e.target.value)}
+              onKeyDown={onCityKeyDown}
+              onBlur={addCity}
+              className="flex-1 min-w-[140px] bg-transparent text-white text-sm placeholder:text-white/25 focus:outline-none px-1 py-1"
+              placeholder={cities.length === 0 ? 'Type a city and press Enter — e.g. Tehran' : 'Add another…'}
+            />
+          </div>
+          <p className="text-white/30 text-[10px] mt-1">Press Enter or comma to add. Click ✕ to remove.</p>
         </div>
 
         {/* Difficulty (required) */}
@@ -371,15 +477,98 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
           <textarea name="itinerary" value={form.itinerary} onChange={handleChange} rows={5} className={`${inputClass} resize-none`} placeholder={"Day 1: Arrival in Tehran...\nDay 2: Flight to Isfahan..."} />
         </div>
 
-        {/* Included / Excluded */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className={labelClass}>What&#39;s Included (one per line)</label>
-            <textarea name="included" value={form.included} onChange={handleChange} rows={4} className={`${inputClass} resize-none`} placeholder={"Hotel accommodation\nBreakfast daily\nPrivate transport"} />
+        {/* What's Included — structured checkboxes grouped by category */}
+        <div>
+          <label className={labelClass}>What&#39;s Included</label>
+          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 space-y-5">
+            {INCLUDED_GROUPS.map(group => (
+              <div key={group.id}>
+                <p className="text-white/70 text-xs font-semibold mb-2">
+                  {group.label[lang] || group.label.en}
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {group.items.map(item => {
+                    const checked = isIncluded(item.slug);
+                    return (
+                      <div key={item.slug} className="space-y-2">
+                        <button
+                          type="button"
+                          onClick={() => toggleIncluded(item.slug)}
+                          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border text-left text-sm transition ${
+                            checked
+                              ? 'border-teal-400 bg-teal-400/15 text-white'
+                              : 'border-white/10 bg-white/[0.03] text-white/70 hover:border-white/25 hover:text-white'
+                          }`}
+                        >
+                          <span className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${
+                            checked ? 'bg-teal-400 border-teal-400' : 'border-white/30'
+                          }`}>
+                            {checked && <Check className="w-3 h-3 text-[hsl(222,45%,14%)]" />}
+                          </span>
+                          <span>{item[lang] || item.en}</span>
+                        </button>
+
+                        {/* Hotel star sub-select, only visible when "Hotel accommodation" is checked */}
+                        {item.hasStars && checked && (
+                          <div className="ms-7 flex items-center gap-2">
+                            <span className="text-white/50 text-xs">Stars:</span>
+                            {HOTEL_STAR_LEVELS.map(s => (
+                              <button
+                                key={s}
+                                type="button"
+                                onClick={() => setHotelStarsAndSync(s)}
+                                className={`px-2 py-0.5 rounded-md text-xs border transition ${
+                                  hotelStars === s
+                                    ? 'border-teal-400 bg-teal-400/20 text-white'
+                                    : 'border-white/15 text-white/55 hover:text-white hover:border-white/30'
+                                }`}
+                              >
+                                {s}★
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
-          <div>
-            <label className={labelClass}>What&#39;s Not Included (one per line)</label>
-            <textarea name="excluded" value={form.excluded} onChange={handleChange} rows={4} className={`${inputClass} resize-none`} placeholder={"International flights\nTravel insurance\nLunch and dinner"} />
+        </div>
+
+        {/* Not Included — structured checkboxes */}
+        <div>
+          <label className={labelClass}>Not Included</label>
+          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 space-y-5">
+            {NOT_INCLUDED_GROUPS.map(group => (
+              <div key={group.id}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {group.items.map(item => {
+                    const checked = notIncludedSlugs.includes(item.slug);
+                    return (
+                      <button
+                        type="button"
+                        key={item.slug}
+                        onClick={() => toggleNotIncluded(item.slug)}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border text-left text-sm transition ${
+                          checked
+                            ? 'border-red-400/60 bg-red-400/10 text-white'
+                            : 'border-white/10 bg-white/[0.03] text-white/70 hover:border-white/25 hover:text-white'
+                        }`}
+                      >
+                        <span className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${
+                          checked ? 'bg-red-400 border-red-400' : 'border-white/30'
+                        }`}>
+                          {checked && <Check className="w-3 h-3 text-[hsl(222,45%,14%)]" />}
+                        </span>
+                        <span>{item[lang] || item.en}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
@@ -457,19 +646,6 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
             </div>
           )}
         </div>
-
-        {/* Status (hidden for platform tours — admin auto-publishes) */}
-        {!isPlatform && (
-          <div>
-            <label className={labelClass}>Status</label>
-            <select name="status" value={form.status} onChange={handleChange} className={`${inputClass} w-48 appearance-none cursor-pointer`}>
-              <option value="draft">Draft</option>
-              <option value="pending_review">Pending Review</option>
-              <option value="published">Published</option>
-              <option value="rejected">Rejected</option>
-            </select>
-          </div>
-        )}
 
         {/* Submit */}
         <div className="flex justify-end pt-2">

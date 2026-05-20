@@ -52,7 +52,7 @@ export default function TestimonialsSection() {
         >
           <p className="font-body text-xs uppercase tracking-[0.2em] text-accent mb-3 flex items-center justify-center gap-2">
             <span className="block w-6 h-px bg-accent" />
-            {t('testimonials_title')}
+            {t('testimonials_eyebrow')}
             <span className="block w-6 h-px bg-accent" />
           </p>
           <h2 className="font-heading text-display-sm text-foreground">{t('testimonials_title')}</h2>

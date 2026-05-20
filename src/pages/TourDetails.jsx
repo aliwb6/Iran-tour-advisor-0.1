@@ -1,11 +1,15 @@
-import { useParams, Link } from 'react-router-dom';
+import { useState } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useI18n } from '@/lib/i18n.jsx';
 import { motion } from 'framer-motion';
 import {
   Clock, MapPin, CheckCircle, XCircle,
-  ArrowRight, ArrowLeft, Star, Phone, Mail, Instagram,
+  ArrowRight, ArrowLeft, Star, Lock, Instagram, Loader2,
 } from 'lucide-react';
 import { useTourBySlug, FALLBACK_IMAGE } from '@/hooks/useSupabase';
+import { supabase } from '@/supabaseClient';
+import { useAuth } from '@/lib/AuthContext';
+import { lookupInclusionLabel } from '@/lib/tourInclusions';
 
 const purposeBadgeConfig = {
   leisure: { en: 'Leisure', fa: 'تفریحی', ar: 'ترفيه', color: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400' },
@@ -64,8 +68,12 @@ const parseItineraryString = (text) => {
 export default function TourDetails() {
   const { slug } = useParams();
   const { t, lang, dir } = useI18n();
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const Arrow = dir === 'rtl' ? ArrowLeft : ArrowRight;
   const { tour, loading, error } = useTourBySlug(slug);
+  const [bookLoading, setBookLoading] = useState(false);
+  const [bookError, setBookError] = useState('');
 
   if (loading) {
     return (
@@ -126,6 +134,45 @@ export default function TourDetails() {
   const themes = Array.isArray(tour.theme) ? tour.theme : (tour.theme ? [tour.theme] : []);
 
   const heroImage = pickHeroImage(tour);
+
+  // "Book Now" routes the traveller into a chat with whichever person owns
+  // the tour. For platform tours (owner_id null / is_platform_tour true) we
+  // resolve a fallback admin so the traveller always lands on a real thread.
+  const handleBookNow = async () => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+    setBookError('');
+
+    if (tour.owner_id && !tour.is_platform_tour) {
+      navigate(`/chat/${tour.owner_id}`);
+      return;
+    }
+
+    setBookLoading(true);
+    try {
+      const { data: admin, error: adminErr } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('is_admin', true)
+        .limit(1)
+        .maybeSingle();
+      if (adminErr) throw adminErr;
+      if (!admin?.id) {
+        throw new Error(
+          lang === 'fa' ? 'در حال حاضر هیچ پشتیبانی در دسترس نیست. لطفاً بعداً تلاش کنید.'
+          : lang === 'ar' ? 'لا يوجد دعم متاح حالياً. يرجى المحاولة لاحقاً.'
+          : 'No support agent is available right now. Please try again later.'
+        );
+      }
+      navigate(`/chat/${admin.id}`);
+    } catch (err) {
+      setBookError(err.message || 'Failed to open chat');
+    } finally {
+      setBookLoading(false);
+    }
+  };
 
   return (
     <div dir={dir} className="pt-0 pb-20 min-h-screen">
@@ -331,7 +378,7 @@ export default function TourDetails() {
                         {included.map((item, i) => (
                           <li key={i} className="flex items-start gap-2 font-body text-sm text-foreground/70">
                             <CheckCircle className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
-                            {item}
+                            {lookupInclusionLabel(item, lang)}
                           </li>
                         ))}
                       </ul>
@@ -347,7 +394,7 @@ export default function TourDetails() {
                         {excluded.map((item, i) => (
                           <li key={i} className="flex items-start gap-2 font-body text-sm text-foreground/70">
                             <XCircle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
-                            {item}
+                            {lookupInclusionLabel(item, lang)}
                           </li>
                         ))}
                       </ul>
@@ -384,22 +431,32 @@ export default function TourDetails() {
                 </h3>
 
                 <div className="space-y-3 mb-6">
-                  <button className="w-full py-3 rounded-xl bg-accent text-white font-body font-semibold hover:bg-accent/90 transition-colors">
-                    {lang === 'fa' ? 'رزرو آنلاین' : lang === 'ar' ? 'احجز الآن' : 'Book Now'}
+                  <button
+                    onClick={handleBookNow}
+                    disabled={bookLoading}
+                    className="w-full py-3 rounded-xl bg-accent text-white font-body font-semibold hover:bg-accent/90 transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {bookLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                    {lang === 'fa' ? 'رزرو / تماس با راهنما'
+                      : lang === 'ar' ? 'احجز / تواصل مع المرشد'
+                      : 'Book / Contact Guide'}
                   </button>
-                  <button className="w-full py-3 rounded-xl border border-accent text-accent font-body font-semibold hover:bg-accent/10 transition-colors">
-                    {t('package_inquiry')}
-                  </button>
+                  {bookError && (
+                    <p className="font-body text-xs text-red-500">{bookError}</p>
+                  )}
                 </div>
 
-                <div className="pt-4 border-t border-border/50 space-y-3">
-                  <div className="flex items-center gap-3">
-                    <Phone className="w-4 h-4 text-muted-foreground" />
-                    <span className="font-body text-sm text-foreground/70">+98 912 123 4567</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Mail className="w-4 h-4 text-muted-foreground" />
-                    <span className="font-body text-sm text-foreground/70">info@irantours.com</span>
+                {/* Contact details are intentionally hidden until booking confirmation. */}
+                <div className="pt-4 border-t border-border/50">
+                  <div className="flex items-start gap-3 p-3 rounded-xl bg-muted/40 border border-border/40">
+                    <Lock className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+                    <p className="font-body text-xs text-foreground/65 leading-relaxed">
+                      {lang === 'fa'
+                        ? 'اطلاعات تماس پس از تأیید رزرو در اختیار شما قرار می‌گیرد.'
+                        : lang === 'ar'
+                        ? 'سيتم مشاركة تفاصيل الاتصال بعد تأكيد الحجز.'
+                        : 'Contact details will be shared after booking confirmation.'}
+                    </p>
                   </div>
                 </div>
               </div>

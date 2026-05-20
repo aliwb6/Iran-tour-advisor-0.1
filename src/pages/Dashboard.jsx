@@ -452,15 +452,16 @@ function MyToursView({ tours, onEdit, onDelete }) {
                 {/* Status badge */}
                 {(() => {
                   const STATUS_CFG = {
-                    published:      { label: t('dashboard_published'), dot: 'bg-emerald-400', wrap: 'bg-emerald-500/20 border-emerald-500/30 text-emerald-300' },
-                    pending_review: { label: lang === 'fa' ? 'در انتظار تایید' : 'Pending Review', dot: 'bg-yellow-400', wrap: 'bg-yellow-500/20 border-yellow-500/30 text-yellow-300' },
-                    draft:          { label: t('dashboard_draft'), dot: 'bg-gray-400',    wrap: 'bg-gray-500/20   border-gray-500/30   text-gray-300'   },
-                    rejected:       { label: lang === 'fa' ? 'رد شده' : 'Rejected',        dot: 'bg-red-400',     wrap: 'bg-red-500/20    border-red-500/30    text-red-300'    },
+                    pending:   { icon: '⏳', label: lang === 'fa' ? 'در انتظار تایید' : lang === 'ar' ? 'بانتظار الموافقة' : 'Awaiting Approval', wrap: 'bg-yellow-500/20 border-yellow-500/30 text-yellow-300' },
+                    published: { icon: '✅', label: lang === 'fa' ? 'تایید شده' : lang === 'ar' ? 'موافق عليه' : 'Approved',                      wrap: 'bg-emerald-500/20 border-emerald-500/30 text-emerald-300' },
+                    active:    { icon: '✅', label: lang === 'fa' ? 'تایید شده' : lang === 'ar' ? 'موافق عليه' : 'Approved',                      wrap: 'bg-emerald-500/20 border-emerald-500/30 text-emerald-300' },
+                    inactive:  { icon: '⏸', label: lang === 'fa' ? 'غیرفعال'   : lang === 'ar' ? 'غير نشط'   : 'Inactive',                       wrap: 'bg-gray-500/20    border-gray-500/30    text-gray-300'    },
+                    draft:     { icon: '📝', label: lang === 'fa' ? 'پیش‌نویس'   : lang === 'ar' ? 'مسودة'    : 'Draft',                          wrap: 'bg-gray-500/20    border-gray-500/30    text-gray-300'    },
                   };
                   const cfg = STATUS_CFG[tour.status] || STATUS_CFG.draft;
                   return (
                     <div className={`absolute top-2.5 end-2.5 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold backdrop-blur-sm border ${cfg.wrap}`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
+                      <span>{cfg.icon}</span>
                       {cfg.label}
                     </div>
                   );
@@ -470,11 +471,21 @@ function MyToursView({ tours, onEdit, onDelete }) {
               {/* Info */}
               <div className="p-4">
                 <p className="text-white font-semibold text-sm mb-2 line-clamp-2">{tour.title}</p>
-                <div className="flex items-center gap-3 text-white/40 text-[11px] mb-4">
+                <div className="flex items-center gap-3 text-white/40 text-[11px] mb-3">
                   {tour.location && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{tour.location}</span>}
                   {tour.duration && <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{tour.duration}d</span>}
                   {tour.price && <span className="flex items-center gap-1"><DollarSign className="w-3 h-3" />{Number(tour.price).toLocaleString()}</span>}
                 </div>
+
+                {/* Admin reason — only shown when an admin_note exists and tour isn't approved */}
+                {tour.admin_note && tour.status !== 'published' && tour.status !== 'active' && (
+                  <div className="mb-3 p-2.5 rounded-lg bg-red-500/[0.08] border border-red-500/20">
+                    <p className="text-red-300/90 text-[10px] font-semibold uppercase tracking-wide mb-0.5">
+                      {lang === 'fa' ? 'دلیل:' : lang === 'ar' ? 'السبب:' : 'Reason:'}
+                    </p>
+                    <p className="text-red-300/80 text-xs leading-snug">{tour.admin_note}</p>
+                  </div>
+                )}
 
                 {/* Actions */}
                 <div className="flex items-center gap-2">
