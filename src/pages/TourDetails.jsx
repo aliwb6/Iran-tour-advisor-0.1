@@ -9,7 +9,7 @@ import {
 import { useTourBySlug, FALLBACK_IMAGE } from '@/hooks/useSupabase';
 import { supabase } from '@/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
-import { lookupInclusionLabel } from '@/lib/tourInclusions';
+import { lookupInclusionLabel, computeNotIncludedLabels } from '@/lib/tourInclusions';
 
 const purposeBadgeConfig = {
   leisure: { en: 'Leisure', fa: 'تفریحی', ar: 'ترفيه', color: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400' },
@@ -115,8 +115,9 @@ export default function TourDetails() {
 
   const highlights = pickLangArray(tour.highlights, lang);
   const included = pickLangArray(tour.included, lang);
-  // Guides save under either `excluded` or `not_included` — accept either.
-  const excluded = pickLangArray(tour.excluded ?? tour.not_included, lang);
+  // "Not Included" is derived from the catalog minus the items the guide picked,
+  // so it stays in sync with the Included list without separate storage.
+  const notIncluded = computeNotIncludedLabels(included, lang);
   const itinerary = Array.isArray(tour.itinerary)
     ? tour.itinerary
     : (typeof tour.itinerary === 'string' ? parseItineraryString(tour.itinerary) : []);
@@ -364,43 +365,41 @@ export default function TourDetails() {
               </section>
             )}
 
-            {/* Included / Excluded */}
-            {(included.length > 0 || excluded.length > 0) && (
-              <section>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  {included.length > 0 && (
-                    <div>
-                      <h3 className="font-heading text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-                        <CheckCircle className="w-5 h-5 text-emerald-500" />
-                        {lang === 'fa' ? 'شامل' : lang === 'ar' ? 'مشمول' : 'Included'}
-                      </h3>
-                      <ul className="space-y-2">
-                        {included.map((item, i) => (
-                          <li key={i} className="flex items-start gap-2 font-body text-sm text-foreground/70">
-                            <CheckCircle className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
-                            {lookupInclusionLabel(item, lang)}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  {excluded.length > 0 && (
-                    <div>
-                      <h3 className="font-heading text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-                        <XCircle className="w-5 h-5 text-red-500" />
-                        {lang === 'fa' ? 'شامل نیست' : lang === 'ar' ? 'غير مشمول' : 'Not Included'}
-                      </h3>
-                      <ul className="space-y-2">
-                        {excluded.map((item, i) => (
-                          <li key={i} className="flex items-start gap-2 font-body text-sm text-foreground/70">
-                            <XCircle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
-                            {lookupInclusionLabel(item, lang)}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
+            {/* Included / Not Included */}
+            {(included.length > 0 || notIncluded.length > 0) && (
+              <section className="space-y-6">
+                {included.length > 0 && (
+                  <div>
+                    <h3 className="font-heading text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+                      <CheckCircle className="w-5 h-5 text-emerald-500" />
+                      {lang === 'fa' ? 'شامل' : lang === 'ar' ? 'مشمول' : 'Included'}
+                    </h3>
+                    <ul className="space-y-2">
+                      {included.map((item, i) => (
+                        <li key={i} className="flex items-start gap-2 font-body text-sm text-foreground/70">
+                          <CheckCircle className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
+                          {lookupInclusionLabel(item, lang)}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {notIncluded.length > 0 && (
+                  <div>
+                    <h3 className="font-heading text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+                      <XCircle className="w-5 h-5 text-red-500" />
+                      {lang === 'fa' ? 'شامل نیست' : lang === 'ar' ? 'غير مشمول' : 'Not Included'}
+                    </h3>
+                    <ul className="space-y-2">
+                      {notIncluded.map((item, i) => (
+                        <li key={i} className="flex items-start gap-2 font-body text-sm text-foreground/70">
+                          <XCircle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </section>
             )}
 

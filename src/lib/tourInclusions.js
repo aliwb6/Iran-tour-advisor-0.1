@@ -190,6 +190,46 @@ for (const a of ACCOMMODATION_TYPES) {
 // Hotel star variants don't have a static label entry — we localise inline.
 const HOTEL_BASE_LABEL = { en: 'Hotel', fa: 'هتل', ar: 'فندق' };
 
+// Generic category labels used by the "Not Included" derivation when an entire
+// group (accommodation / transport / meals) wasn't selected at all.
+const CATEGORY_LABELS = {
+  accommodation:  { en: 'Accommodation',  fa: 'اقامت',          ar: 'الإقامة' },
+  transportation: { en: 'Transportation', fa: 'حمل‌ونقل',       ar: 'المواصلات' },
+  meals:          { en: 'Meals',          fa: 'وعده‌های غذایی', ar: 'الوجبات' },
+};
+
+/**
+ * Given the saved `tour.included` array, return a localised list of catalog
+ * items the guide did *not* select, in the same order as the spec:
+ *   Accommodation → Transportation → Meals → English Guide → Insurance →
+ *   Entrance Fees → SIM Card.
+ * Each of the four OTHER_OPTIONS is checked individually; the three grouped
+ * categories show up only when nothing in that group was picked.
+ */
+export function computeNotIncludedLabels(included, lang = 'en') {
+  const state = parseIncluded(included);
+  const out = [];
+
+  if (!state.accommodationEnabled || !state.accommodationType) {
+    const c = CATEGORY_LABELS.accommodation;
+    out.push(c[lang] || c.en);
+  }
+  if (!state.transportation || state.transportation.length === 0) {
+    const c = CATEGORY_LABELS.transportation;
+    out.push(c[lang] || c.en);
+  }
+  if (!state.meals || state.meals === 'none') {
+    const c = CATEGORY_LABELS.meals;
+    out.push(c[lang] || c.en);
+  }
+  for (const opt of OTHER_OPTIONS) {
+    if (!state.other.includes(opt.value)) {
+      out.push(opt[lang] || opt.en);
+    }
+  }
+  return out;
+}
+
 /**
  * Resolve a saved inclusion entry (new English label or legacy slug) into a
  * localised label for the public TourDetails view. Falls through to the raw
