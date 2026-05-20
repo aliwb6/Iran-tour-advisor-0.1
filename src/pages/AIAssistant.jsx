@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useI18n } from '@/lib/i18n.jsx';
 import { supabase } from '@/supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -99,6 +99,8 @@ export default function AIAssistant() {
   const { t, dir, lang } = useI18n();
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
+  const [searchParams] = useSearchParams();
+  const cityHint = searchParams.get('city') || '';
 
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -107,16 +109,33 @@ export default function AIAssistant() {
 
   const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY;
 
-  // Initial greeting (instant, no API call)
+  // Initial greeting (instant, no API call). If the user arrived from a city
+  // page (e.g. /ai-assistant?city=Isfahan), the assistant opens with a
+  // city-aware greeting AND the composer is pre-filled with a sensible
+  // first message so the traveller can just hit Send.
   useEffect(() => {
-    const greet = lang === 'fa'
-      ? 'سلام! من راهنمای سفر هوشمند ایران تور ادوایزر هستم. بگو ببینم، چه چیزی تو را به ایران می‌کشاند؟'
-      : lang === 'ar'
-      ? 'مرحباً! أنا مستشار سفرك إلى إيران من Iran Tour Advisor. أخبرني، ما الذي يجذبك إلى إيران؟'
-      : "Salaam! I'm your Iran travel advisor at Iran Tour Advisor. Tell me — what's drawing you to Iran?";
+    const greet = cityHint
+      ? (lang === 'fa'
+          ? `سلام! دیدم به ${cityHint} علاقه داری — عالیه! چه چیزی تو را به این شهر می‌کشاند؟`
+          : lang === 'ar'
+          ? `مرحباً! أرى أنك مهتم بـ ${cityHint} — اختيار رائع! ما الذي يجذبك إلى هذه المدينة؟`
+          : `Salaam! I see you're curious about ${cityHint} — great choice. What's drawing you there?`)
+      : (lang === 'fa'
+          ? 'سلام! من راهنمای سفر هوشمند ایران تور ادوایزر هستم. بگو ببینم، چه چیزی تو را به ایران می‌کشاند؟'
+          : lang === 'ar'
+          ? 'مرحباً! أنا مستشار سفرك إلى إيران من Iran Tour Advisor. أخبرني، ما الذي يجذبك إلى إيران؟'
+          : "Salaam! I'm your Iran travel advisor at Iran Tour Advisor. Tell me — what's drawing you to Iran?");
     setMessages([{ role: 'assistant', content: greet }]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (cityHint) {
+      setInput(
+        lang === 'fa'
+          ? `می‌خواهم سفری به ${cityHint} برنامه‌ریزی کنم.`
+          : lang === 'ar'
+          ? `أرغب في التخطيط لرحلة إلى ${cityHint}.`
+          : `I'd like to plan a trip to ${cityHint}.`
+      );
+    }
+  }, [cityHint, lang]);
 
   // Fetch tours + guides once
   useEffect(() => {

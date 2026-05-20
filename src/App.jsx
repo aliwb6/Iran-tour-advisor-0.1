@@ -28,6 +28,7 @@ import ProfilePage from '@/pages/profile/ProfilePage';
 import SettingsPage from '@/pages/profile/SettingsPage';
 import BookingsPage from '@/pages/profile/BookingsPage';
 import RequestsPage from '@/pages/profile/RequestsPage';
+import CityPage from '@/pages/CityPage';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth } = useAuth();
@@ -57,6 +58,7 @@ const AuthenticatedApp = () => {
         <Route path="/about" element={<About />} />
         <Route path="/blog" element={<Blog />} />
         <Route path="/blog/:slug" element={<ArticleDetails />} />
+        <Route path="/destinations/:citySlug" element={<CityPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/profile/settings" element={<SettingsPage />} />
         <Route path="/profile/bookings" element={<BookingsPage />} />
