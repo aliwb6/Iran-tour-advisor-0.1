@@ -13,10 +13,10 @@ const COMPANY = [
   { path: '/blog', key: 'nav_blog' },
 ];
 
-const CITIES = ["Isfahan", "Shiraz", "Yazd", "Tehran", "Tabriz", "Kerman"];
+const CITY_KEYS = ['city_isfahan', 'city_shiraz', 'city_yazd', 'city_tehran', 'city_tabriz', 'city_kerman'];
 
 export default function Footer() {
-  const { t, dir, lang } = useI18n();
+  const { t, dir } = useI18n();
 
   return (
     <footer dir={dir} className="bg-navy text-primary-foreground">
@@ -33,7 +33,7 @@ export default function Footer() {
               </div>
               <div>
                 <p className="font-heading text-base font-semibold text-white">Iran Tour Advisor</p>
-                <p className="font-body text-[9px] uppercase tracking-[0.18em] text-gold/60">AI-Powered</p>
+                <p className="font-body text-[9px] uppercase tracking-[0.18em] text-gold/60">{t('brand_tagline')}</p>
               </div>
             </Link>
             <p className="font-body text-sm text-white/50 leading-relaxed mb-6">
@@ -69,13 +69,13 @@ export default function Footer() {
           {/* Destinations */}
           <div>
             <p className="font-body text-xs uppercase tracking-[0.18em] text-gold/70 mb-5">
-              {lang === 'fa' ? 'مقاصد' : lang === 'ar' ? 'الوجهات' : 'Destinations'}
+              {t('footer_destinations')}
             </p>
             <ul className="space-y-3">
-              {CITIES.map(city => (
-                <li key={city}>
+              {CITY_KEYS.map(cityKey => (
+                <li key={cityKey}>
                   <Link to="/tours" className="font-body text-sm text-white/55 hover:text-white transition-colors">
-                    {city}
+                    {t(cityKey)}
                   </Link>
                 </li>
               ))}
@@ -97,12 +97,12 @@ export default function Footer() {
 
             {/* Newsletter */}
             <p className="font-body text-xs text-white/40 mb-3">
-              {lang === 'fa' ? 'دریافت الهام‌های سفر' : lang === 'ar' ? 'احصل على إلهامات السفر' : 'Get travel inspiration'}
+              {t('footer_newsletter')}
             </p>
             <div className="flex gap-2">
               <input
                 type="email"
-                placeholder={lang === 'fa' ? 'ایمیل شما' : lang === 'ar' ? 'بريدك الإلكتروني' : 'Your email'}
+                placeholder={t('footer_email_placeholder')}
                 className="flex-1 bg-white/8 border border-white/15 rounded-full px-4 py-2 text-xs font-body text-white placeholder:text-white/30 focus:outline-none focus:border-turquoise/50 transition-colors"
               />
               <button className="w-9 h-9 rounded-full bg-turquoise flex items-center justify-center shrink-0 hover:bg-turquoise-light transition-colors">
@@ -114,8 +114,8 @@ export default function Footer() {
 
         {/* City ornament strip */}
         <div className="flex items-center gap-2 text-white/15 text-[10px] font-body uppercase tracking-widest overflow-hidden mb-8">
-          {[...CITIES, ...CITIES].map((city, i) => (
-            <span key={i} className="shrink-0">{city} <span className="text-gold/25">❖</span></span>
+          {[...CITY_KEYS, ...CITY_KEYS].map((cityKey, i) => (
+            <span key={i} className="shrink-0">{t(cityKey)} <span className="text-gold/25">❖</span></span>
           ))}
         </div>
 

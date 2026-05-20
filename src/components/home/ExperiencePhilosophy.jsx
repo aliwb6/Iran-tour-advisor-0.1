@@ -27,7 +27,7 @@ const pillars = [
 ];
 
 export default function ExperiencePhilosophy() {
-  const { t, dir, lang } = useI18n();
+  const { t, dir } = useI18n();
 
   return (
     <section dir={dir} className="section-gap bg-background">
@@ -41,7 +41,7 @@ export default function ExperiencePhilosophy() {
         >
           <p className="font-body text-xs uppercase tracking-[0.2em] text-accent mb-3 flex items-center justify-center gap-2">
             <span className="block w-6 h-px bg-accent" />
-            {lang === 'fa' ? 'فلسفه' : lang === 'ar' ? 'الفلسفة' : 'Philosophy'}
+            {t('philosophy_eyebrow')}
             <span className="block w-6 h-px bg-accent" />
           </p>
           <h2 className="font-heading text-display-sm text-foreground mb-3">{t('philosophy_title')}</h2>

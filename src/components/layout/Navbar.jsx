@@ -74,7 +74,7 @@ export default function Navbar() {
                 <span className={`font-heading text-base font-semibold tracking-wide transition-colors ${
                   isLight ? 'text-white' : 'text-foreground'
                 }`}>Iran Tour Advisor</span>
-                <span className="font-body text-[9px] uppercase tracking-[0.18em] text-gold/80">AI-Powered</span>
+                <span className="font-body text-[9px] uppercase tracking-[0.18em] text-gold/80">{t('brand_tagline')}</span>
               </div>
             </Link>
 
@@ -140,7 +140,7 @@ export default function Navbar() {
                         }`}
                       >
                         <Shield className="w-3.5 h-3.5" />
-                        {dir === 'rtl' ? 'پنل ادمین' : 'Admin Panel'}
+                        {t('nav_admin_panel')}
                       </Link>
                     )}
                     {/* Dashboard — guide/agency only */}
@@ -154,7 +154,7 @@ export default function Navbar() {
                         }`}
                       >
                         <LayoutDashboard className="w-3.5 h-3.5" />
-                        {dir === 'rtl' ? 'داشبورد' : 'Dashboard'}
+                        {t('nav_dashboard')}
                       </Link>
                     )}
                     {/* Profile — tourist only */}
@@ -168,7 +168,7 @@ export default function Navbar() {
                         }`}
                       >
                         <User className="w-3.5 h-3.5" />
-                        {dir === 'rtl' ? 'پروفایل' : 'Profile'}
+                        {t('nav_profile')}
                       </Link>
                     )}
                     {/* Logout */}
@@ -179,7 +179,7 @@ export default function Navbar() {
                           ? 'text-white/70 hover:text-white hover:bg-white/10'
                           : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
                       }`}
-                      title={dir === 'rtl' ? 'خروج' : 'Sign out'}
+                      title={t('auth_signout')}
                     >
                       <LogOut className="w-4 h-4" />
                     </button>
@@ -194,13 +194,13 @@ export default function Navbar() {
                           : 'border-border/60 text-foreground hover:bg-muted'
                       }`}
                     >
-                      {dir === 'rtl' ? 'ورود' : 'Sign In'}
+                      {t('auth_signin')}
                     </Link>
                     <Link
                       to="/signup"
                       className="px-4 py-2 rounded-full text-xs font-body font-semibold bg-accent text-white hover:bg-accent/90 transition-colors"
                     >
-                      {dir === 'rtl' ? 'ثبت‌نام' : 'Sign Up'}
+                      {t('auth_signup')}
                     </Link>
                   </div>
                 )
@@ -214,7 +214,7 @@ export default function Navbar() {
                     ? 'border-white/30 text-white bg-white/10'
                     : 'border-border/60 bg-background/60 text-foreground'
                 }`}
-                aria-label="Menu"
+                aria-label={t('nav_menu_aria')}
               >
                 {mobileOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
               </button>
@@ -269,8 +269,8 @@ export default function Navbar() {
                       <span className="font-body text-sm font-bold text-white">{initials}</span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-body text-sm font-medium text-foreground truncate">{fullName || 'User'}</p>
-                      <p className="font-body text-xs text-muted-foreground capitalize">{role || 'traveler'}</p>
+                      <p className="font-body text-sm font-medium text-foreground truncate">{fullName || t('common_user')}</p>
+                      <p className="font-body text-xs text-muted-foreground capitalize">{role || t('role_traveler')}</p>
                     </div>
                     {isAdmin && (
                       <Link
@@ -278,7 +278,7 @@ export default function Navbar() {
                         className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border/50 font-body text-xs font-medium text-foreground hover:bg-muted/50 transition"
                       >
                         <Shield className="w-3.5 h-3.5" />
-                        {dir === 'rtl' ? 'پنل ادمین' : 'Admin Panel'}
+                        {t('nav_admin_panel')}
                       </Link>
                     )}
                     {isGuideOrAgency && (
@@ -287,7 +287,7 @@ export default function Navbar() {
                         className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-accent text-white font-body text-xs font-medium"
                       >
                         <LayoutDashboard className="w-3.5 h-3.5" />
-                        {dir === 'rtl' ? 'داشبورد' : 'Dashboard'}
+                        {t('nav_dashboard')}
                       </Link>
                     )}
                     {isTourist && (
@@ -296,13 +296,13 @@ export default function Navbar() {
                         className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-accent text-white font-body text-xs font-medium"
                       >
                         <User className="w-3.5 h-3.5" />
-                        {dir === 'rtl' ? 'پروفایل' : 'Profile'}
+                        {t('nav_profile')}
                       </Link>
                     )}
                     <button
                       onClick={() => logout()}
                       className="w-8 h-8 rounded-lg border border-border/50 flex items-center justify-center text-muted-foreground hover:text-destructive transition"
-                      title={dir === 'rtl' ? 'خروج' : 'Sign out'}
+                      title={t('auth_signout')}
                     >
                       <LogOut className="w-4 h-4" />
                     </button>
@@ -313,13 +313,13 @@ export default function Navbar() {
                       to="/login"
                       className="flex-1 text-center py-3 rounded-xl border border-border/60 font-body text-sm font-medium text-foreground hover:bg-muted/50 transition"
                     >
-                      {dir === 'rtl' ? 'ورود' : 'Sign In'}
+                      {t('auth_signin')}
                     </Link>
                     <Link
                       to="/signup"
                       className="flex-1 text-center py-3 rounded-xl bg-accent font-body text-sm font-semibold text-white hover:bg-accent/90 transition"
                     >
-                      {dir === 'rtl' ? 'ثبت‌نام' : 'Sign Up'}
+                      {t('auth_signup')}
                     </Link>
                   </div>
                 )

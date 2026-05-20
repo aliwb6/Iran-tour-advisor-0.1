@@ -26,7 +26,7 @@ const durationOptions = [
 ];
 
 export default function TourFilters({ filters, onChange, resultCount }) {
-  const { lang, dir } = useI18n();
+  const { lang, dir, t } = useI18n();
   const label = (opt) => opt[lang] || opt.en;
 
   const hasActive = filters.purpose !== 'all' || filters.theme !== 'all' || filters.duration !== 'all';
@@ -39,7 +39,7 @@ export default function TourFilters({ filters, onChange, resultCount }) {
       <div className="mb-8">
         <p className="font-body text-xs uppercase tracking-widest text-muted-foreground mb-4 flex items-center gap-2">
           <span className="text-accent">◆</span>
-          {lang === 'fa' ? 'هدف سفر شما چیست؟' : lang === 'ar' ? 'ما هو هدف سفرك؟' : 'What is the purpose of your journey?'}
+          {t('filters_purpose_q')}
         </p>
         <div className="flex flex-wrap gap-3">
           {purposeOptions.map(opt => (
@@ -76,7 +76,7 @@ export default function TourFilters({ filters, onChange, resultCount }) {
         <div className="flex-1 min-w-[160px]">
           <p className="font-body text-xs text-muted-foreground mb-2 flex items-center gap-1.5">
             <SlidersHorizontal className="w-3 h-3" />
-            {lang === 'fa' ? 'تم سفر' : lang === 'ar' ? 'نوع الرحلة' : 'Tour Theme'}
+            {t('filters_theme')}
           </p>
           <div className="flex flex-wrap gap-2">
             {themeOptions.map(opt => (
@@ -92,7 +92,7 @@ export default function TourFilters({ filters, onChange, resultCount }) {
         {/* Duration */}
         <div className="min-w-[160px]">
           <p className="font-body text-xs text-muted-foreground mb-2">
-            {lang === 'fa' ? 'مدت سفر' : lang === 'ar' ? 'مدة الرحلة' : 'Duration'}
+            {t('filters_duration')}
           </p>
           <div className="flex gap-2">
             {durationOptions.map(opt => (
@@ -109,12 +109,12 @@ export default function TourFilters({ filters, onChange, resultCount }) {
         <div className="flex items-center gap-3 ms-auto">
           <span className="font-body text-sm text-muted-foreground">
             <span className="text-foreground font-semibold">{resultCount}</span>
-            {lang === 'fa' ? ' تور یافت شد' : lang === 'ar' ? ' رحلة' : ' tours found'}
+            {t('filters_results_found')}
           </span>
           {hasActive && (
             <button onClick={reset} className="flex items-center gap-1 text-xs font-body text-destructive hover:opacity-70 transition-opacity">
               <X className="w-3.5 h-3.5" />
-              {lang === 'fa' ? 'پاک کردن' : lang === 'ar' ? 'مسح' : 'Clear'}
+              {t('filters_clear')}
             </button>
           )}
         </div>

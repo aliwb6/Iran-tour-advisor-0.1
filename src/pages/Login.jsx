@@ -9,25 +9,13 @@ import {
 } from 'lucide-react';
 
 const BENEFITS = [
-  {
-    icon: Compass,
-    en: { title: 'Your Journey Continues', desc: 'Pick up your Iran adventure exactly where you left off' },
-    fa: { title: 'سفر شما ادامه دارد', desc: 'دقیقاً از همان‌جایی که رفته بودید ادامه دهید' },
-  },
-  {
-    icon: Bookmark,
-    en: { title: 'Saved Favourites', desc: 'Instant access to your saved guides, tours, and destinations' },
-    fa: { title: 'موارد ذخیره‌شده', desc: 'دسترسی سریع به راهنماها، تورها و مقاصد مورد علاقه‌تان' },
-  },
-  {
-    icon: Star,
-    en: { title: 'Personalised for You', desc: 'AI recommendations shaped by your unique travel style' },
-    fa: { title: 'شخصی‌سازی شده برای شما', desc: 'پیشنهادهای هوش مصنوعی متناسب با سبک سفر شما' },
-  },
+  { icon: Compass, titleKey: 'login_benefit1_title', descKey: 'login_benefit1_desc' },
+  { icon: Bookmark, titleKey: 'login_benefit2_title', descKey: 'login_benefit2_desc' },
+  { icon: Star, titleKey: 'login_benefit3_title', descKey: 'login_benefit3_desc' },
 ];
 
 export default function Login() {
-  const { lang, dir } = useI18n();
+  const { t, dir } = useI18n();
   const navigate = useNavigate();
   const isRtl = dir === 'rtl';
   const Arrow = isRtl ? ArrowLeft : ArrowRight;
@@ -64,19 +52,11 @@ export default function Login() {
     } catch (err) {
       const msg = err.message || '';
       if (msg.includes('Invalid login credentials') || msg.includes('invalid_credentials')) {
-        setError(
-          lang === 'fa'
-            ? 'ایمیل یا رمز عبور اشتباه است. / Invalid email or password.'
-            : 'Invalid email or password. / ایمیل یا رمز عبور اشتباه است.'
-        );
+        setError(t('auth_err_invalid'));
       } else if (msg.includes('Email not confirmed')) {
-        setError(
-          lang === 'fa'
-            ? 'لطفاً ایمیل خود را تأیید کنید. / Please verify your email first.'
-            : 'Please verify your email first. / لطفاً ایمیل خود را تأیید کنید.'
-        );
+        setError(t('auth_err_unconfirmed'));
       } else {
-        setError(lang === 'fa' ? `خطا: ${msg}` : `Error: ${msg}`);
+        setError(t('auth_err_generic', { msg }));
       }
     } finally {
       setLoading(false);
@@ -94,7 +74,7 @@ export default function Login() {
       if (resetErr) throw resetErr;
       setResetSent(true);
     } catch (err) {
-      setResetError(lang === 'fa' ? `خطا: ${err.message}` : `Error: ${err.message}`);
+      setResetError(t('auth_err_generic', { msg: err.message }));
     } finally {
       setResetLoading(false);
     }
@@ -134,23 +114,16 @@ export default function Login() {
           {/* Headline */}
           <div className="mb-12">
             <h2 className="font-heading text-4xl xl:text-5xl font-bold text-white leading-tight mb-4">
-              {lang === 'fa' ? (
-                <>خوش آمدید<br /><span className="text-[hsl(38,62%,60%)]">دوباره</span></>
-              ) : (
-                <>Welcome<br /><span className="text-[hsl(38,62%,60%)]">Back</span></>
-              )}
+              {t('login_welcome_1')}<br /><span className="text-[hsl(38,62%,60%)]">{t('login_welcome_2')}</span>
             </h2>
             <p className="font-body text-[hsl(222,20%,65%)] text-base leading-relaxed max-w-xs">
-              {lang === 'fa'
-                ? 'ادامه سفر ایرانی شما در یک کلیک'
-                : 'Continue your Iranian adventure — one click away'}
+              {t('login_welcome_sub')}
             </p>
           </div>
 
           {/* Benefits */}
           <div className="space-y-6 flex-1">
-            {BENEFITS.map(({ icon: Icon, en, fa }, i) => {
-              const content = lang === 'fa' ? fa : en;
+            {BENEFITS.map(({ icon: Icon, titleKey, descKey }, i) => {
               return (
                 <motion.div
                   key={i}
@@ -163,8 +136,8 @@ export default function Login() {
                     <Icon className="w-5 h-5 text-[hsl(38,62%,65%)]" />
                   </div>
                   <div>
-                    <p className="font-body text-white font-semibold text-sm mb-0.5">{content.title}</p>
-                    <p className="font-body text-[hsl(222,15%,58%)] text-xs leading-relaxed">{content.desc}</p>
+                    <p className="font-body text-white font-semibold text-sm mb-0.5">{t(titleKey)}</p>
+                    <p className="font-body text-[hsl(222,15%,58%)] text-xs leading-relaxed">{t(descKey)}</p>
                   </div>
                 </motion.div>
               );
@@ -174,9 +147,7 @@ export default function Login() {
           {/* Bottom quote */}
           <div className="mt-auto pt-10 border-t border-white/10">
             <p className="font-body text-[hsl(222,15%,50%)] text-xs italic leading-relaxed">
-              {lang === 'fa'
-                ? '"هر سفر به ایران داستانی تازه است که منتظر روایت توست"'
-                : '"Every journey to Iran is a new story waiting to be told"'}
+              {t('login_quote')}
             </p>
           </div>
         </div>
@@ -193,10 +164,10 @@ export default function Login() {
           {/* Header */}
           <div className="mb-8">
             <h1 className="font-heading text-3xl font-bold text-foreground mb-1">
-              {lang === 'fa' ? 'ورود به حساب' : 'Sign In'}
+              {t('login_heading')}
             </h1>
             <p className="font-body text-muted-foreground text-sm">
-              {lang === 'fa' ? 'به دنیای ایران‌گردی خوش آمدید' : 'Good to have you back'}
+              {t('login_subtitle')}
             </p>
           </div>
 
@@ -220,7 +191,7 @@ export default function Login() {
             {/* Email */}
             <div>
               <label className="block font-body text-xs text-muted-foreground mb-1.5">
-                {lang === 'fa' ? 'ایمیل' : 'Email'} *
+                {t('field_email')} *
               </label>
               <div className="relative">
                 <Mail className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none ${isRtl ? 'end-3.5' : 'start-3.5'}`} />
@@ -240,14 +211,14 @@ export default function Login() {
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="font-body text-xs text-muted-foreground">
-                  {lang === 'fa' ? 'رمز عبور' : 'Password'} *
+                  {t('field_password')} *
                 </label>
                 <button
                   type="button"
                   onClick={() => { setForgotOpen(v => !v); setResetSent(false); setResetError(''); }}
                   className="font-body text-xs text-accent hover:underline underline-offset-2 transition"
                 >
-                  {lang === 'fa' ? 'رمز عبور را فراموش کردید؟' : 'Forgot password?'}
+                  {t('login_forgot')}
                 </button>
               </div>
               <div className="relative">
@@ -286,17 +257,13 @@ export default function Login() {
                       <div className="flex items-center gap-2 text-green-600 font-body text-sm">
                         <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
                         <span>
-                          {lang === 'fa'
-                            ? 'لینک بازیابی ارسال شد. ایمیل خود را بررسی کنید.'
-                            : 'Reset link sent — check your inbox.'}
+                          {t('login_reset_sent')}
                         </span>
                       </div>
                     ) : (
                       <form onSubmit={handleResetPassword} className="space-y-2.5">
                         <p className="font-body text-xs text-muted-foreground">
-                          {lang === 'fa'
-                            ? 'ایمیل خود را وارد کنید تا لینک بازیابی ارسال شود.'
-                            : 'Enter your email and we\'ll send a reset link.'}
+                          {t('login_reset_prompt')}
                         </p>
                         {resetError && (
                           <p className="font-body text-xs text-red-500">{resetError}</p>
@@ -315,7 +282,7 @@ export default function Login() {
                             disabled={resetLoading}
                             className="px-3 py-2 rounded-lg bg-accent text-white font-body text-xs font-medium hover:bg-accent/90 transition disabled:opacity-60"
                           >
-                            {resetLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : (lang === 'fa' ? 'ارسال' : 'Send')}
+                            {resetLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : t('common_send')}
                           </button>
                         </div>
                       </form>
@@ -334,20 +301,18 @@ export default function Login() {
               {loading
                 ? <Loader2 className="w-4 h-4 animate-spin" />
                 : <Arrow className="w-4 h-4" />}
-              {loading
-                ? (lang === 'fa' ? 'در حال ورود...' : 'Signing in...')
-                : (lang === 'fa' ? 'ورود به حساب' : 'Sign In')}
+              {loading ? t('login_signing_in') : t('login_heading')}
             </button>
           </form>
 
           {/* Register link */}
           <p className="mt-6 text-center font-body text-sm text-muted-foreground">
-            {lang === 'fa' ? 'حساب کاربری ندارید؟' : "Don't have an account?"}{' '}
+            {t('login_no_account')}{' '}
             <Link
               to="/register"
               className="text-accent font-medium hover:underline underline-offset-2 transition"
             >
-              {lang === 'fa' ? 'ثبت‌نام رایگان' : 'Join free'}
+              {t('login_join_free')}
             </Link>
           </p>
         </motion.div>

@@ -6,7 +6,7 @@ import { useTopRatedTours, FALLBACK_IMAGE } from '@/hooks/useSupabase';
 import { useNavigate } from 'react-router-dom';
 
 export default function FeaturedPackages() {
-  const { t, dir, lang } = useI18n();
+  const { t, dir } = useI18n();
   const navigate = useNavigate();
   const Arrow = dir === 'rtl' ? ArrowLeft : ArrowRight;
 
@@ -27,7 +27,7 @@ export default function FeaturedPackages() {
           >
             <p className="font-body text-xs uppercase tracking-[1.5em] text-accent mb-3 flex items-center gap-2">
               <span className="block w-6 h-px bg-accent" />
-              {lang === 'fa' ? 'پکیج‌های selected' : lang === 'ar' ? 'باقات مختارة' : 'Featured Packages'}
+              {t('featured_eyebrow')}
             </p>
             <h2 className="font-heading text-display-sm text-foreground">{t('packages_title')}</h2>
             <p className="font-body text-muted-foreground mt-2">{t('packages_subtitle')}</p>

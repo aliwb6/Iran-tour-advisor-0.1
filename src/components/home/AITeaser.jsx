@@ -42,7 +42,7 @@ export default function AITeaser() {
 
           <p className="font-body text-xs uppercase tracking-[0.2em] text-accent/80 mb-4 flex items-center justify-center gap-2">
             <span className="block w-6 h-px bg-accent/60" />
-            {lang === 'fa' ? 'هوش مصنوعی سفر' : lang === 'ar' ? 'ذكاء اصطناعي للسفر' : 'AI Travel Intelligence'}
+            {t('ai_teaser_eyebrow')}
             <span className="block w-6 h-px bg-accent/60" />
           </p>
 
@@ -70,7 +70,7 @@ export default function AITeaser() {
               to="/ai-assistant"
               className="inline-flex items-center gap-2.5 bg-accent hover:bg-accent/90 text-white px-8 py-3.5 rounded-full font-body font-semibold text-sm uppercase tracking-wide transition-all duration-300 hover:shadow-lg hover:shadow-accent/30"
             >
-              {lang === 'fa' ? 'شروع گفتگو' : lang === 'ar' ? 'ابدأ المحادثة' : 'Start a Conversation'}
+              {t('ai_teaser_cta')}
               <Arrow className="w-4 h-4" />
             </Link>
             <Link

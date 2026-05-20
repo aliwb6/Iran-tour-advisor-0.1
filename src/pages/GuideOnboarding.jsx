@@ -48,16 +48,19 @@ export default function GuideOnboarding() {
       if (!session?.user?.id) throw new Error('User not authenticated. Please log in.');
       const userId = session.user.id;
 
-      const { error: supabaseError } = await supabase.from('profiles').insert({
-        id: userId,
-        full_name: formData.full_name,
-        bio: formData.bio,
-        city: formData.city,
-        specialty: formData.specialty,
-        role: 'guide',
-        is_approved: false,
-        created_at: new Date().toISOString(),
-      });
+      // The profile row already exists (created by handle_new_user trigger on signup),
+      // so we update it instead of inserting a new one.
+      const { error: supabaseError } = await supabase
+        .from('profiles')
+        .update({
+          full_name: formData.full_name,
+          bio: formData.bio,
+          city: formData.city,
+          specialty: formData.specialty,
+          role: 'guide',
+          is_approved: false,
+        })
+        .eq('id', userId);
 
       if (supabaseError) throw supabaseError;
 

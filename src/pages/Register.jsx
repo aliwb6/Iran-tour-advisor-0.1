@@ -96,13 +96,15 @@ export default function Register() {
     setLoading(true);
 
     try {
-      const { data, error: signUpError } = await supabase.auth.signUp({
+      // Profile row is created automatically by the handle_new_user DB trigger
+      const { error: signUpError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
           data: {
             full_name: `${formData.firstName} ${formData.lastName}`.trim(),
             role,
+            gender: formData.gender,
             phone: formData.phone || null,
             country: formData.country || null,
           },
@@ -110,18 +112,6 @@ export default function Register() {
       });
 
       if (signUpError) throw signUpError;
-
-      if (data?.user) {
-        await supabase.from('profiles').upsert({
-          id: data.user.id,
-          email: formData.email,
-          full_name: `${formData.firstName} ${formData.lastName}`.trim(),
-          role,
-          gender: formData.gender,
-          phone: formData.phone || null,
-          country: formData.country || null,
-        });
-      }
 
       if (role === 'traveler') navigate('/');
       else navigate('/dashboard');

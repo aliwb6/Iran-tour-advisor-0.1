@@ -12,7 +12,7 @@ const FALLBACK_IMAGES = [
 ];
 
 export default function PopularPackages() {
-  const { t, dir, lang } = useI18n();
+  const { t, dir } = useI18n();
   const [tours, setTours] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -68,11 +68,7 @@ export default function PopularPackages() {
         ) : tours.length === 0 ? (
           <div className="text-center py-16">
             <p className="font-body text-muted-foreground text-sm">
-              {lang === 'fa'
-                ? 'به زودی سفرهای ویژه ما را اینجا خواهید دید'
-                : lang === 'ar'
-                ? 'قريباً سترى رحلاتنا المنتقاة هنا'
-                : 'Our curated journeys are coming soon'}
+              {t('popular_empty')}
             </p>
           </div>
         ) : (
@@ -116,7 +112,7 @@ export default function PopularPackages() {
                         </div>
                         {tour.price != null && (
                           <span className="font-body text-sm text-accent font-semibold">
-                            {lang === 'fa' ? 'از ' : lang === 'ar' ? 'من ' : 'from '}
+                            {t('price_from')}
                             ${Number(tour.price).toLocaleString()}
                           </span>
                         )}

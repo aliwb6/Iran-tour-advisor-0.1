@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { User, Mail, Lock, Building2, MapPin, ArrowRight, ArrowLeft, Eye, EyeOff, Loader2 } from 'lucide-react';
 
 export default function Signup() {
-  const { dir, lang } = useI18n();
+  const { dir, t } = useI18n();
   const navigate = useNavigate();
   const Arrow = dir === 'rtl' ? ArrowLeft : ArrowRight;
 
@@ -33,56 +33,46 @@ export default function Signup() {
     setError('');
 
     if (formData.password !== formData.confirmPassword) {
-      setError(lang === 'fa' ? 'رمزهای عبور مطابقت ندارند' : 'Passwords do not match');
+      setError(t('signup_err_pw_match'));
       return;
     }
 
     if (formData.password.length < 8) {
-      setError(lang === 'fa' ? 'رمز عبور باید حداقل ۸ کاراکتر باشد' : 'Password must be at least 8 characters');
+      setError(t('signup_err_pw_len'));
       return;
     }
 
     if ((formData.role === 'guide' || formData.role === 'agency') && !formData.city) {
-      setError(lang === 'fa' ? 'لطفاً شهر خود را وارد کنید' : 'Please enter your city');
+      setError(t('signup_err_city'));
       return;
     }
 
     if (!formData.gender) {
-      setError(lang === 'fa' ? 'لطفاً جنسیت خود را انتخاب کنید' : 'Please select your gender');
+      setError(t('signup_err_gender'));
       return;
     }
 
     setLoading(true);
     try {
       // ۱. ثبت‌نام در Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      // پروفایل به‌صورت خودکار توسط تریگر handle_new_user در دیتابیس ساخته می‌شود
+      const { error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
-          data: { full_name: formData.full_name }
-        }
-      });
-
-      if (authError) throw authError;
-
-      // ۲. ذخیره اطلاعات پروفایل
-      if (authData.user) {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .upsert({
-            id: authData.user.id,
-            email: formData.email,
+          data: {
             full_name: formData.full_name,
             role: formData.role,
             gender: formData.gender,
             city: formData.city || null,
             bio: formData.bio || null,
-          });
+          }
+        }
+      });
 
-        if (profileError) throw profileError;
-      }
+      if (authError) throw authError;
 
-      // ۳. redirect بر اساس role
+      // ۲. redirect بر اساس role
       if (formData.role === 'guide' || formData.role === 'agency') {
         navigate('/dashboard');
       } else {
@@ -91,7 +81,7 @@ export default function Signup() {
       }
 
     } catch (err) {
-      setError(err.message || (lang === 'fa' ? 'خطا در ثبت‌نام' : 'Registration failed'));
+      setError(err.message || t('signup_err_failed'));
     } finally {
       setLoading(false);
     }
@@ -110,10 +100,10 @@ export default function Signup() {
             <User className="w-8 h-8 text-accent" />
           </div>
           <h1 className="font-heading text-3xl font-bold text-foreground mb-2">
-            {lang === 'fa' ? 'ایجاد حساب کاربری' : 'Create Account'}
+            {t('signup_heading')}
           </h1>
           <p className="font-body text-muted-foreground">
-            {lang === 'fa' ? 'به Iran Tour Advisor خوش آمدید' : 'Welcome to Iran Tour Advisor'}
+            {t('signup_subtitle')}
           </p>
         </div>
 
@@ -129,7 +119,7 @@ export default function Signup() {
             {/* نام کامل */}
             <div>
               <label className="block font-body text-sm text-muted-foreground mb-1.5">
-                {lang === 'fa' ? 'نام کامل' : 'Full Name'}
+                {t('field_full_name')}
               </label>
               <div className="relative">
                 <User className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground ${dir === 'rtl' ? 'end-4' : 'start-4'}`} />
@@ -139,7 +129,7 @@ export default function Signup() {
                   value={formData.full_name}
                   onChange={e => handleChange('full_name', e.target.value)}
                   className={`w-full ${dir === 'rtl' ? 'pe-11 ps-4' : 'ps-11 pe-4'} py-3 rounded-xl border border-border bg-background font-body text-foreground focus:outline-none focus:ring-2 focus:ring-accent/50`}
-                  placeholder={lang === 'fa' ? 'نام و نام خانوادگی' : 'Your full name'}
+                  placeholder={t('signup_full_name_ph')}
                 />
               </div>
             </div>
@@ -147,7 +137,7 @@ export default function Signup() {
             {/* ایمیل */}
             <div>
               <label className="block font-body text-sm text-muted-foreground mb-1.5">
-                {lang === 'fa' ? 'ایمیل' : 'Email'}
+                {t('field_email')}
               </label>
               <div className="relative">
                 <Mail className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground ${dir === 'rtl' ? 'end-4' : 'start-4'}`} />
@@ -165,7 +155,7 @@ export default function Signup() {
             {/* رمز عبور */}
             <div>
               <label className="block font-body text-sm text-muted-foreground mb-1.5">
-                {lang === 'fa' ? 'رمز عبور' : 'Password'}
+                {t('field_password')}
               </label>
               <div className="relative">
                 <Lock className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground ${dir === 'rtl' ? 'end-4' : 'start-4'}`} />
@@ -190,7 +180,7 @@ export default function Signup() {
             {/* تکرار رمز عبور */}
             <div>
               <label className="block font-body text-sm text-muted-foreground mb-1.5">
-                {lang === 'fa' ? 'تکرار رمز عبور' : 'Confirm Password'}
+                {t('field_confirm_password')}
               </label>
               <div className="relative">
                 <Lock className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground ${dir === 'rtl' ? 'end-4' : 'start-4'}`} />
@@ -208,14 +198,14 @@ export default function Signup() {
             {/* انتخاب نوع حساب */}
             <div>
               <label className="block font-body text-sm text-muted-foreground mb-2">
-                {lang === 'fa' ? 'نوع حساب' : 'Account Type'}
+                {t('signup_account_type')}
               </label>
               <div className="grid grid-cols-3 rounded-xl border border-border overflow-hidden">
                 {[
-                  { value: 'tourist', fa: 'گردشگر', en: 'Tourist', icon: User },
-                  { value: 'guide', fa: 'راهنما', en: 'Guide', icon: MapPin },
-                  { value: 'agency', fa: 'آژانس', en: 'Agency', icon: Building2 },
-                ].map(({ value, fa, en, icon: Icon }) => (
+                  { value: 'tourist', icon: User },
+                  { value: 'guide', icon: MapPin },
+                  { value: 'agency', icon: Building2 },
+                ].map(({ value, icon: Icon }) => (
                   <button
                     key={value}
                     type="button"
@@ -227,7 +217,7 @@ export default function Signup() {
                     }`}
                   >
                     <Icon className="w-4 h-4" />
-                    {lang === 'fa' ? fa : en}
+                    {t('role_' + value)}
                   </button>
                 ))}
               </div>
@@ -236,13 +226,13 @@ export default function Signup() {
             {/* جنسیت */}
             <div>
               <label className="block font-body text-sm text-muted-foreground mb-2">
-                {lang === 'fa' ? 'جنسیت' : 'Gender'}
+                {t('signup_gender')}
               </label>
               <div className="grid grid-cols-2 gap-3">
                 {[
-                  { value: 'male', fa: 'آقا', en: 'Male', img: '/avatars/default-male.png' },
-                  { value: 'female', fa: 'خانم', en: 'Female', img: '/avatars/default-female.png' },
-                ].map(({ value, fa, en, img }) => {
+                  { value: 'male', img: '/avatars/default-male.png' },
+                  { value: 'female', img: '/avatars/default-female.png' },
+                ].map(({ value, img }) => {
                   const selected = formData.gender === value;
                   return (
                     <button
@@ -258,11 +248,11 @@ export default function Signup() {
                     >
                       <img
                         src={img}
-                        alt={en}
+                        alt={t('gender_' + value)}
                         className={`w-16 h-16 rounded-full object-cover transition-opacity ${selected ? 'opacity-100' : 'opacity-80'}`}
                       />
                       <span className={`font-body text-sm font-semibold ${selected ? 'text-accent' : 'text-foreground'}`}>
-                        {lang === 'fa' ? fa : en}
+                        {t('gender_' + value)}
                       </span>
                     </button>
                   );
@@ -279,7 +269,7 @@ export default function Signup() {
               >
                 <div>
                   <label className="block font-body text-sm text-muted-foreground mb-1.5">
-                    {lang === 'fa' ? 'شهر فعالیت' : 'City of Activity'}
+                    {t('signup_city_label')}
                   </label>
                   <div className="relative">
                     <MapPin className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground ${dir === 'rtl' ? 'end-4' : 'start-4'}`} />
@@ -288,7 +278,7 @@ export default function Signup() {
                       value={formData.city}
                       onChange={e => handleChange('city', e.target.value)}
                       className={`w-full ${dir === 'rtl' ? 'pe-11 ps-4' : 'ps-11 pe-4'} py-3 rounded-xl border border-border bg-background font-body text-foreground focus:outline-none focus:ring-2 focus:ring-accent/50`}
-                      placeholder={lang === 'fa' ? 'مثلاً: تهران، اصفهان' : 'e.g. Tehran, Isfahan'}
+                      placeholder={t('signup_city_ph')}
                     />
                   </div>
                 </div>
