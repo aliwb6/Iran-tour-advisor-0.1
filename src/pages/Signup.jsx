@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { User, Mail, Lock, Building2, MapPin, ArrowRight, ArrowLeft, Eye, EyeOff, Loader2 } from 'lucide-react';
 
 export default function Signup() {
-  const { dir, t } = useI18n();
+  const { lang, dir, t } = useI18n();
   const navigate = useNavigate();
   const Arrow = dir === 'rtl' ? ArrowLeft : ArrowRight;
 
