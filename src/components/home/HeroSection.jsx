@@ -2,23 +2,12 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useI18n } from '@/lib/i18n.jsx';
 import { motion } from 'framer-motion';
-import { ArrowRight, ArrowLeft, Sparkles, MapPin, Star } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Sparkles, Star } from 'lucide-react';
 
 const HERO_IMAGES = [
   "https://media.base44.com/images/public/69fddcfab0730c36bda3631e/7a7bd2ab5_generated_847e20ff.png",
   "https://media.base44.com/images/public/69fddcfab0730c36bda3631e/67ecc93d7_generated_d105795a.png",
   "https://media.base44.com/images/public/69fddcfab0730c36bda3631e/edfc38152_generated_aa7676e0.png",
-];
-
-const DESTINATIONS = [
-  { en: "Isfahan",    fa: "اصفهان",      ar: "أصفهان" },
-  { en: "Shiraz",     fa: "شیراز",       ar: "شيراز" },
-  { en: "Persepolis", fa: "تخت جمشید",   ar: "برسبوليس" },
-  { en: "Yazd",       fa: "یزد",         ar: "يزد" },
-  { en: "Lut Desert", fa: "کویر لوت",    ar: "صحراء لوت" },
-  { en: "Tabriz",     fa: "تبریز",       ar: "تبريز" },
-  { en: "Tehran",     fa: "تهران",       ar: "طهران" },
-  { en: "Kashan",     fa: "کاشان",       ar: "كاشان" },
 ];
 
 const STATS = [
@@ -126,27 +115,13 @@ export default function HeroSection() {
           </Link>
         </motion.div>
 
-        {/* Bottom row: destinations + stats */}
+        {/* Bottom row: stats */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.9, duration: 0.8 }}
-          className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-6"
+          className="flex flex-col sm:flex-row items-start sm:items-end justify-end gap-6"
         >
-          {/* Destination pills */}
-          <div className="flex flex-wrap gap-2">
-            {DESTINATIONS.map((d, i) => (
-              <Link
-                key={i}
-                to="/tours"
-                className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 border border-white/15 rounded-full px-3 py-1.5 text-white/80 hover:text-white transition-all duration-300 backdrop-blur-sm"
-              >
-                <MapPin className="w-3 h-3 text-gold" />
-                <span className="font-body text-xs">{d[lang] || d.en}</span>
-              </Link>
-            ))}
-          </div>
-
           {/* Stats */}
           <div className="flex items-center gap-6 sm:gap-8">
             {STATS.map((stat, i) => (

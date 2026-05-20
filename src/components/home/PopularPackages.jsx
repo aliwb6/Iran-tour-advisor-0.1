@@ -46,21 +46,6 @@ export default function PopularPackages() {
   return (
     <section dir={dir} className="section-gap bg-sand/30">
       <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-10">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-12 lg:mb-16">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
-            <p className="font-body text-xs uppercase tracking-[1.5em] text-accent mb-3 flex items-center gap-2">
-              <span className="block w-6 h-px bg-accent" />
-              {t('packages_title')}
-            </p>
-            <h2 className="font-heading text-display-sm text-foreground">{t('packages_title')}</h2>
-            <p className="font-body text-muted-foreground mt-2">{t('packages_subtitle')}</p>
-          </motion.div>
-        </div>
-
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-7 h-7 text-accent animate-spin" />
