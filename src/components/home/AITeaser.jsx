@@ -61,19 +61,13 @@ export default function AITeaser() {
             ))}
           </div>
 
-          <div className="flex flex-wrap items-center justify-center gap-4">
+          <div className="flex items-center justify-center">
             <Link
               to="/ai-assistant"
               className="inline-flex items-center gap-2.5 bg-accent hover:bg-accent/90 text-white px-8 py-3.5 rounded-full font-body font-semibold text-sm uppercase tracking-wide transition-all duration-300 hover:shadow-lg hover:shadow-accent/30"
             >
               {t('ai_teaser_cta')}
               <Arrow className="w-4 h-4" />
-            </Link>
-            <Link
-              to="/custom-trip"
-              className="inline-flex items-center gap-2 text-white/70 hover:text-white text-sm font-body transition-colors"
-            >
-              {t('hero_cta_custom')} <Arrow className="w-3.5 h-3.5" />
             </Link>
           </div>
         </motion.div>

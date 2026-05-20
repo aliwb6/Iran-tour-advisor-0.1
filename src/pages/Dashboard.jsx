@@ -192,18 +192,125 @@ function Sidebar({ section, onNavigate, profileExpanded, setProfileExpanded, use
 
 // ─── HomeView ─────────────────────────────────────────────────────────────────
 
-function HomeView({ profile, tours, reviews, onNavigate }) {
+function HomeView({ profile, tours, reviews, userId, lang, onNavigate, onOpenChat }) {
   const { t } = useI18n();
   const [reqTab, setReqTab] = useState('new');
+  const [latestChats, setLatestChats] = useState([]);
+  const [latestChatsLoading, setLatestChatsLoading] = useState(true);
+  const [tourRequests, setTourRequests] = useState([]);
 
-  const upcomingTour = tours.find(t => t.status === 'published');
+  const upcomingTour = tours.find(tr => tr.status === 'published');
   const totalTours = tours.length;
-  const publishedCount = tours.filter(t => t.status === 'published').length;
-  const draftCount = tours.filter(t => t.status === 'draft').length;
+  const publishedCount = tours.filter(tr => tr.status === 'published').length;
+  const draftCount = tours.filter(tr => tr.status === 'draft').length;
   const totalReviews = reviews.length;
   const avgRating = totalReviews
     ? (reviews.reduce((s, r) => s + (r.rating || 0), 0) / totalReviews).toFixed(1)
     : '—';
+
+  // Live: load the 3 most-recent conversations for this user (Latest Chat widget)
+  // and any inbound traveller messages that look like a new request (Tour Requests).
+  useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
+
+    async function load() {
+      const { data: msgs, error } = await supabase
+        .from('messages')
+        .select('*')
+        .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
+        .order('created_at', { ascending: false })
+        .limit(80);
+
+      if (cancelled) return;
+      if (error) {
+        console.error('[Dashboard] latest messages fetch failed', error);
+        setLatestChatsLoading(false);
+        return;
+      }
+
+      // Group by the other participant; keep first (newest) message per conversation.
+      const groups = new Map();
+      (msgs || []).forEach((m) => {
+        const otherId = m.sender_id === userId ? m.receiver_id : m.sender_id;
+        if (!otherId) return;
+        if (!groups.has(otherId)) {
+          groups.set(otherId, { otherId, last: m, unread: 0 });
+        }
+        if (m.receiver_id === userId && !m.is_read) {
+          groups.get(otherId).unread += 1;
+        }
+      });
+
+      const otherIds = [...groups.keys()];
+      let profiles = [];
+      if (otherIds.length > 0) {
+        const { data: ps } = await supabase
+          .from('profiles')
+          .select('id, full_name, avatar_url, gender, role')
+          .in('id', otherIds);
+        profiles = ps || [];
+      }
+
+      const list = [...groups.values()].map((g) => ({
+        ...g,
+        profile: profiles.find((p) => p.id === g.otherId) || null,
+      }));
+
+      if (!cancelled) {
+        setLatestChats(list.slice(0, 3));
+        // Unread inbound messages double as "new" tour requests until a dedicated table exists.
+        const inboundUnread = (msgs || [])
+          .filter((m) => m.receiver_id === userId && !m.is_read)
+          .slice(0, 5)
+          .map((m) => ({
+            ...m,
+            sender: profiles.find((p) => p.id === m.sender_id) || null,
+          }));
+        setTourRequests(inboundUnread);
+        setLatestChatsLoading(false);
+      }
+    }
+
+    load();
+
+    const channel = supabase
+      .channel(`home-messages-${userId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'messages', filter: `receiver_id=eq.${userId}` },
+        () => load()
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'messages', filter: `sender_id=eq.${userId}` },
+        () => load()
+      )
+      .subscribe();
+
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(channel);
+    };
+  }, [userId]);
+
+  const messagePreview = (m) => {
+    if (!m) return '';
+    const isMine = m.sender_id === userId;
+    const prefix = isMine
+      ? (lang === 'fa' ? 'شما: ' : lang === 'ar' ? 'أنت: ' : 'You: ')
+      : '';
+    return `${prefix}${m.content || ''}`;
+  };
+
+  const timeLabel = (iso) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    const now = new Date();
+    const sameDay = d.toDateString() === now.toDateString();
+    if (sameDay) return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleDateString();
+  };
 
   const cardBase = 'bg-[hsl(222,45%,14%)] border border-white/[0.08] rounded-2xl p-5';
 
@@ -214,7 +321,7 @@ function HomeView({ profile, tours, reviews, onNavigate }) {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
         {/* Welcome */}
-        <div className={`${cardBase} flex flex-col justify-between`}>
+        <div className={`${cardBase} flex flex-col`}>
           <div>
             <p className="text-white/40 text-xs mb-1">{t('dashboard_welcome')}</p>
             <h2 className="text-white font-bold text-lg leading-tight">
@@ -226,14 +333,17 @@ function HomeView({ profile, tours, reviews, onNavigate }) {
           </div>
           <button
             onClick={() => onNavigate('add-tour')}
-            className="mt-4 w-full py-2 rounded-xl bg-[hsl(178,85%,32%)] text-white text-xs font-semibold hover:bg-[hsl(178,85%,28%)] transition"
+            className="mt-4 flex-1 min-h-[140px] w-full rounded-xl bg-[hsl(178,85%,32%)]/[0.08] hover:bg-[hsl(178,85%,32%)]/[0.15] border-2 border-dashed border-[hsl(178,85%,32%)]/40 hover:border-[hsl(178,85%,45%)] flex flex-col items-center justify-center gap-2 text-[hsl(178,85%,50%)] transition group"
           >
-            + {t('dashboard_add_tour')}
+            <div className="w-12 h-12 rounded-2xl bg-[hsl(178,85%,32%)]/20 group-hover:bg-[hsl(178,85%,32%)] flex items-center justify-center transition">
+              <Plus className="w-6 h-6 text-white group-hover:scale-110 transition-transform" />
+            </div>
+            <span className="text-xs font-semibold">+ {t('dashboard_add_tour')}</span>
           </button>
         </div>
 
         {/* Upcoming Tour */}
-        <div className={cardBase}>
+        <div className={`${cardBase} flex flex-col`}>
           <p className="text-white/40 text-xs mb-3">{t('dashboard_upcoming_tour')}</p>
           {upcomingTour ? (
             <div>
@@ -255,7 +365,16 @@ function HomeView({ profile, tours, reviews, onNavigate }) {
               </div>
             </div>
           ) : (
-            <EmptyState Icon={Briefcase} title={t('dashboard_no_upcoming')} desc={t('dashboard_add_tour')} />
+            <button
+              onClick={() => onNavigate('add-tour')}
+              className="flex-1 min-h-[180px] w-full rounded-xl border-2 border-dashed border-white/15 hover:border-[hsl(178,85%,45%)] hover:bg-[hsl(178,85%,32%)]/[0.05] flex flex-col items-center justify-center gap-2 text-white/35 hover:text-[hsl(178,85%,50%)] transition group"
+            >
+              <div className="w-12 h-12 rounded-2xl bg-white/[0.06] group-hover:bg-[hsl(178,85%,32%)]/20 flex items-center justify-center transition">
+                <Plus className="w-6 h-6" />
+              </div>
+              <p className="font-medium text-sm">{t('dashboard_no_upcoming')}</p>
+              <p className="text-[11px] text-white/30">{t('dashboard_add_tour')}</p>
+            </button>
           )}
         </div>
 
@@ -300,21 +419,97 @@ function HomeView({ profile, tours, reviews, onNavigate }) {
               ))}
             </div>
           </div>
-          <EmptyState
-            Icon={Bell}
-            title={reqTab === 'new' ? t('dashboard_empty_requests') : t('dashboard_empty_chat')}
-            desc={t('dashboard_no_requests')}
-          />
+          {reqTab === 'new' && tourRequests.length > 0 ? (
+            <div className="space-y-2">
+              {tourRequests.map((req) => (
+                <button
+                  key={req.id}
+                  onClick={() => onOpenChat(req.sender_id)}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] hover:border-[hsl(178,85%,32%)]/40 transition text-left"
+                >
+                  <img
+                    src={avatarFor(req.sender)}
+                    alt=""
+                    className="w-10 h-10 rounded-full object-cover border border-white/10 flex-shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2 mb-0.5">
+                      <p className="text-white text-xs font-semibold truncate">
+                        {req.sender?.full_name || (lang === 'fa' ? 'مسافر' : lang === 'ar' ? 'مسافر' : 'Traveller')}
+                      </p>
+                      <span className="text-white/35 text-[10px] flex-shrink-0">{timeLabel(req.created_at)}</span>
+                    </div>
+                    <p className="text-white/55 text-[11px] truncate">{req.content}</p>
+                  </div>
+                  <span className="w-2 h-2 rounded-full bg-[hsl(178,85%,45%)] flex-shrink-0" />
+                </button>
+              ))}
+            </div>
+          ) : (
+            <EmptyState
+              Icon={Bell}
+              title={reqTab === 'new' ? t('dashboard_empty_requests') : t('dashboard_empty_chat')}
+              desc={t('dashboard_no_requests')}
+            />
+          )}
         </div>
 
         {/* Latest Chat */}
         <div className={`${cardBase} md:col-span-2`}>
-          <p className="text-white/70 text-sm font-semibold mb-4">{t('dashboard_latest_chat')}</p>
-          <EmptyState
-            Icon={MessageSquare}
-            title={t('dashboard_no_messages')}
-            desc={t('dashboard_empty_chat')}
-          />
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-white/70 text-sm font-semibold">{t('dashboard_latest_chat')}</p>
+            {latestChats.length > 0 && (
+              <button
+                onClick={() => onNavigate('chat')}
+                className="text-[hsl(178,85%,50%)] hover:text-[hsl(178,85%,60%)] text-[11px] font-medium transition"
+              >
+                {lang === 'fa' ? 'مشاهده همه' : lang === 'ar' ? 'عرض الكل' : 'View all'}
+              </button>
+            )}
+          </div>
+          {latestChatsLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-5 h-5 text-[hsl(178,85%,45%)] animate-spin" />
+            </div>
+          ) : latestChats.length === 0 ? (
+            <EmptyState
+              Icon={MessageSquare}
+              title={t('dashboard_no_messages')}
+              desc={t('dashboard_empty_chat')}
+            />
+          ) : (
+            <div className="space-y-2">
+              {latestChats.map((c) => (
+                <button
+                  key={c.otherId}
+                  onClick={() => onOpenChat(c.otherId)}
+                  className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/[0.04] transition text-left"
+                >
+                  <img
+                    src={avatarFor(c.profile)}
+                    alt=""
+                    className="w-9 h-9 rounded-full object-cover border border-white/10 flex-shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2 mb-0.5">
+                      <p className="text-white text-xs font-semibold truncate">
+                        {c.profile?.full_name || (lang === 'fa' ? 'کاربر' : lang === 'ar' ? 'مستخدم' : 'User')}
+                      </p>
+                      <span className="text-white/35 text-[10px] flex-shrink-0">{timeLabel(c.last?.created_at)}</span>
+                    </div>
+                    <p className={`text-[11px] truncate ${c.unread > 0 ? 'text-white/90 font-medium' : 'text-white/45'}`}>
+                      {messagePreview(c.last)}
+                    </p>
+                  </div>
+                  {c.unread > 0 && (
+                    <span className="flex-shrink-0 min-w-[18px] h-[18px] px-1.5 rounded-full bg-[hsl(178,85%,32%)] text-white text-[10px] font-bold flex items-center justify-center">
+                      {c.unread > 99 ? '99+' : c.unread}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -1315,6 +1510,7 @@ function EmptySection({ section }) {
 export default function Dashboard() {
   const navigate = useNavigate();
   const { section = 'home' } = useParams();
+  const { lang } = useI18n();
 
   const [authUser, setAuthUser] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -1390,7 +1586,17 @@ export default function Dashboard() {
     }
     switch (section) {
       case 'home':
-        return <HomeView profile={profile} tours={tours} reviews={reviews} onNavigate={nav} />;
+        return (
+          <HomeView
+            profile={profile}
+            tours={tours}
+            reviews={reviews}
+            userId={authUser?.id}
+            lang={lang}
+            onNavigate={nav}
+            onOpenChat={(otherId) => navigate(`/chat/${otherId}`)}
+          />
+        );
       case 'my-tours':
         return <MyToursView tours={tours} onEdit={setEditingTour} onDelete={handleDeleteTour} />;
       case 'profile':
