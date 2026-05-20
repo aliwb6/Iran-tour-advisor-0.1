@@ -78,19 +78,6 @@ const cityData = {
   },
 };
 
-// ── Mock data (shown only when Supabase has no matching rows yet) ────────────
-const MOCK_TOURS = [
-  { id: 'mt1', title: 'Cultural Heritage Tour', duration: 5, price: 890, image: 'https://images.unsplash.com/photo-1564507592333-c60657eea523?w=600' },
-  { id: 'mt2', title: 'Persian Poetry & Gardens', duration: 4, price: 720, image: 'https://images.unsplash.com/photo-1582550945154-660d3ea7b1a8?w=600' },
-  { id: 'mt3', title: 'Architecture Photography', duration: 6, price: 1080, image: 'https://images.unsplash.com/photo-1591115765373-5207764f72e7?w=600' },
-];
-
-const MOCK_GUIDES = [
-  { id: 'mg1', full_name: 'Reza Hosseini', languages: 'Persian, English', rating: 4.9 },
-  { id: 'mg2', full_name: 'Maryam Tehrani', languages: 'Persian, English, French', rating: 4.8 },
-  { id: 'mg3', full_name: 'Ali Karimi', languages: 'Persian, Arabic, English', rating: 4.95 },
-];
-
 // ── Page ─────────────────────────────────────────────────────────────────────
 export default function CityPage() {
   const { citySlug } = useParams();
@@ -105,39 +92,51 @@ export default function CityPage() {
   const [query, setQuery] = useState('');
   const [tours, setTours] = useState([]);
   const [guides, setGuides] = useState([]);
-  const [usingMockTours, setUsingMockTours] = useState(false);
-  const [usingMockGuides, setUsingMockGuides] = useState(false);
+  const [toursLoading, setToursLoading] = useState(true);
+  const [guidesLoading, setGuidesLoading] = useState(true);
 
-  // Best-effort Supabase fetches scoped to the active city. If nothing matches
-  // we fall back to MOCK_* so the UI is never empty for travellers exploring
-  // this page before content has been authored.
+  // Real Supabase data, scoped to the active city. No mock fallback —
+  // when nothing matches we render a "No tour packages…" / "No guides…"
+  // empty state so visitors see honest data, not placeholder content.
+  //
+  // Mapping vs the user's pseudocode:
+  //   `tour_packages`  → `tours`            (actual table in this project)
+  //   `is_active`      → `status='published'`
+  //   `guides`         → `profiles` filtered by role IN (guide, agency)
+  //   ilike with the city's display name, not the URL slug
   useEffect(() => {
     if (!city) return;
     let cancelled = false;
+
     (async () => {
+      setToursLoading(true);
+      setGuidesLoading(true);
+
       const [toursRes, guidesRes] = await Promise.all([
         supabase
           .from('tours')
           .select('*')
           .eq('status', 'published')
           .ilike('city', `%${city.name}%`)
-          .order('created_at', { ascending: false })
-          .limit(3),
+          .order('created_at', { ascending: false }),
         supabase
           .from('profiles')
           .select('id, full_name, avatar_url, gender, city, languages, role')
           .in('role', ['guide', 'agency'])
-          .ilike('city', `%${city.name}%`)
-          .limit(3),
+          .ilike('city', `%${city.name}%`),
       ]);
+
       if (cancelled) return;
-      const realTours = toursRes.data || [];
-      const realGuides = guidesRes.data || [];
-      setTours(realTours.length ? realTours : MOCK_TOURS);
-      setUsingMockTours(realTours.length === 0);
-      setGuides(realGuides.length ? realGuides : MOCK_GUIDES);
-      setUsingMockGuides(realGuides.length === 0);
+
+      if (toursRes.error) console.error('[CityPage] tours fetch error', toursRes.error);
+      if (guidesRes.error) console.error('[CityPage] guides fetch error', guidesRes.error);
+
+      setTours(toursRes.data || []);
+      setGuides(guidesRes.data || []);
+      setToursLoading(false);
+      setGuidesLoading(false);
     })();
+
     return () => { cancelled = true; };
   }, [city]);
 
@@ -170,6 +169,16 @@ export default function CityPage() {
     knowBefore:  lang === 'fa' ? 'پیش از سفر' : lang === 'ar' ? 'قبل السفر' : 'Good to know',
     knowBeforeVal: lang === 'fa' ? 'احترام به پوشش محلی، با راهنمای مجاز سفر کن، اینترنت محدود است.' : lang === 'ar' ? 'احترم اللباس المحلي، سافر مع مرشد مرخص، الإنترنت محدود.' : 'Respect local dress codes, travel with a licensed guide, internet access can be limited.',
     noResults:   lang === 'fa' ? 'نتیجه‌ای یافت نشد' : lang === 'ar' ? 'لا توجد نتائج' : 'No results',
+
+    // Empty-state copy
+    noTours:     lang === 'fa' ? 'هنوز پکیج توری برای این شهر ثبت نشده است.' : lang === 'ar' ? 'لا توجد باقات سياحية لهذه المدينة بعد.' : 'No tour packages available for this city yet.',
+    noToursSub:  lang === 'fa' ? 'به‌زودی برگرد یا با دستیار هوشمند ما برنامه‌ریزی کن.' : lang === 'ar' ? 'تحقق لاحقاً أو خطّط مع مساعدنا الذكي.' : 'Check back soon or plan with our AI Assistant.',
+    planWithAi:  lang === 'fa' ? 'برنامه‌ریزی با هوش مصنوعی' : lang === 'ar' ? 'خطّط مع الذكاء الاصطناعي' : 'Plan with AI',
+    noGuides:    lang === 'fa' ? 'هنوز راهنمای محلی برای این شهر ثبت نشده است.' : lang === 'ar' ? 'لا يوجد مرشدون محليون مسجلون لهذه المدينة بعد.' : 'No local guides registered for this city yet.',
+    noGuidesSub: lang === 'fa' ? 'می‌خواهی به‌عنوان راهنما ثبت‌نام کنی؟' : lang === 'ar' ? 'هل تريد الانضمام كمرشد؟' : 'Want to become a guide?',
+    joinGuide:   lang === 'fa' ? 'ثبت‌نام به‌عنوان راهنما' : lang === 'ar' ? 'انضم كمرشد' : 'Join as a Guide',
+    attractionsSoon: lang === 'fa' ? 'دیدنی‌ها به‌زودی' : lang === 'ar' ? 'الأماكن قريباً' : 'Attractions coming soon',
+    attractionsSoonSub: lang === 'fa' ? 'در حال انتخاب بهترین جاذبه‌های این شهر هستیم.' : lang === 'ar' ? 'نختار لك أفضل المواقع في هذه المدينة.' : "We're curating the best spots in this city.",
   }), [lang, city]);
 
   // ── Not found ──────────────────────────────────────────────────────────────
@@ -317,10 +326,11 @@ export default function CityPage() {
               <TourGrid
                 tours={filteredTours}
                 cityName={city.name}
-                isMock={usingMockTours}
                 tx={tx}
                 Arrow={Arrow}
-                noResults={q && filteredTours.length === 0}
+                loading={toursLoading}
+                searchActive={Boolean(q)}
+                navigate={navigate}
               />
             )}
 
@@ -328,14 +338,15 @@ export default function CityPage() {
               <GuideGrid
                 guides={filteredGuides}
                 cityName={city.name}
-                isMock={usingMockGuides}
                 tx={tx}
-                noResults={q && filteredGuides.length === 0}
+                loading={guidesLoading}
+                searchActive={Boolean(q)}
+                navigate={navigate}
               />
             )}
 
             {tab === 'attractions' && (
-              <AttractionsGrid highlights={filteredHighlights} cityImage={city.image} cityName={localName} q={q} tx={tx} />
+              <AttractionsComingSoon tx={tx} />
             )}
 
             {tab === 'about' && (
@@ -356,6 +367,21 @@ export default function CityPage() {
 
 // ── Sub-components ───────────────────────────────────────────────────────────
 
+function GridSkeleton({ shape = 'card' }) {
+  // Three placeholder tiles so the page doesn't flash an empty state before
+  // the Supabase call resolves.
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {[0, 1, 2].map((i) => (
+        <div
+          key={i}
+          className={`bg-card/50 border border-border/40 rounded-3xl ${shape === 'card' ? 'aspect-[4/3]' : 'h-44'} animate-pulse`}
+        />
+      ))}
+    </div>
+  );
+}
+
 function NoResults({ tx }) {
   return (
     <div className="text-center py-16 text-muted-foreground">
@@ -364,149 +390,159 @@ function NoResults({ tx }) {
   );
 }
 
-function MockBanner({ tx }) {
+function TourGrid({ tours, cityName, tx, Arrow, loading, searchActive, navigate }) {
+  if (loading) return <GridSkeleton shape="card" />;
+  if (tours.length === 0) {
+    // A search miss against a populated catalog reads "No results";
+    // an empty catalog gets the "no packages yet" CTA from the spec.
+    if (searchActive) return <NoResults tx={tx} />;
+    return (
+      <div className="text-center py-16">
+        <div className="w-16 h-16 mx-auto mb-5 rounded-2xl bg-gold/10 border border-gold/30 flex items-center justify-center">
+          <MapIcon className="w-7 h-7 text-gold" />
+        </div>
+        <p className="font-heading text-lg text-foreground font-semibold">{tx.noTours}</p>
+        <p className="font-body text-sm text-muted-foreground mt-2">{tx.noToursSub}</p>
+        <button
+          onClick={() => navigate(`/ai-assistant?city=${encodeURIComponent(cityName)}`)}
+          className="mt-6 inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-gold hover:bg-gold-light text-navy text-sm font-semibold transition-all hover:shadow-lg hover:shadow-gold/30"
+        >
+          <Sparkles className="w-4 h-4" />
+          {tx.planWithAi}
+          <ArrowUpRight className="w-4 h-4" />
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <div className="mb-6 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gold/10 border border-gold/30 text-gold text-[11px]">
-      <Info className="w-3.5 h-3.5" />
-      {tx.mockBanner}
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {tours.map((tour) => {
+        const img = tour.image_url || tour.cover_image || (Array.isArray(tour.gallery) && tour.gallery[0]) || 'https://images.unsplash.com/photo-1564960723835-2898c9df9297?w=600';
+        const title = (tour.title && typeof tour.title === 'object' ? (tour.title.en || tour.title.fa || tour.title.ar) : tour.title) || 'Tour';
+        const price = tour.price ?? tour.price_from ?? tour.price_usd;
+        const href = tour.slug ? `/tours/${tour.slug}` : '/tours';
+        return (
+          <Link
+            key={tour.id}
+            to={href}
+            className="group block bg-card rounded-3xl overflow-hidden border border-border/50 hover:border-accent/40 hover:shadow-xl transition-all duration-500"
+          >
+            <div className="relative aspect-[4/3] overflow-hidden">
+              <img src={img} alt={title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+              <span className="absolute top-3 start-3 px-2.5 py-1 rounded-full bg-white/15 backdrop-blur-md border border-white/25 text-[10px] font-semibold text-white">
+                {cityName}
+              </span>
+            </div>
+            <div className="p-5">
+              <h3 className="font-heading text-lg font-semibold text-foreground mb-3 group-hover:text-accent transition-colors">{title}</h3>
+              <div className="flex items-center justify-between text-xs text-muted-foreground mb-4">
+                <span className="flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5" />
+                  {tour.duration ? `${tour.duration} ${tx.days}` : '—'}
+                </span>
+                {price != null && (
+                  <span className="flex items-center gap-1 text-accent font-semibold">
+                    <DollarSign className="w-3.5 h-3.5" />
+                    {tx.fromPrice} {Number(price).toLocaleString()}
+                  </span>
+                )}
+              </div>
+              <span className="inline-flex items-center gap-1.5 text-sm font-medium text-accent">
+                {tx.viewPackage}
+                <Arrow className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+              </span>
+            </div>
+          </Link>
+        );
+      })}
     </div>
   );
 }
 
-function TourGrid({ tours, cityName, isMock, tx, Arrow, noResults }) {
-  if (noResults) return <NoResults tx={tx} />;
-  return (
-    <>
-      {isMock && <MockBanner tx={tx} />}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {tours.map((tour) => {
-          const img = tour.image_url || tour.image || 'https://images.unsplash.com/photo-1564960723835-2898c9df9297?w=600';
-          const title = (tour.title && typeof tour.title === 'object' ? tour.title.en : tour.title) || tour.name || 'Tour';
-          const price = tour.price ?? tour.price_from ?? tour.price_usd;
-          const href = tour.slug ? `/tours/${tour.slug}` : '/tours';
-          return (
-            <Link
-              key={tour.id}
-              to={href}
-              className="group block bg-card rounded-3xl overflow-hidden border border-border/50 hover:border-accent/40 hover:shadow-xl transition-all duration-500"
-            >
-              <div className="relative aspect-[4/3] overflow-hidden">
-                <img src={img} alt={title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
-                <span className="absolute top-3 start-3 px-2.5 py-1 rounded-full bg-white/15 backdrop-blur-md border border-white/25 text-[10px] font-semibold text-white">
-                  {cityName}
-                </span>
-              </div>
-              <div className="p-5">
-                <h3 className="font-heading text-lg font-semibold text-foreground mb-3 group-hover:text-accent transition-colors">{title}</h3>
-                <div className="flex items-center justify-between text-xs text-muted-foreground mb-4">
-                  <span className="flex items-center gap-1.5">
-                    <Clock className="w-3.5 h-3.5" />
-                    {tour.duration ? `${tour.duration} ${tx.days}` : '—'}
-                  </span>
-                  {price != null && (
-                    <span className="flex items-center gap-1 text-accent font-semibold">
-                      <DollarSign className="w-3.5 h-3.5" />
-                      {tx.fromPrice} {Number(price).toLocaleString()}
-                    </span>
-                  )}
-                </div>
-                <span className="inline-flex items-center gap-1.5 text-sm font-medium text-accent">
-                  {tx.viewPackage}
-                  <Arrow className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-                </span>
-              </div>
-            </Link>
-          );
-        })}
-      </div>
-    </>
-  );
-}
-
-function GuideGrid({ guides, cityName, isMock, tx, noResults }) {
-  if (noResults) return <NoResults tx={tx} />;
-  return (
-    <>
-      {isMock && <MockBanner tx={tx} />}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {guides.map((guide) => {
-          const isReal = !String(guide.id).startsWith('mg');
-          const rating = guide.rating ?? 4.9;
-          return (
-            <div
-              key={guide.id}
-              className="bg-card rounded-3xl border border-border/50 p-6 hover:border-accent/40 hover:shadow-xl transition-all duration-500"
-            >
-              <div className="flex items-center gap-4 mb-4">
-                <img
-                  src={isReal ? avatarFor(guide) : `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(guide.full_name)}&backgroundColor=0d1117&textColor=c9a96e`}
-                  alt=""
-                  className="w-14 h-14 rounded-full object-cover border-2 border-gold/40 flex-shrink-0"
-                />
-                <div className="min-w-0">
-                  <p className="font-heading text-base font-semibold text-foreground truncate">{guide.full_name}</p>
-                  <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                    <Compass className="w-3 h-3 text-accent" />
-                    {cityName}
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-2 mb-5">
-                <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-                  <Languages className="w-3.5 h-3.5 text-accent" />
-                  {guide.languages || '—'}
-                </p>
-                <div className="flex items-center gap-1.5">
-                  {[1, 2, 3, 4, 5].map((n) => (
-                    <Star
-                      key={n}
-                      className={`w-3.5 h-3.5 ${n <= Math.round(rating) ? 'text-gold fill-gold' : 'text-muted-foreground/30'}`}
-                    />
-                  ))}
-                  <span className="text-xs text-muted-foreground ms-1">{rating.toFixed(1)}</span>
-                </div>
-              </div>
-
-              <Link
-                to={isReal ? `/chat/${guide.id}` : '/guides'}
-                className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-full bg-accent hover:bg-accent/90 text-white text-sm font-semibold transition"
-              >
-                <MessageCircle className="w-4 h-4" />
-                {tx.contactGuide}
-              </Link>
-            </div>
-          );
-        })}
-      </div>
-    </>
-  );
-}
-
-function AttractionsGrid({ highlights, cityImage, cityName, q, tx }) {
-  if (q && highlights.length === 0) return <NoResults tx={tx} />;
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-      {highlights.map((h, i) => (
-        <div
-          key={h}
-          className="group relative aspect-[4/5] rounded-3xl overflow-hidden border border-border/40 hover:border-gold/40 hover:shadow-xl transition-all duration-500"
+function GuideGrid({ guides, cityName, tx, loading, searchActive, navigate }) {
+  if (loading) return <GridSkeleton shape="card" />;
+  if (guides.length === 0) {
+    if (searchActive) return <NoResults tx={tx} />;
+    return (
+      <div className="text-center py-16">
+        <div className="w-16 h-16 mx-auto mb-5 rounded-2xl bg-accent/10 border border-accent/30 flex items-center justify-center">
+          <User className="w-7 h-7 text-accent" />
+        </div>
+        <p className="font-heading text-lg text-foreground font-semibold">{tx.noGuides}</p>
+        <p className="font-body text-sm text-muted-foreground mt-2">{tx.noGuidesSub}</p>
+        <button
+          onClick={() => navigate('/signup')}
+          className="mt-6 inline-flex items-center gap-2 px-6 py-2.5 rounded-full border border-gold/40 text-gold hover:bg-gold/10 text-sm font-semibold transition-all"
         >
-          <img
-            src={`${cityImage}&q=80&sat=-10&blur=${i % 2 === 0 ? 0 : 2}`}
-            alt={h}
-            className="absolute inset-0 w-full h-full object-cover scale-105 group-hover:scale-110 transition-transform duration-700"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
-          <span className="absolute top-4 start-4 px-2.5 py-1 rounded-full bg-white/15 backdrop-blur-md border border-white/25 text-[10px] font-semibold text-white">
-            #{String(i + 1).padStart(2, '0')}
-          </span>
-          <div className="absolute inset-x-0 bottom-0 p-5">
-            <p className="text-[11px] text-white/65 mb-1">{cityName}</p>
-            <h3 className="font-heading text-xl font-semibold text-white leading-tight">{h}</h3>
+          <Compass className="w-4 h-4" />
+          {tx.joinGuide}
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {guides.map((guide) => (
+        <div
+          key={guide.id}
+          className="bg-card rounded-3xl border border-border/50 p-6 hover:border-accent/40 hover:shadow-xl transition-all duration-500"
+        >
+          <div className="flex items-center gap-4 mb-4">
+            <img
+              src={avatarFor(guide)}
+              alt=""
+              className="w-14 h-14 rounded-full object-cover border-2 border-gold/40 flex-shrink-0"
+            />
+            <div className="min-w-0">
+              <p className="font-heading text-base font-semibold text-foreground truncate">{guide.full_name || 'Local guide'}</p>
+              <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                <Compass className="w-3 h-3 text-accent" />
+                {guide.city || cityName}
+              </p>
+            </div>
           </div>
+
+          <div className="space-y-2 mb-5">
+            <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+              <Languages className="w-3.5 h-3.5 text-accent" />
+              {guide.languages || '—'}
+            </p>
+            <div className="flex items-center gap-1.5">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <Star
+                  key={n}
+                  className={`w-3.5 h-3.5 ${n <= Math.round(guide.rating || 0) ? 'text-gold fill-gold' : 'text-muted-foreground/30'}`}
+                />
+              ))}
+              {guide.rating != null && (
+                <span className="text-xs text-muted-foreground ms-1">{Number(guide.rating).toFixed(1)}</span>
+              )}
+            </div>
+          </div>
+
+          <Link
+            to={`/chat/${guide.id}`}
+            className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-full bg-accent hover:bg-accent/90 text-white text-sm font-semibold transition"
+          >
+            <MessageCircle className="w-4 h-4" />
+            {tx.contactGuide}
+          </Link>
         </div>
       ))}
+    </div>
+  );
+}
+
+function AttractionsComingSoon({ tx }) {
+  return (
+    <div className="text-center py-16">
+      <div className="w-16 h-16 mx-auto mb-5 rounded-2xl bg-accent/10 border border-accent/30 flex items-center justify-center">
+        <Landmark className="w-7 h-7 text-accent" />
+      </div>
+      <p className="font-heading text-lg text-foreground font-semibold">{tx.attractionsSoon}</p>
+      <p className="font-body text-sm text-muted-foreground mt-2 max-w-sm mx-auto">{tx.attractionsSoonSub}</p>
     </div>
   );
 }
