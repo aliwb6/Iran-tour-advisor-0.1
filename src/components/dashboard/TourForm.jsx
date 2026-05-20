@@ -323,16 +323,10 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
 
       <form onSubmit={handleSubmit} className="bg-[hsl(222,45%,14%)] border border-white/[0.08] rounded-2xl p-6 space-y-5">
 
-        {/* Title + Slug */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className={labelClass}>Title *</label>
-            <input name="title" required value={form.title} onChange={handleChange} className={inputClass} placeholder="Tour title" />
-          </div>
-          <div>
-            <label className={labelClass}>Slug (auto-generated)</label>
-            <input name="slug" value={form.slug} onChange={handleChange} className={`${inputClass} text-white/50`} placeholder="tour-slug" />
-          </div>
+        {/* Title */}
+        <div>
+          <label className={labelClass}>Title *</label>
+          <input name="title" required value={form.title} onChange={handleChange} className={inputClass} placeholder="Tour title" />
         </div>
 
         {/* Description */}
