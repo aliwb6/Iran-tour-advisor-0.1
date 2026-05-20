@@ -8,31 +8,31 @@ import { useI18n } from '@/lib/i18n.jsx';
 const SPOTLIGHT_CITIES = [
   {
     slug: 'isfahan',
-    image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600',
+    image: '/images/isfahan.jpg',
     name:     { en: 'Isfahan',  fa: 'اصفهان',   ar: 'أصفهان' },
     category: { en: 'Architecture', fa: 'معماری', ar: 'العمارة' },
   },
   {
     slug: 'shiraz',
-    image: 'https://images.unsplash.com/photo-1596386461350-326ccb383e9f?w=600',
+    image: '/images/shiraz.jpg',
     name:     { en: 'Shiraz',   fa: 'شیراز',    ar: 'شيراز' },
     category: { en: 'History',  fa: 'تاریخ',    ar: 'التاريخ' },
   },
   {
     slug: 'yazd',
-    image: 'https://images.unsplash.com/photo-1539125530496-3c72dd32c174?w=600',
+    image: '/images/yazd.jpg',
     name:     { en: 'Yazd',     fa: 'یزد',      ar: 'يزد' },
     category: { en: 'Culture',  fa: 'فرهنگ',    ar: 'الثقافة' },
   },
   {
     slug: 'mashhad',
-    image: 'https://images.unsplash.com/photo-1584551246679-0daf3d275d0f?w=600',
+    image: '/images/mashhad.jpg',
     name:     { en: 'Mashhad',    fa: 'مشهد',    ar: 'مشهد' },
     category: { en: 'Spiritual',  fa: 'معنوی',   ar: 'روحاني' },
   },
   {
     slug: 'gilan',
-    image: 'https://images.unsplash.com/photo-1448375240586-882707db888b?w=600',
+    image: '/images/Gilan.jpg',
     name:     { en: 'Gilan',   fa: 'گیلان',   ar: 'جيلان' },
     category: { en: 'Nature', fa: 'طبیعت',   ar: 'الطبيعة' },
   },

@@ -20,7 +20,7 @@ const cityData = {
     name: 'Isfahan',
     nameI18n: { fa: 'اصفهان', ar: 'أصفهان' },
     category: 'Architecture & History',
-    image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1200',
+    image: '/images/isfahan.jpg',
     description:
       "Known as 'Half of the World', Isfahan dazzles visitors with its stunning Islamic architecture, turquoise-domed mosques, and the magnificent Naqsh-e Jahan Square — a UNESCO World Heritage Site.",
     highlights: ['Naqsh-e Jahan Square', 'Sheikh Lotfollah Mosque', 'Si-o-Se Pol Bridge', 'Armenian Quarter'],
@@ -30,7 +30,7 @@ const cityData = {
     name: 'Shiraz',
     nameI18n: { fa: 'شیراز', ar: 'شيراز' },
     category: 'History & Poetry',
-    image: 'https://images.unsplash.com/photo-1596386461350-326ccb383e9f?w=1200',
+    image: '/images/shiraz.jpg',
     description:
       "The city of poets, roses, and wine. Shiraz is home to Persepolis — the ancient capital of the Persian Empire — and the tombs of legendary Persian poets Hafez and Sa'di.",
     highlights: ['Persepolis', 'Tomb of Hafez', 'Nasir ol-Molk Mosque', 'Eram Garden'],
@@ -40,7 +40,7 @@ const cityData = {
     name: 'Yazd',
     nameI18n: { fa: 'یزد', ar: 'يزد' },
     category: 'Culture & Desert',
-    image: 'https://images.unsplash.com/photo-1539125530496-3c72dd32c174?w=1200',
+    image: '/images/yazd.jpg',
     description:
       "A living museum of Persian culture. Yazd's ancient mud-brick architecture, wind towers, and Zoroastrian fire temples make it one of the oldest continuously inhabited cities in the world.",
     highlights: ['Jameh Mosque of Yazd', 'Towers of Silence', 'Zoroastrian Fire Temple', 'Amir Chakhmaq Complex'],
@@ -50,7 +50,7 @@ const cityData = {
     name: 'Mashhad',
     nameI18n: { fa: 'مشهد', ar: 'مشهد' },
     category: 'Spiritual & Cultural',
-    image: 'https://images.unsplash.com/photo-1584551246679-0daf3d275d0f?w=1200',
+    image: '/images/mashhad.jpg',
     description:
       "Iran's holiest city and spiritual heart. The magnificent shrine of Imam Reza draws millions of pilgrims annually, surrounded by museums, bazaars, and beautiful gardens.",
     highlights: ['Imam Reza Shrine', 'Goharshad Mosque', 'Mellat Park', 'Khorasan Museum'],
@@ -60,7 +60,7 @@ const cityData = {
     name: 'Gilan',
     nameI18n: { fa: 'گیلان', ar: 'جيلان' },
     category: 'Nature & Forest',
-    image: 'https://images.unsplash.com/photo-1448375240586-882707db888b?w=1200',
+    image: '/images/Gilan.jpg',
     description:
       "Iran's lush green paradise. Gilan's misty forests, rice paddies, and Caspian coastline offer a dramatic contrast to Iran's desert interior — perfect for nature lovers.",
     highlights: ['Masuleh Village', 'Anzali Lagoon', 'Rudkhan Castle', 'Rasht Bazaar'],
