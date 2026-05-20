@@ -94,6 +94,23 @@ export default function RequestsPage() {
   return (
     <div className="min-h-screen bg-background pt-24 pb-16">
       <div className="max-w-6xl mx-auto px-5 sm:px-8 lg:px-10">
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-2 px-4 py-2 mb-6
+                     bg-white/20 backdrop-blur-md border border-white/30
+                     rounded-full text-sm font-medium
+                     hover:bg-white/30 transition-all duration-200
+                     text-gray-700 dark:text-gray-200"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg"
+               className="h-4 w-4" fill="none"
+               viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round"
+                  strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Back
+        </button>
+
         {/* Header + filter */}
         <header className="mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
           <div>
