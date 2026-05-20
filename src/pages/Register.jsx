@@ -113,8 +113,16 @@ export default function Register() {
 
       if (signUpError) throw signUpError;
 
-      if (role === 'traveler') navigate('/');
-      else navigate('/dashboard');
+      // Auto sign-in immediately after signup (no email confirmation wait)
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password,
+      });
+
+      if (signInError) throw signInError;
+
+      navigate('/');
+      window.location.reload();
     } catch (err) {
       const msg = err.message || '';
       if (msg.includes('already registered') || msg.includes('already exists')) {

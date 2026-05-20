@@ -72,13 +72,17 @@ export default function Signup() {
 
       if (authError) throw authError;
 
-      // ۲. redirect بر اساس role
-      if (formData.role === 'guide' || formData.role === 'agency') {
-        navigate('/dashboard');
-      } else {
-        navigate('/');
-        window.location.reload();
-      }
+      // ۲. ورود خودکار بلافاصله بعد از ثبت‌نام (بدون انتظار برای تأیید ایمیل)
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password,
+      });
+
+      if (signInError) throw signInError;
+
+      // ۳. redirect به صفحه اصلی
+      navigate('/');
+      window.location.reload();
 
     } catch (err) {
       setError(err.message || t('signup_err_failed'));
