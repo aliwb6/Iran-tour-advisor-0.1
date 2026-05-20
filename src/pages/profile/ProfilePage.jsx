@@ -4,6 +4,8 @@ import { motion } from 'framer-motion';
 import {
   Phone, Mail, Globe, MapPin, Plane, Star,
   Calendar, ClipboardList, Settings,
+  Sparkles, MessageCircle, Map, CheckCircle2, Compass,
+  ArrowRight, ArrowLeft,
 } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { useI18n } from '@/lib/i18n.jsx';
@@ -34,9 +36,11 @@ function StatTile({ icon: Icon, value, label }) {
 export default function ProfilePage() {
   const navigate = useNavigate();
   const { user, profile, fetchProfile, isLoadingAuth, isAuthenticated } = useAuth();
-  const { lang } = useI18n();
+  const { lang, dir } = useI18n();
+  const Arrow = dir === 'rtl' ? ArrowLeft : ArrowRight;
   const [localProfile, setLocalProfile] = useState(profile);
   const [reviewCount, setReviewCount] = useState(0);
+  const [requestCount, setRequestCount] = useState(0);
 
   // Bounce signed-out visitors to login.
   useEffect(() => {
@@ -56,6 +60,32 @@ export default function ProfilePage() {
         .select('id', { count: 'exact', head: true })
         .eq('reviewer_id', user.id);
       if (!cancelled && typeof count === 'number') setReviewCount(count);
+    })();
+    return () => { cancelled = true; };
+  }, [user?.id]);
+
+  // Trip-request count (best-effort) — mirrors the lookup order in
+  // RequestsPage. If neither table exists yet we silently keep the count at 0
+  // so the empty-state copy renders.
+  useEffect(() => {
+    if (!user?.id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        let res = await supabase
+          .from('trip_requests')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', user.id);
+        if (res.error) {
+          res = await supabase
+            .from('tour_requests')
+            .select('id', { count: 'exact', head: true })
+            .eq('user_id', user.id);
+        }
+        if (!cancelled && typeof res.count === 'number') setRequestCount(res.count);
+      } catch {
+        // table missing — leave count at 0
+      }
     })();
     return () => { cancelled = true; };
   }, [user?.id]);
@@ -100,6 +130,52 @@ export default function ProfilePage() {
       : lang === 'ar'
       ? 'اكتشف الجمال الخفي لإيران الأصيلة عبر رحلات ثقافية ذات معنى.'
       : 'Discover the hidden beauty of authentic Iran through meaningful cultural journeys.',
+
+    // ── How to Plan Your Trip with AI ──
+    planTitle: lang === 'fa' ? 'با هوش مصنوعی برای سفرت برنامه‌ریزی کن'
+            : lang === 'ar' ? 'خطّط رحلتك الإيرانية مع الذكاء الاصطناعي'
+            : 'Plan Your Iran Journey with AI',
+    step1Title: lang === 'fa' ? 'گفتگو با هوش مصنوعی'
+             : lang === 'ar' ? 'تحدّث مع الذكاء الاصطناعي'
+             : 'Chat with AI',
+    step1Desc: lang === 'fa' ? 'دستیار هوشمند را باز کن و سفر رؤیایی‌ات را توصیف کن — مقصد، تاریخ‌ها و علاقه‌هایی مثل معماری، طبیعت یا غذا.'
+            : lang === 'ar' ? 'افتح مساعد الذكاء الاصطناعي وصِف رحلة أحلامك — الوجهة، التواريخ، واهتماماتك كالعمارة أو الطبيعة أو الطعام.'
+            : 'Open the AI Assistant and describe your dream trip — destination, dates, interests like architecture, nature or food.',
+    step2Title: lang === 'fa' ? 'برنامه‌ات را دریافت کن'
+             : lang === 'ar' ? 'احصل على خطتك'
+             : 'Get Your Plan',
+    step2Desc: lang === 'fa' ? 'هوش مصنوعی فوراً یک برنامه شخصی با شهرها، تجربه‌ها و راهنماهای محلی متناسب با تو می‌سازد.'
+            : lang === 'ar' ? 'يُنشئ الذكاء الاصطناعي فوراً خطة مخصّصة بمدن وتجارب ومرشدين محليين تناسبك.'
+            : 'The AI instantly creates a personalized itinerary with recommended cities, experiences, and local guides just for you.',
+    step3Title: lang === 'fa' ? 'سفرت را رزرو کن'
+             : lang === 'ar' ? 'احجز رحلتك'
+             : 'Book Your Journey',
+    step3Desc: lang === 'fa' ? 'گزینه ایده‌آلت را انتخاب کن، اطلاعاتت را تکمیل کن و ماجراجویی اصیل ایرانی‌ات شروع می‌شود.'
+            : lang === 'ar' ? 'اختر التطابق المثالي، أكمل بياناتك، وتبدأ مغامرتك الإيرانية الأصيلة.'
+            : 'Choose your perfect match, complete your details, and your authentic Iran adventure begins.',
+    planCta: lang === 'fa' ? 'شروع برنامه‌ریزی با هوش مصنوعی'
+          : lang === 'ar' ? 'ابدأ التخطيط مع الذكاء الاصطناعي'
+          : 'Start Planning with AI',
+
+    // ── My Travel Requests preview ──
+    requestsTitle: lang === 'fa' ? 'درخواست‌های سفر من'
+                : lang === 'ar' ? 'طلبات سفري'
+                : 'My Travel Requests',
+    requestsSubtitle: lang === 'fa' ? 'سفرهایی که درخواست داده‌ای را ببین و مدیریت کن'
+                   : lang === 'ar' ? 'تصفّح وأدر الرحلات التي طلبتها'
+                   : "View and manage the journeys you've requested",
+    requestsEmpty: lang === 'fa' ? 'هنوز سفری شروع نکرده‌ای. با هوش مصنوعی ما گفتگو کن تا تجربه ایده‌آلت در ایران را کشف کنی.'
+                : lang === 'ar' ? 'لم تبدأ رحلتك بعد. تحدّث مع مساعدنا الذكي لاكتشاف تجربتك الإيرانية المثالية.'
+                : "You haven't started a journey yet. Chat with our AI to discover your perfect Iran experience.",
+    requestsHasSome: lang === 'fa' ? 'پیشنهادهای راهنماها به درخواست‌های فعالت اینجا منتظر بررسی هستند.'
+                  : lang === 'ar' ? 'تنتظرك عروض المرشدين على طلباتك النشطة هنا.'
+                  : "Proposals from local guides on your active requests are waiting for you.",
+    goToAi: lang === 'fa' ? 'برو به دستیار هوش مصنوعی'
+         : lang === 'ar' ? 'انتقل إلى مساعد الذكاء الاصطناعي'
+         : 'Go to AI Assistant',
+    viewAll: lang === 'fa' ? 'مشاهده همه درخواست‌ها'
+          : lang === 'ar' ? 'عرض جميع الطلبات'
+          : 'View All Requests',
   };
 
   return (
@@ -180,6 +256,116 @@ export default function ProfilePage() {
               <VerificationBadge icon={Globe} label={tx.social} verified={false} />
             </div>
           </motion.div>
+
+          {/* ── How to Plan Your Trip with AI ── */}
+          <motion.section
+            initial={{ opacity: 0, y: 12 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-60px' }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="relative bg-card/60 backdrop-blur-xl border border-gold/30 rounded-3xl p-6 sm:p-8 overflow-hidden"
+          >
+            {/* Subtle gold glow in the corner so the AI card sits a notch above
+                the surrounding glass cards visually. */}
+            <div className="absolute -top-16 -end-16 w-48 h-48 rounded-full bg-gold/15 blur-3xl pointer-events-none" />
+
+            <div className="relative">
+              <div className="flex items-center gap-2.5 mb-5">
+                <div className="w-9 h-9 rounded-xl bg-gold/15 border border-gold/30 flex items-center justify-center">
+                  <Sparkles className="w-4 h-4 text-gold" />
+                </div>
+                <h3 className="font-heading text-lg font-semibold text-foreground">{tx.planTitle}</h3>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                {[
+                  { icon: MessageCircle, title: tx.step1Title, desc: tx.step1Desc },
+                  { icon: Map,           title: tx.step2Title, desc: tx.step2Desc },
+                  { icon: CheckCircle2,  title: tx.step3Title, desc: tx.step3Desc },
+                ].map((s, i) => (
+                  <div
+                    key={i}
+                    className="relative p-4 rounded-2xl bg-background/40 border border-border/30 hover:border-gold/40 transition-colors"
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-7 h-7 rounded-lg bg-gold/10 text-gold flex items-center justify-center">
+                        <s.icon className="w-3.5 h-3.5" />
+                      </div>
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-gold/70">
+                        {String(i + 1).padStart(2, '0')}
+                      </span>
+                    </div>
+                    <p className="font-heading text-sm font-semibold text-foreground mb-1">{s.title}</p>
+                    <p className="font-body text-xs text-muted-foreground leading-relaxed">{s.desc}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex justify-center sm:justify-start">
+                <Link
+                  to="/ai-assistant"
+                  className="group inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gold hover:bg-gold-light text-navy font-body font-semibold text-sm transition-all duration-300 hover:shadow-lg hover:shadow-gold/30 w-full sm:w-auto justify-center"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  {tx.planCta}
+                  <Arrow className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                </Link>
+              </div>
+            </div>
+          </motion.section>
+
+          {/* ── My Travel Requests preview ── */}
+          <motion.section
+            initial={{ opacity: 0, y: 12 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-60px' }}
+            transition={{ duration: 0.5, delay: 0.25 }}
+            className="bg-card/60 backdrop-blur-xl border border-border/40 rounded-3xl p-6 sm:p-8"
+          >
+            <div className="flex items-start justify-between gap-4 mb-2">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-accent/10 border border-accent/20 flex items-center justify-center">
+                  <Compass className="w-4 h-4 text-accent" />
+                </div>
+                <div>
+                  <h3 className="font-heading text-lg font-semibold text-foreground">{tx.requestsTitle}</h3>
+                  <p className="font-body text-xs text-muted-foreground mt-0.5">{tx.requestsSubtitle}</p>
+                </div>
+              </div>
+              {requestCount > 0 && (
+                <span className="shrink-0 px-2.5 py-1 rounded-full bg-accent/15 border border-accent/30 text-accent text-xs font-semibold">
+                  {requestCount}
+                </span>
+              )}
+            </div>
+
+            {requestCount === 0 ? (
+              <p className="font-body text-sm text-muted-foreground leading-relaxed mt-4 mb-6">
+                {tx.requestsEmpty}
+              </p>
+            ) : (
+              <p className="font-body text-sm text-muted-foreground leading-relaxed mt-4 mb-6">
+                {tx.requestsHasSome}
+              </p>
+            )}
+
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              <Link
+                to="/ai-assistant"
+                className="group inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-accent hover:bg-accent/90 text-white text-sm font-semibold transition-all"
+              >
+                <Sparkles className="w-4 h-4" />
+                {tx.goToAi}
+              </Link>
+              <Link
+                to="/profile/requests"
+                className="inline-flex items-center justify-center gap-1.5 text-sm font-medium text-gold hover:text-gold-light transition group/link sm:ms-2"
+              >
+                {tx.viewAll}
+                <Arrow className="w-3.5 h-3.5 group-hover/link:translate-x-0.5 transition-transform" />
+              </Link>
+            </div>
+          </motion.section>
         </div>
 
         {/* Right column: stats + quick actions */}
