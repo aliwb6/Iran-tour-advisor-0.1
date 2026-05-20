@@ -1,8 +1,23 @@
 import { useRef, useState } from 'react';
 import { supabase } from '@/supabaseClient';
 import { useI18n } from '@/lib/i18n.jsx';
-import { CheckCircle2, Loader2, Upload, X, Check } from 'lucide-react';
-import { INCLUDED_GROUPS, NOT_INCLUDED_GROUPS, HOTEL_STAR_LEVELS } from '@/lib/tourInclusions';
+import { CheckCircle2, Loader2, Upload, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
+import {
+  ACCOMMODATION_TYPES,
+  HOTEL_STAR_LEVELS,
+  TRANSPORTATION_OPTIONS,
+  MEALS_OPTIONS,
+  OTHER_OPTIONS,
+  DEFAULT_INCLUDED_STATE,
+  serializeIncluded,
+  parseIncluded,
+} from '@/lib/tourInclusions';
 
 export const THEMES = [
   { value: 'nature',    en: 'Nature & Wildlife 🌿',        fa: 'طبیعت‌گردی و حیات وحش 🌿', ar: 'الطبيعة والحياة البرية 🌿' },
@@ -41,7 +56,7 @@ export const EMPTY_TOUR = {
 };
 
 export default function TourForm({ editing, onDone, onCancel, isPlatform = false }) {
-  const { t, lang } = useI18n();
+  const { t, lang, dir } = useI18n();
   const fileRef    = useRef(null);
   const galleryRef = useRef(null);
 
@@ -75,19 +90,31 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
   });
   const [cityInput, setCityInput] = useState('');
 
-  // Structured inclusion selections — stored as slug arrays.
-  const initialIncluded = Array.isArray(editing?.included) ? editing.included : [];
-  const initialNotIncluded = Array.isArray(editing?.excluded)
-    ? editing.excluded
-    : (Array.isArray(editing?.not_included) ? editing.not_included : []);
-  const [includedSlugs, setIncludedSlugs] = useState(initialIncluded);
-  const [notIncludedSlugs, setNotIncludedSlugs] = useState(initialNotIncluded);
-  // Hotel stars — derived from any existing hotel_*star slug at mount.
-  const initialHotelStars = (() => {
-    const match = initialIncluded.find(s => /^hotel_\d+star$/.test(s));
-    return match ? Number(match.split('_')[1].replace('star', '')) : 4;
-  })();
-  const [hotelStars, setHotelStars] = useState(initialHotelStars);
+  // Structured "What's Included" selections — single source of truth.
+  // Hydrated from whatever's on the existing tour row (new English labels or
+  // legacy slug rows are both accepted by parseIncluded).
+  const [included, setIncluded] = useState(() =>
+    editing ? parseIncluded(editing.included) : { ...DEFAULT_INCLUDED_STATE }
+  );
+
+  const setIncludedField = (field, value) =>
+    setIncluded(prev => ({ ...prev, [field]: value }));
+
+  const toggleTransport = (value) =>
+    setIncluded(prev => ({
+      ...prev,
+      transportation: prev.transportation.includes(value)
+        ? prev.transportation.filter(v => v !== value)
+        : [...prev.transportation, value],
+    }));
+
+  const toggleOther = (value) =>
+    setIncluded(prev => ({
+      ...prev,
+      other: prev.other.includes(value)
+        ? prev.other.filter(v => v !== value)
+        : [...prev.other, value],
+    }));
 
   const [selectedThemes, setSelectedThemes] = useState(() => {
     if (!editing) return [];
@@ -145,35 +172,6 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
     }
   };
 
-  // Inclusion checkboxes — the hotel slug is special-cased because it carries
-  // a star sub-select. Picking hotel adds `hotel_{N}star` based on current
-  // `hotelStars`; toggling stars while hotel is selected swaps the slug.
-  const isIncluded = (slug) => {
-    if (slug === 'hotel') return includedSlugs.some(s => /^hotel_\d+star$/.test(s));
-    return includedSlugs.includes(slug);
-  };
-  const toggleIncluded = (slug) => {
-    if (slug === 'hotel') {
-      setIncludedSlugs(prev => {
-        const hasHotel = prev.some(s => /^hotel_\d+star$/.test(s));
-        if (hasHotel) return prev.filter(s => !/^hotel_\d+star$/.test(s));
-        return [...prev, `hotel_${hotelStars}star`];
-      });
-      return;
-    }
-    setIncludedSlugs(prev => prev.includes(slug) ? prev.filter(s => s !== slug) : [...prev, slug]);
-  };
-  const setHotelStarsAndSync = (stars) => {
-    setHotelStars(stars);
-    setIncludedSlugs(prev => {
-      const withoutHotel = prev.filter(s => !/^hotel_\d+star$/.test(s));
-      const hadHotel = prev.length !== withoutHotel.length;
-      return hadHotel ? [...withoutHotel, `hotel_${stars}star`] : prev;
-    });
-  };
-
-  const toggleNotIncluded = (slug) =>
-    setNotIncludedSlugs(prev => prev.includes(slug) ? prev.filter(s => s !== slug) : [...prev, slug]);
 
   const addCustomTheme = () => {
     const v = customTheme.trim();
@@ -243,8 +241,11 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
         difficulty:  form.difficulty,
         highlights:  form.highlights.split('\n').filter(Boolean),
         itinerary:   form.itinerary,
-        included:    includedSlugs,
-        excluded:    notIncludedSlugs,
+        // Inclusion list is serialised into a readable English label array
+        // (e.g. ["Hotel (4★)", "Airport Transfer", "Breakfast only"]).
+        // The "Not Included" column is no longer written — anything not
+        // selected here is implicitly excluded.
+        included:    serializeIncluded(included),
         image_url:   imageUrl,
         gallery:     galleryUrls,
       };
@@ -278,9 +279,7 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
           setSelectedPurposes([]);
           setCities([]);
           setCityInput('');
-          setIncludedSlugs([]);
-          setNotIncludedSlugs([]);
-          setHotelStars(4);
+          setIncluded({ ...DEFAULT_INCLUDED_STATE });
           setImageUrl('');
           setGalleryUrls([]);
         }, 2000);
@@ -477,98 +476,196 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
           <textarea name="itinerary" value={form.itinerary} onChange={handleChange} rows={5} className={`${inputClass} resize-none`} placeholder={"Day 1: Arrival in Tehran...\nDay 2: Flight to Isfahan..."} />
         </div>
 
-        {/* What's Included — structured checkboxes grouped by category */}
+        {/* What's Included — structured selections.
+            Anything NOT picked here is implicitly excluded. */}
         <div>
           <label className={labelClass}>What&#39;s Included</label>
-          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 space-y-5">
-            {INCLUDED_GROUPS.map(group => (
-              <div key={group.id}>
-                <p className="text-white/70 text-xs font-semibold mb-2">
-                  {group.label[lang] || group.label.en}
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {group.items.map(item => {
-                    const checked = isIncluded(item.slug);
-                    return (
-                      <div key={item.slug} className="space-y-2">
-                        <button
-                          type="button"
-                          onClick={() => toggleIncluded(item.slug)}
-                          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border text-left text-sm transition ${
-                            checked
-                              ? 'border-teal-400 bg-teal-400/15 text-white'
-                              : 'border-white/10 bg-white/[0.03] text-white/70 hover:border-white/25 hover:text-white'
-                          }`}
+          <p className="text-white/40 text-[10px] mb-2">
+            {lang === 'fa' ? 'هر آنچه انتخاب نشود، در تور لحاظ نشده محسوب می‌شود.'
+              : lang === 'ar' ? 'كل ما لا تختاره يُعد غير مشمول تلقائياً.'
+              : 'Anything you do not select is automatically considered "not included".'}
+          </p>
+          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 space-y-6">
+
+            {/* ── Group 1: Accommodation ── */}
+            <div>
+              <p className="text-white/70 text-xs font-semibold mb-3">
+                {lang === 'fa' ? 'محل اقامت' : lang === 'ar' ? 'الإقامة' : 'Accommodation'}
+              </p>
+              <div className="flex items-center gap-3">
+                <Checkbox
+                  id="inc-accommodation"
+                  checked={included.accommodationEnabled}
+                  onCheckedChange={(v) => setIncluded(prev => ({
+                    ...prev,
+                    accommodationEnabled: !!v,
+                    // Clear the sub-selection when toggling off.
+                    accommodationType: v ? prev.accommodationType : '',
+                  }))}
+                  className="border-white/40 data-[state=checked]:bg-teal-400 data-[state=checked]:text-[hsl(222,45%,14%)] data-[state=checked]:border-teal-400"
+                />
+                <Label htmlFor="inc-accommodation" className="text-white text-sm cursor-pointer m-0">
+                  {lang === 'fa' ? 'اقامت شامل شود'
+                    : lang === 'ar' ? 'الإقامة مشمولة'
+                    : 'Accommodation included'}
+                </Label>
+              </div>
+
+              <AnimatePresence initial={false}>
+                {included.accommodationEnabled && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+                    className="overflow-hidden"
+                  >
+                    <div className="mt-3 ms-7 space-y-3">
+                      <div>
+                        <Label className="text-white/50 text-xs mb-1.5 block">
+                          {lang === 'fa' ? 'نوع اقامت' : lang === 'ar' ? 'نوع الإقامة' : 'Type'}
+                        </Label>
+                        <Select
+                          value={included.accommodationType}
+                          onValueChange={(v) => setIncludedField('accommodationType', v)}
+                          dir={dir}
                         >
-                          <span className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${
-                            checked ? 'bg-teal-400 border-teal-400' : 'border-white/30'
-                          }`}>
-                            {checked && <Check className="w-3 h-3 text-[hsl(222,45%,14%)]" />}
-                          </span>
-                          <span>{item[lang] || item.en}</span>
-                        </button>
-
-                        {/* Hotel star sub-select, only visible when "Hotel accommodation" is checked */}
-                        {item.hasStars && checked && (
-                          <div className="ms-7 flex items-center gap-2">
-                            <span className="text-white/50 text-xs">Stars:</span>
-                            {HOTEL_STAR_LEVELS.map(s => (
-                              <button
-                                key={s}
-                                type="button"
-                                onClick={() => setHotelStarsAndSync(s)}
-                                className={`px-2 py-0.5 rounded-md text-xs border transition ${
-                                  hotelStars === s
-                                    ? 'border-teal-400 bg-teal-400/20 text-white'
-                                    : 'border-white/15 text-white/55 hover:text-white hover:border-white/30'
-                                }`}
-                              >
-                                {s}★
-                              </button>
+                          <SelectTrigger className="w-full md:w-80 bg-white/[0.05] border-white/10 text-white text-sm h-10 rounded-xl">
+                            <SelectValue
+                              placeholder={
+                                lang === 'fa' ? 'یک نوع را انتخاب کنید'
+                                  : lang === 'ar' ? 'اختر النوع'
+                                  : 'Select a type…'
+                              }
+                            />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {ACCOMMODATION_TYPES.map(opt => (
+                              <SelectItem key={opt.value} value={opt.value}>
+                                {opt[lang] || opt.en}
+                              </SelectItem>
                             ))}
-                          </div>
-                        )}
+                          </SelectContent>
+                        </Select>
                       </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
 
-        {/* Not Included — structured checkboxes */}
-        <div>
-          <label className={labelClass}>Not Included</label>
-          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 space-y-5">
-            {NOT_INCLUDED_GROUPS.map(group => (
-              <div key={group.id}>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {group.items.map(item => {
-                    const checked = notIncludedSlugs.includes(item.slug);
-                    return (
-                      <button
-                        type="button"
-                        key={item.slug}
-                        onClick={() => toggleNotIncluded(item.slug)}
-                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border text-left text-sm transition ${
-                          checked
-                            ? 'border-red-400/60 bg-red-400/10 text-white'
-                            : 'border-white/10 bg-white/[0.03] text-white/70 hover:border-white/25 hover:text-white'
-                        }`}
-                      >
-                        <span className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${
-                          checked ? 'bg-red-400 border-red-400' : 'border-white/30'
-                        }`}>
-                          {checked && <Check className="w-3 h-3 text-[hsl(222,45%,14%)]" />}
-                        </span>
-                        <span>{item[lang] || item.en}</span>
-                      </button>
-                    );
-                  })}
-                </div>
+                      <AnimatePresence initial={false}>
+                        {included.accommodationType === 'hotel' && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+                            className="overflow-hidden"
+                          >
+                            <div>
+                              <Label className="text-white/50 text-xs mb-1.5 block">
+                                {lang === 'fa' ? 'ستاره هتل' : lang === 'ar' ? 'تصنيف الفندق' : 'Star rating'}
+                              </Label>
+                              <Select
+                                value={String(included.hotelStars)}
+                                onValueChange={(v) => setIncludedField('hotelStars', Number(v))}
+                                dir={dir}
+                              >
+                                <SelectTrigger className="w-full md:w-40 bg-white/[0.05] border-white/10 text-white text-sm h-10 rounded-xl">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {HOTEL_STAR_LEVELS.map(s => (
+                                    <SelectItem key={s} value={String(s)}>{s}★</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            <div className="h-px bg-white/[0.06]" />
+
+            {/* ── Group 2: Transportation ── */}
+            <div>
+              <p className="text-white/70 text-xs font-semibold mb-3">
+                {lang === 'fa' ? 'حمل و نقل' : lang === 'ar' ? 'النقل' : 'Transportation'}
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {TRANSPORTATION_OPTIONS.map(opt => {
+                  const id = `inc-t-${opt.value}`;
+                  const checked = included.transportation.includes(opt.value);
+                  return (
+                    <div key={opt.value} className="flex items-center gap-3">
+                      <Checkbox
+                        id={id}
+                        checked={checked}
+                        onCheckedChange={() => toggleTransport(opt.value)}
+                        className="border-white/40 data-[state=checked]:bg-teal-400 data-[state=checked]:text-[hsl(222,45%,14%)] data-[state=checked]:border-teal-400"
+                      />
+                      <Label htmlFor={id} className="text-white/85 text-sm cursor-pointer m-0">
+                        {opt[lang] || opt.en}
+                      </Label>
+                    </div>
+                  );
+                })}
               </div>
-            ))}
+            </div>
+
+            <div className="h-px bg-white/[0.06]" />
+
+            {/* ── Group 3: Meals ── */}
+            <div>
+              <p className="text-white/70 text-xs font-semibold mb-3">
+                {lang === 'fa' ? 'وعده‌های غذایی' : lang === 'ar' ? 'الوجبات' : 'Meals'}
+              </p>
+              <Select
+                value={included.meals}
+                onValueChange={(v) => setIncludedField('meals', v)}
+                dir={dir}
+              >
+                <SelectTrigger className="w-full md:w-80 bg-white/[0.05] border-white/10 text-white text-sm h-10 rounded-xl">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {MEALS_OPTIONS.map(opt => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt[lang] || opt.en}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="h-px bg-white/[0.06]" />
+
+            {/* ── Group 4: Other ── */}
+            <div>
+              <p className="text-white/70 text-xs font-semibold mb-3">
+                {lang === 'fa' ? 'دیگر' : lang === 'ar' ? 'أخرى' : 'Other'}
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {OTHER_OPTIONS.map(opt => {
+                  const id = `inc-o-${opt.value}`;
+                  const checked = included.other.includes(opt.value);
+                  return (
+                    <div key={opt.value} className="flex items-center gap-3">
+                      <Checkbox
+                        id={id}
+                        checked={checked}
+                        onCheckedChange={() => toggleOther(opt.value)}
+                        className="border-white/40 data-[state=checked]:bg-teal-400 data-[state=checked]:text-[hsl(222,45%,14%)] data-[state=checked]:border-teal-400"
+                      />
+                      <Label htmlFor={id} className="text-white/85 text-sm cursor-pointer m-0">
+                        {opt[lang] || opt.en}
+                      </Label>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </div>
 
