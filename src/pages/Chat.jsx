@@ -1,17 +1,261 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { useI18n } from '@/lib/i18n.jsx';
 import { avatarFor } from '@/lib/avatar';
-import { motion } from 'framer-motion';
-import { ArrowLeft, ArrowRight, Send, Loader2, MessageCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  ArrowLeft,
+  ArrowRight,
+  Send,
+  Loader2,
+  MessageCircle,
+  Sparkles,
+  Globe2,
+  ChevronDown,
+} from 'lucide-react';
 
+// ── Brand tokens ────────────────────────────────────────────────
+const C = {
+  turq: '#0D8B85',
+  turqSoft: '#3FC7C1',
+  turqDeep: '#0A6864',
+  teal: '#1A4A4A',
+  white: '#FFFFFF',
+  mist: '#F5FBFA',
+  muted: '#7A8C8C',
+  ink: '#0F2A2A',
+  gold: '#C9972B',
+};
+
+// ── Persian Rub-el-Hizb pattern ─────────────────────────────────
+function PersianPattern({ opacity = 0.06, color = C.turq, size = 72 }) {
+  return (
+    <svg
+      className="absolute inset-0 h-full w-full select-none pointer-events-none"
+      aria-hidden="true"
+      style={{ opacity }}
+    >
+      <defs>
+        <pattern
+          id="rub-el-hizb"
+          width={size}
+          height={size}
+          patternUnits="userSpaceOnUse"
+        >
+          <g fill="none" stroke={color} strokeWidth="0.9">
+            <rect
+              x={size * 0.22}
+              y={size * 0.22}
+              width={size * 0.56}
+              height={size * 0.56}
+            />
+            <rect
+              x={size * 0.22}
+              y={size * 0.22}
+              width={size * 0.56}
+              height={size * 0.56}
+              transform={`rotate(45 ${size / 2} ${size / 2})`}
+            />
+            <circle cx={size / 2} cy={size / 2} r="1.6" fill={color} />
+          </g>
+          <g fill={color}>
+            <circle cx="0" cy="0" r="1" />
+            <circle cx={size} cy="0" r="1" />
+            <circle cx="0" cy={size} r="1" />
+            <circle cx={size} cy={size} r="1" />
+          </g>
+        </pattern>
+      </defs>
+      <rect width="100%" height="100%" fill="url(#rub-el-hizb)" />
+    </svg>
+  );
+}
+
+// ── Aria avatar mark ────────────────────────────────────────────
+function AriaMark({ size = 36, pulse = false }) {
+  return (
+    <div className="relative shrink-0" style={{ width: size, height: size }}>
+      <div
+        className="absolute inset-0 rounded-full"
+        style={{
+          background: `radial-gradient(circle at 30% 28%, ${C.turqSoft}, ${C.turq} 60%, ${C.turqDeep})`,
+          boxShadow: `0 4px 12px ${C.turq}40, inset 0 0 0 1px ${C.turqDeep}80`,
+        }}
+      />
+      <div className="absolute inset-0 grid place-items-center">
+        <Sparkles
+          className="text-[#FFFFFF]"
+          style={{ width: size * 0.5, height: size * 0.5 }}
+          strokeWidth={2.2}
+        />
+      </div>
+      {pulse && (
+        <span
+          className="absolute -inset-1 rounded-full animate-ping"
+          style={{ background: `${C.turq}25` }}
+          aria-hidden
+        />
+      )}
+    </div>
+  );
+}
+
+// ── Typing indicator ────────────────────────────────────────────
+function TypingDots() {
+  return (
+    <div className="flex items-center gap-1.5 px-1 py-0.5">
+      {[0, 1, 2].map((i) => (
+        <motion.span
+          key={i}
+          className="block h-1.5 w-1.5 rounded-full"
+          style={{ background: C.muted }}
+          animate={{ y: [0, -4, 0], opacity: [0.35, 1, 0.35] }}
+          transition={{
+            duration: 1.1,
+            repeat: Infinity,
+            delay: i * 0.15,
+            ease: 'easeInOut',
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+// ── Chat bubble ─────────────────────────────────────────────────
+function MessageBubble({ msg, idx, isUser, avatar, senderName }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -8 }}
+      transition={{
+        duration: 0.45,
+        delay: idx === 0 ? 0 : 0,
+        ease: [0.22, 1, 0.36, 1],
+      }}
+      className={`flex w-full items-end gap-3 ${
+        isUser ? 'justify-end' : 'justify-start'
+      }`}
+    >
+      {!isUser && <AriaMark size={32} />}
+      <div className={`group max-w-[78%] ${isUser ? 'items-end' : 'items-start'} flex flex-col`}>
+        {!isUser && (
+          <span className="mb-1 px-1 text-[11px] font-medium tracking-wide" style={{ color: C.muted }}>
+            {senderName || 'Guide'}
+          </span>
+        )}
+        <div
+          className={`relative rounded-3xl px-5 py-3.5 text-[14.5px] leading-relaxed shadow-sm whitespace-pre-wrap ${
+            isUser ? 'rounded-br-md' : 'rounded-bl-md'
+          }`}
+          style={
+            isUser
+              ? {
+                  background: `linear-gradient(135deg, ${C.turq} 0%, ${C.turqDeep} 100%)`,
+                  color: '#FFFFFF',
+                  boxShadow: `0 6px 18px ${C.turq}30`,
+                }
+              : {
+                  background: '#FFFFFF',
+                  color: C.ink,
+                  border: `1px solid ${C.muted}20`,
+                }
+          }
+        >
+          {msg.content}
+        </div>
+        {msg.created_at && (
+          <span
+            className="mt-1.5 px-1 text-[10.5px] opacity-0 transition-opacity group-hover:opacity-100"
+            style={{ color: C.muted }}
+          >
+            {new Date(msg.created_at).toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit',
+            })}
+          </span>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
+// ── Language switcher ───────────────────────────────────────────
+const LANGS = [
+  { code: 'en', label: 'English', dir: 'ltr' },
+  { code: 'fa', label: 'فارسی', dir: 'rtl' },
+  { code: 'ar', label: 'العربية', dir: 'rtl' },
+];
+
+function LanguageSwitcher({ lang, onChange }) {
+  const [open, setOpen] = useState(false);
+  const current = LANGS.find((l) => l.code === lang) || LANGS[0];
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-2 rounded-full px-3.5 py-2 text-sm font-medium transition-colors"
+        style={{
+          background: '#ffffff70',
+          backdropFilter: 'blur(12px)',
+          border: `1px solid ${C.muted}30`,
+          color: C.teal,
+        }}
+      >
+        <Globe2 className="h-4 w-4" style={{ color: C.turq }} />
+        <span>{current.label}</span>
+        <ChevronDown
+          className={`h-3.5 w-3.5 transition-transform ${open ? 'rotate-180' : ''}`}
+          style={{ color: C.muted }}
+        />
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -4, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -4, scale: 0.98 }}
+            transition={{ duration: 0.15 }}
+            className="absolute right-0 mt-2 min-w-[140px] overflow-hidden rounded-2xl py-1 z-10"
+            style={{
+              background: '#ffffff',
+              border: `1px solid ${C.muted}25`,
+              boxShadow: `0 12px 40px ${C.teal}15`,
+            }}
+          >
+            {LANGS.map((l) => (
+              <button
+                key={l.code}
+                onClick={() => {
+                  onChange(l.code);
+                  setOpen(false);
+                }}
+                className="flex w-full items-center justify-between px-4 py-2 text-sm transition-colors hover:bg-white"
+                style={{ color: C.teal }}
+              >
+                <span style={{ direction: l.dir }}>{l.label}</span>
+                {l.code === lang && (
+                  <span className="h-1.5 w-1.5 rounded-full" style={{ background: C.turq }} />
+                )}
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ── Main Chat Component ─────────────────────────────────────────
 export default function Chat() {
   const { guideId } = useParams();
   const navigate = useNavigate();
   const { user, isAuthenticated, isLoadingAuth } = useAuth();
   const { lang, dir } = useI18n();
+  const [chatLang, setChatLang] = useState(lang);
   const isRtl = dir === 'rtl';
   const BackArrow = isRtl ? ArrowRight : ArrowLeft;
 
@@ -22,7 +266,8 @@ export default function Chat() {
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
 
-  const listRef = useRef(null);
+  const scrollerRef = useRef(null);
+  const inputRef = useRef(null);
 
   // Auth guard
   useEffect(() => {
@@ -104,8 +349,8 @@ export default function Chat() {
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
-    if (listRef.current) {
-      listRef.current.scrollTop = listRef.current.scrollHeight;
+    if (scrollerRef.current) {
+      scrollerRef.current.scrollTop = scrollerRef.current.scrollHeight;
     }
   }, [messages]);
 
@@ -139,25 +384,49 @@ export default function Chat() {
 
   if (isLoadingAuth || (loading && !error)) {
     return (
-      <div dir={dir} className="min-h-screen bg-[hsl(222,55%,8%)] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-[hsl(178,85%,45%)] animate-spin" />
+      <div
+        dir={dir}
+        className="min-h-screen w-full flex items-center justify-center"
+        style={{ background: C.white }}
+      >
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-8 h-8 animate-spin" style={{ color: C.turq }} />
+          <p style={{ color: C.muted }} className="text-sm">
+            {chatLang === 'fa' ? 'در حال بارگزاری...' : 'Loading...'}
+          </p>
+        </div>
       </div>
     );
   }
 
   if (!guide) {
     return (
-      <div dir={dir} className="min-h-screen bg-[hsl(222,55%,8%)] flex items-center justify-center px-6">
-        <div className="text-center">
-          <div className="w-16 h-16 rounded-2xl bg-white/[0.05] border border-white/10 flex items-center justify-center mx-auto mb-4">
-            <MessageCircle className="w-7 h-7 text-white/25" />
+      <div
+        dir={dir}
+        className="min-h-screen w-full flex items-center justify-center px-6"
+        style={{ background: C.white }}
+      >
+        <div className="text-center max-w-sm">
+          <div
+            className="w-16 h-16 rounded-2xl border flex items-center justify-center mx-auto mb-4"
+            style={{ background: `${C.muted}10`, borderColor: `${C.muted}20` }}
+          >
+            <MessageCircle className="w-7 h-7" style={{ color: C.muted }} />
           </div>
-          <p className="text-white font-heading text-2xl mb-2">
-            {lang === 'fa' ? 'کاربر یافت نشد' : lang === 'ar' ? 'المستخدم غير موجود' : 'User not found'}
+          <p className="font-semibold text-lg mb-2" style={{ color: C.teal }}>
+            {chatLang === 'fa'
+              ? 'کاربر یافت نشد'
+              : chatLang === 'ar'
+              ? 'المستخدم غير موجود'
+              : 'Guide not found'}
           </p>
-          {error && <p className="text-red-400 text-sm mb-3">{error}</p>}
-          <Link to="/guides" className="text-[hsl(178,85%,55%)] hover:underline text-sm">
-            ← {lang === 'fa' ? 'بازگشت' : lang === 'ar' ? 'رجوع' : 'Back'}
+          {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
+          <Link
+            to="/guides"
+            className="inline-flex items-center gap-2 font-medium transition-colors hover:opacity-80"
+            style={{ color: C.turq }}
+          >
+            ← {chatLang === 'fa' ? 'بازگشت' : chatLang === 'ar' ? 'رجوع' : 'Back'}
           </Link>
         </div>
       </div>
@@ -165,117 +434,207 @@ export default function Chat() {
   }
 
   return (
-    <div dir={dir} className="min-h-screen bg-[hsl(222,55%,8%)] flex flex-col">
-      {/* Header */}
-      <header className="border-b border-white/[0.07] bg-[hsl(222,50%,10%)] sticky top-0 z-10">
-        <div className="max-w-3xl mx-auto px-5 py-4 flex items-center gap-4">
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            className="w-9 h-9 rounded-full flex items-center justify-center text-white/60 hover:text-white hover:bg-white/[0.06] transition"
-            aria-label="Back"
+    <div
+      dir={dir}
+      className="min-h-screen w-full"
+      style={{
+        background: C.white,
+        fontFamily: "'Khamenei', 'Segoe UI', system-ui, -apple-system, sans-serif",
+        color: C.ink,
+      }}
+    >
+      <div className="mx-auto flex min-h-screen max-w-[1480px] flex-col lg:flex-row">
+        {/* Chat column */}
+        <section
+          className="relative flex w-full flex-col lg:w-[60%] lg:border-r"
+          style={{ borderColor: `${C.muted}20` }}
+        >
+          {/* Header */}
+          <header
+            className="relative overflow-hidden px-6 pt-8 pb-7 sm:px-10 sm:pt-10 sm:pb-9"
+            style={{ borderBottom: `1px solid ${C.muted}20` }}
           >
-            <BackArrow className="w-4 h-4" />
-          </button>
-          <img
-            src={avatarFor(guide)}
-            alt={guide.full_name || ''}
-            className="w-10 h-10 rounded-full object-cover border border-white/10 flex-shrink-0"
-          />
-          <div className="flex-1 min-w-0">
-            <p className="text-white font-semibold text-sm truncate">{guide.full_name || 'Guide'}</p>
-            {guide.city && <p className="text-white/40 text-xs truncate">{guide.city}</p>}
-          </div>
-          <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[hsl(178,85%,32%)]/15 text-[hsl(178,85%,55%)] border border-[hsl(178,85%,32%)]/25">
-            {lang === 'fa' ? 'آنلاین' : lang === 'ar' ? 'متصل' : 'Live'}
-          </span>
-        </div>
-      </header>
-
-      {/* Message list */}
-      <div ref={listRef} className="flex-1 overflow-y-auto">
-        <div className="max-w-3xl mx-auto px-5 py-6 space-y-3">
-          {messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-24 text-center">
-              <div className="w-14 h-14 rounded-2xl bg-white/[0.05] border border-white/10 flex items-center justify-center mb-4">
-                <MessageCircle className="w-6 h-6 text-white/30" />
+            <PersianPattern opacity={0.055} color={C.turq} size={64} />
+            <div
+              className="absolute inset-x-0 top-0 h-px"
+              style={{
+                background: `linear-gradient(90deg, transparent, ${C.turq}55, transparent)`,
+              }}
+            />
+            <div className="relative flex items-start justify-between gap-4">
+              <div className="flex items-center gap-3.5">
+                <button
+                  onClick={() => navigate(-1)}
+                  className="inline-flex items-center justify-center w-10 h-10 rounded-lg transition-colors -ml-2"
+                  style={{ background: `${C.muted}10`, color: C.teal }}
+                  aria-label="Back"
+                >
+                  <BackArrow className="w-5 h-5" />
+                </button>
+                <div>
+                  <div
+                    className="text-[10.5px] font-semibold uppercase tracking-[0.18em]"
+                    style={{ color: C.turq }}
+                  >
+                    Chat with Guide
+                  </div>
+                  <h1
+                    className="mt-1 text-xl font-bold leading-tight sm:text-2xl"
+                    style={{ color: C.teal }}
+                  >
+                    {guide.full_name || 'Guide'}
+                  </h1>
+                  {guide.city && (
+                    <p
+                      className="mt-0.5 text-[13px]"
+                      style={{ color: C.muted }}
+                    >
+                      📍 {guide.city}
+                    </p>
+                  )}
+                </div>
               </div>
-              <p className="text-white/50 text-sm">
-                {lang === 'fa'
-                  ? 'هنوز پیامی رد و بدل نشده است'
-                  : lang === 'ar'
-                  ? 'لا توجد رسائل بعد'
-                  : 'No messages yet'}
-              </p>
-              <p className="text-white/30 text-xs mt-1">
-                {lang === 'fa'
-                  ? 'گفت‌وگو را با یک سلام آغاز کنید'
-                  : lang === 'ar'
-                  ? 'ابدأ المحادثة بتحية'
-                  : 'Start the conversation with a hello'}
+              <LanguageSwitcher lang={chatLang} onChange={setChatLang} />
+            </div>
+
+            {/* Decorative line */}
+            <div
+              className="mt-7 h-[2px] w-full"
+              style={{
+                background: `repeating-linear-gradient(90deg, ${C.turq} 0 6px, transparent 6px 12px, ${C.muted} 12px 14px, transparent 14px 20px)`,
+                opacity: 0.45,
+              }}
+            />
+          </header>
+
+          {/* Messages */}
+          <div
+            ref={scrollerRef}
+            className="flex-1 overflow-y-auto px-6 py-6 sm:px-10"
+            style={{ minHeight: 360 }}
+          >
+            <div className="mx-auto flex max-w-[680px] flex-col gap-5">
+              {messages.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-24 text-center">
+                  <AriaMark size={48} />
+                  <p className="mt-4 font-medium" style={{ color: C.teal }}>
+                    {chatLang === 'fa'
+                      ? 'هنوز پیامی رد و بدل نشده است'
+                      : chatLang === 'ar'
+                      ? 'لا توجد رسائل بعد'
+                      : 'No messages yet'}
+                  </p>
+                  <p className="mt-1 text-sm" style={{ color: C.muted }}>
+                    {chatLang === 'fa'
+                      ? 'گفت‌وگو را با یک سلام آغاز کنید'
+                      : chatLang === 'ar'
+                      ? 'ابدأ المحادثة بتحية'
+                      : 'Start the conversation with a hello'}
+                  </p>
+                </div>
+              ) : (
+                <AnimatePresence initial={false}>
+                  {messages.map((m, idx) => {
+                    const isUser = m.sender_id === user.id;
+                    return (
+                      <MessageBubble
+                        key={m.id}
+                        msg={m}
+                        idx={idx}
+                        isUser={isUser}
+                        senderName={isUser ? 'You' : guide.full_name}
+                      />
+                    );
+                  })}
+                </AnimatePresence>
+              )}
+            </div>
+          </div>
+
+          {/* Input form */}
+          <form
+            onSubmit={handleSend}
+            className="border-t px-6 py-4 sm:px-10"
+            style={{ borderColor: `${C.muted}20`, background: `${C.white}` }}
+          >
+            <div className="mx-auto flex max-w-[680px] items-center gap-3">
+              <input
+                ref={inputRef}
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder={
+                  chatLang === 'fa'
+                    ? 'پیام خود را بنویسید...'
+                    : chatLang === 'ar'
+                    ? 'اكتب رسالتك...'
+                    : 'Type a message...'
+                }
+                className="flex-1 px-4 py-2.5 rounded-xl border text-sm focus:outline-none transition-all"
+                style={{
+                  background: `${C.mist}`,
+                  borderColor: `${C.muted}20`,
+                  color: C.ink,
+                }}
+                dir="auto"
+                autoComplete="off"
+                disabled={sending}
+              />
+              <button
+                type="submit"
+                disabled={sending || !input.trim()}
+                className="w-10 h-10 rounded-xl flex items-center justify-center font-medium transition-all hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  background: !sending && input.trim() ? C.turq : `${C.muted}40`,
+                  color: C.white,
+                }}
+                aria-label="Send message"
+              >
+                {sending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
+              </button>
+            </div>
+            {error && (
+              <p className="mt-2 text-xs text-red-500">{error}</p>
+            )}
+          </form>
+        </section>
+
+        {/* Info panel - Right side on desktop */}
+        <aside
+          className="hidden lg:flex flex-col w-[40%] border-l overflow-y-auto px-8 py-8"
+          style={{ borderColor: `${C.muted}20`, background: `${C.mist}40` }}
+        >
+          {guide && (
+            <div>
+              <div
+                className="relative w-24 h-24 rounded-2xl overflow-hidden mb-4 border-2"
+                style={{ borderColor: C.turq }}
+              >
+                <img
+                  src={avatarFor(guide)}
+                  alt={guide.full_name}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <h2 className="text-2xl font-bold mb-1" style={{ color: C.teal }}>
+                {guide.full_name}
+              </h2>
+              {guide.city && (
+                <p className="text-sm mb-4" style={{ color: C.muted }}>
+                  📍 {guide.city}
+                </p>
+              )}
+              <p className="text-sm leading-relaxed" style={{ color: C.ink }}>
+                {guide.bio || 'Welcome! Let me help you plan an unforgettable journey through Iran.'}
               </p>
             </div>
-          ) : (
-            messages.map((m) => {
-              const mine = m.sender_id === user.id;
-              return (
-                <motion.div
-                  key={m.id}
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.18 }}
-                  className={`flex ${mine ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div
-                    className={`max-w-[78%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
-                      mine
-                        ? 'bg-[hsl(178,85%,32%)] text-white rounded-br-md'
-                        : 'bg-white/[0.06] text-white/90 border border-white/[0.05] rounded-bl-md'
-                    }`}
-                  >
-                    {m.content}
-                    <div className={`mt-1 text-[10px] ${mine ? 'text-white/70' : 'text-white/40'}`}>
-                      {new Date(m.created_at).toLocaleTimeString([], {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </div>
-                  </div>
-                </motion.div>
-              );
-            })
           )}
-        </div>
+        </aside>
       </div>
-
-      {/* Input */}
-      <form onSubmit={handleSend} className="border-t border-white/[0.07] bg-[hsl(222,50%,10%)]">
-        <div className="max-w-3xl mx-auto px-5 py-4 flex items-center gap-3">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder={
-              lang === 'fa'
-                ? 'پیام خود را بنویسید...'
-                : lang === 'ar'
-                ? 'اكتب رسالتك...'
-                : 'Type a message...'
-            }
-            className="flex-1 px-4 py-2.5 rounded-xl bg-white/[0.05] border border-white/[0.08] text-white text-sm placeholder:text-white/30 focus:outline-none focus:border-[hsl(178,85%,32%)]/50 transition"
-            dir="auto"
-            autoComplete="off"
-          />
-          <button
-            type="submit"
-            disabled={sending || !input.trim()}
-            className="w-10 h-10 rounded-xl bg-[hsl(178,85%,32%)] flex items-center justify-center text-white hover:bg-[hsl(178,85%,38%)] disabled:opacity-40 disabled:cursor-not-allowed transition"
-            aria-label="Send"
-          >
-            {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-          </button>
-        </div>
-      </form>
     </div>
   );
 }
