@@ -40,7 +40,7 @@ const pickImage = (tour) => {
 };
 
 export default function Tours() {
-  const { t, dir, lang } = useI18n();
+  const { dir, lang } = useI18n();
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const { tours, loading, error } = useTours(filters);
 
@@ -50,32 +50,6 @@ export default function Tours() {
   return (
     <div dir={dir} className="pt-24 pb-20 min-h-screen">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-
-        {/* Hero Header */}
-        <div className="relative mb-14">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="pt-6"
-          >
-            {/* Decorative label */}
-            <div className="flex items-center gap-3 mb-4">
-              <span className="text-accent text-xl">❖</span>
-              <span className="font-body text-xs uppercase tracking-[0.2em] text-muted-foreground">
-                {lang === 'fa' ? 'پکیج‌های سفر' : lang === 'ar' ? 'باقات السفر' : 'Tour Packages'}
-              </span>
-              <div className="flex-1 h-px bg-gradient-to-r from-border to-transparent" />
-            </div>
-
-            <h1 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-light text-foreground mb-4">
-              {t('packages_title')}
-            </h1>
-            <p className="font-body text-muted-foreground max-w-xl text-base leading-relaxed">
-              {t('packages_subtitle')}
-            </p>
-          </motion.div>
-        </div>
 
         {/* Filters */}
         <TourFilters filters={filters} onChange={setFilters} resultCount={tours.length} />

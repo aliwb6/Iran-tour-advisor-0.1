@@ -12,7 +12,7 @@ const FALLBACK_IMAGES = [
 ];
 
 export default function PopularPackages() {
-  const { t, dir } = useI18n();
+  const { t, dir, lang } = useI18n();
   const [tours, setTours] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -46,6 +46,25 @@ export default function PopularPackages() {
   return (
     <section dir={dir} className="section-gap bg-sand/30">
       <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-10">
+        {/* Section header — matches the eyebrow + title + subtitle style on /tours */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="mb-12 lg:mb-14"
+        >
+          <div className="flex items-center gap-3 mb-4">
+            <span className="text-accent text-xl">❖</span>
+            <span className="font-body text-xs uppercase tracking-[0.2em] text-muted-foreground">
+              {lang === 'fa' ? 'پکیج‌های سفر' : lang === 'ar' ? 'باقات السفر' : 'Tour Packages'}
+            </span>
+            <div className="flex-1 h-px bg-gradient-to-r from-border to-transparent" />
+          </div>
+          <h2 className="font-heading text-display-sm text-foreground mb-3">{t('packages_title')}</h2>
+          <p className="font-body text-muted-foreground max-w-xl text-base leading-relaxed">{t('packages_subtitle')}</p>
+        </motion.div>
+
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-7 h-7 text-accent animate-spin" />

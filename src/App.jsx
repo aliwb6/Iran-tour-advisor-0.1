@@ -18,6 +18,7 @@ import PackageDetails from '@/pages/PackageDetails';
 import Dashboard from '@/pages/Dashboard';
 import AdminDashboard from '@/pages/AdminDashboard';
 import Guides from '@/pages/Guides';
+import Agencies from '@/pages/Agencies';
 import GuideDetails from '@/pages/GuideDetails';
 import AIAssistant from '@/pages/AIAssistant';
 import About from '@/pages/About';
@@ -55,6 +56,7 @@ const AuthenticatedApp = () => {
         <Route path="/package/:id" element={<PackageDetails />} />
         <Route path="/guides" element={<Guides />} />
         <Route path="/guides/:id" element={<GuideDetails />} />
+        <Route path="/agencies" element={<Agencies />} />
         <Route path="/about" element={<About />} />
         <Route path="/blog" element={<Blog />} />
         <Route path="/blog/:slug" element={<ArticleDetails />} />

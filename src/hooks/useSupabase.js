@@ -14,7 +14,11 @@ export function useTours(filters = {}) {
 
     const fetchTours = async () => {
       try {
-        let query = supabase.from('tours').select('*');
+        // Public listing — hide draft/pending tours so visitors only see
+        // what guides have actually published. Matches the convention used
+        // by CityPage, the AI Assistant catalog, and the dashboard's
+        // "Upcoming tour" widget.
+        let query = supabase.from('tours').select('*').eq('status', 'published');
 
         // tours.purpose and tours.theme are `text[]` in Supabase, so we use
         // PostgREST array-containment (`@>`) via `.contains([value])`. A
@@ -311,43 +315,59 @@ export function useSearchTours(query) {
   return { results, loading, error };
 }
 
-export function useGuides() {
-  const [guides, setGuides] = useState([]);
+// Internal: fetch profiles for one or more roles. Used by `useGuides` and
+// `useAgencies` below so the two pages can stay independent — Guides used to
+// share its hook with agencies, but the UX now splits them.
+function useProfilesByRole(roles) {
+  const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const rolesKey = Array.isArray(roles) ? roles.join(',') : String(roles);
 
   useEffect(() => {
     let isMounted = true;
     setLoading(true);
 
-    const fetchGuides = async () => {
+    const fetchRows = async () => {
       try {
-        const { data, error: supabaseError } = await supabase
+        const list = Array.isArray(roles) ? roles : [roles];
+        const { data: rows, error: supabaseError } = await supabase
           .from('profiles')
           .select('*')
-          .in('role', ['guide', 'agency'])
+          .in('role', list)
           .order('created_at', { ascending: false });
 
         if (supabaseError) throw supabaseError;
         if (isMounted) {
-          setGuides(data || []);
+          setData(rows || []);
           setError(null);
         }
       } catch (err) {
         if (isMounted) {
           setError(err.message);
-          setGuides([]);
+          setData([]);
         }
       } finally {
         if (isMounted) setLoading(false);
       }
     };
 
-    fetchGuides();
+    fetchRows();
     return () => { isMounted = false; };
-  }, []);
+  }, [rolesKey]);
 
-  return { guides, loading, error };
+  return { data, loading, error };
+}
+
+export function useGuides() {
+  const { data, loading, error } = useProfilesByRole(['guide']);
+  return { guides: data, loading, error };
+}
+
+export function useAgencies() {
+  const { data, loading, error } = useProfilesByRole(['agency']);
+  return { agencies: data, loading, error };
 }
 
 export { FALLBACK_IMAGE };

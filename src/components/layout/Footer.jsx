@@ -5,6 +5,7 @@ import { Compass, Mail, Instagram, Youtube, Twitter } from 'lucide-react';
 const EXPLORE = [
   { path: '/tours', key: 'nav_tours' },
   { path: '/guides', key: 'nav_guides' },
+  { path: '/agencies', key: 'nav_agencies' },
   { path: '/ai-assistant', key: 'nav_ai' },
 ];
 

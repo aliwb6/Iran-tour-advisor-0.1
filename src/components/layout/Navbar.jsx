@@ -26,6 +26,7 @@ export default function Navbar() {
   const navLinks = [
     { path: '/tours', label: t('nav_tours') },
     { path: '/guides', label: t('nav_guides') },
+    { path: '/agencies', label: t('nav_agencies') },
     { path: '/ai-assistant', label: t('nav_ai') },
     { path: '/blog', label: t('nav_blog') },
   ];

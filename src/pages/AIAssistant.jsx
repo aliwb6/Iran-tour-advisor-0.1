@@ -7,6 +7,7 @@ import {
   Sparkles, Send, Loader2, ArrowLeft, ArrowRight, MapPin, Clock, DollarSign, MessageCircle,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import { sendChatMessage } from '../services/api.js';
 import { avatarFor } from '@/lib/avatar';
 
 // ── System prompt ───────────────────────────────────────────────────────────
@@ -107,7 +108,7 @@ export default function AIAssistant() {
   const [loading, setLoading] = useState(false);
   const [catalogue, setCatalogue] = useState({ tours: [], guides: [], ready: false });
 
-  const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY;
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
 
   // Initial greeting (instant, no API call). If the user arrived from a city
   // page (e.g. /ai-assistant?city=Isfahan), the assistant opens with a
@@ -159,7 +160,7 @@ export default function AIAssistant() {
 
   useEffect(() => {
     if (!apiKey) {
-      console.warn('[AIAssistant] VITE_OPENROUTER_API_KEY is missing. Did you restart the dev server after editing .env?');
+      console.warn('[AIAssistant] VITE_GEMINI_API_KEY is missing. Did you restart the dev server after editing .env?');
     }
   }, [apiKey]);
 
@@ -170,11 +171,13 @@ export default function AIAssistant() {
   const sendMessage = async () => {
     const text = input.trim();
     if (!text || loading) return;
-    if (!apiKey) {
-      setMessages((prev) => [...prev, {
-        role: 'assistant',
-        content: 'Missing VITE_OPENROUTER_API_KEY. Add it to .env and restart the dev server.',
-      }]);
+    if (!import.meta.env.VITE_GEMINI_API_KEY) {
+      const missing = lang === 'fa'
+        ? 'کلید API موجود نیست. لطفاً فایل .env را بررسی کنید.'
+        : lang === 'ar'
+        ? 'مفتاح API مفقود. يرجى التحقق من ملف .env.'
+        : 'API key is missing. Please check your .env file.';
+      setMessages((prev) => [...prev, { role: 'assistant', content: missing }]);
       return;
     }
 
@@ -185,44 +188,15 @@ export default function AIAssistant() {
     setLoading(true);
 
     try {
-      const systemPrompt = buildSystemPrompt(catalogue.tours, catalogue.guides);
-      const history = nextMessages
-        .filter((m) => m.role === 'user' || m.role === 'assistant')
-        .map(({ role, content }) => ({ role, content }));
+      const systemPromptText = buildSystemPrompt(catalogue.tours, catalogue.guides);
 
-      const body = {
-        model: 'google/gemini-2.0-flash-exp:free',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          ...history,
-        ],
-      };
-      console.log('[AIAssistant] OpenRouter request', { model: body.model, turns: history.length });
+      const responseText = await sendChatMessage(
+        nextMessages,
+        systemPromptText,
+        lang
+      );
 
-      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': 'http://localhost:5173',
-          'X-Title': 'Iran Tour Advisor',
-        },
-        body: JSON.stringify(body),
-      });
-
-      if (!response.ok) {
-        const detail = await response.text().catch(() => '');
-        console.error('[AIAssistant] OpenRouter error', response.status, detail);
-        throw new Error(`OpenRouter ${response.status}: ${detail || response.statusText}`);
-      }
-      const json = await response.json();
-      const raw = json?.choices?.[0]?.message?.content;
-      if (!raw) {
-        console.error('[AIAssistant] Empty OpenRouter response', json);
-        throw new Error('Empty response from the assistant');
-      }
-
-      const { content, tours, guides } = extractRecommendation(raw, catalogue.tours, catalogue.guides);
+      const { content, tours, guides } = extractRecommendation(responseText, catalogue.tours, catalogue.guides);
       const assistantMsg = { role: 'assistant', content };
       if (tours.length > 0 || guides.length > 0) {
         assistantMsg.cards = { tours, guides };
