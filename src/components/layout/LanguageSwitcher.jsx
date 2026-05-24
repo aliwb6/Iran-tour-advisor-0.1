@@ -42,18 +42,18 @@ export default function LanguageSwitcher() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="absolute top-full mt-2 end-0 bg-card border border-border rounded-xl shadow-xl overflow-hidden min-w-[160px] z-50"
+            className="absolute top-full mt-2 end-0 bg-white dark:bg-gray-900 border border-border rounded-xl shadow-xl overflow-hidden min-w-[160px] z-50"
           >
             {languages.map((l) => (
               <button
                 key={l.code}
                 onClick={() => { switchLang(l.code); setOpen(false); }}
                 className={`w-full px-4 py-3 flex items-center justify-between text-sm font-body hover:bg-accent/5 transition-colors ${
-                  lang === l.code ? 'text-accent font-medium bg-accent/5' : 'text-foreground'
+                  lang === l.code ? 'text-accent font-medium bg-accent/5' : 'text-gray-900 dark:text-gray-100'
                 }`}
               >
                 <span>{l.full}</span>
-                <span className="text-xs text-muted-foreground">{l.label}</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">{l.label}</span>
               </button>
             ))}
           </motion.div>

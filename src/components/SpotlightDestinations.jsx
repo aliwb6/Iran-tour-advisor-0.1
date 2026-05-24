@@ -7,16 +7,22 @@ import { useI18n } from '@/lib/i18n.jsx';
 // Slugs match the keys in CityPage.jsx's cityData so the cards route correctly.
 const SPOTLIGHT_CITIES = [
   {
-    slug: 'isfahan',
-    image: '/images/isfahan.jpg',
-    name:     { en: 'Isfahan',  fa: 'اصفهان',   ar: 'أصفهان' },
-    category: { en: 'Architecture', fa: 'معماری', ar: 'العمارة' },
+    slug: 'tehran',
+    image: '/images/tehran.jpg',
+    name:     { en: 'Tehran',  fa: 'تهران',   ar: 'طهران' },
+    category: { en: 'Culture', fa: 'فرهنگ', ar: 'الثقافة' },
   },
   {
     slug: 'shiraz',
     image: '/images/shiraz.jpg',
     name:     { en: 'Shiraz',   fa: 'شیراز',    ar: 'شيراز' },
     category: { en: 'History',  fa: 'تاریخ',    ar: 'التاريخ' },
+  },
+  {
+    slug: 'isfahan',
+    image: '/images/isfahan.jpg',
+    name:     { en: 'Isfahan',  fa: 'اصفهان',   ar: 'أصفهان' },
+    category: { en: 'Architecture', fa: 'معماری', ar: 'العمارة' },
   },
   {
     slug: 'yazd',
@@ -31,16 +37,10 @@ const SPOTLIGHT_CITIES = [
     category: { en: 'Spiritual',  fa: 'معنوی',   ar: 'روحاني' },
   },
   {
-    slug: 'gilan',
-    image: '/images/Gilan.jpg',
-    name:     { en: 'Gilan',   fa: 'گیلان',   ar: 'جيلان' },
+    slug: 'rasht',
+    image: '/images/rasht.jpg',
+    name:     { en: 'Rasht',   fa: 'رشت',   ar: 'رشت' },
     category: { en: 'Nature', fa: 'طبیعت',   ar: 'الطبيعة' },
-  },
-  {
-    slug: 'lorestan',
-    image: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=600',
-    name:     { en: 'Lorestan',   fa: 'لرستان',     ar: 'لرستان' },
-    category: { en: 'Adventure',  fa: 'ماجراجویی',  ar: 'مغامرة' },
   },
 ];
 

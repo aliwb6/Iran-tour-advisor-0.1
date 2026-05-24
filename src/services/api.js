@@ -1,50 +1,42 @@
-export async function sendChatMessage(messages, systemPrompt, language = 'en') {
-  try {
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+export async function sendChatMessage(messages, systemPrompt, language = 'en', model = 'openrouter/auto') {
+  const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY;
 
-    if (!apiKey) {
-      throw new Error('VITE_GEMINI_API_KEY is not configured in .env');
-    }
-
-    console.log('[API] Calling Google AI Studio (Gemini)');
-
-    // Gemini requires alternating user/model turns and cannot start with model.
-    // Drop any leading assistant messages (e.g. the initial greeting) so the
-    // first content entry is always role: 'user'.
-    const trimmed = [...messages];
-    while (trimmed.length > 0 && trimmed[0].role === 'assistant') trimmed.shift();
-
-    const contents = trimmed.map((m) => ({
-      role: m.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: m.content }],
-    }));
-
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: systemPrompt }] },
-          contents,
-          generationConfig: {
-            maxOutputTokens: 1000,
-            temperature: 0.7,
-          },
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('[API] Gemini error:', errorData);
-      throw new Error(errorData.error?.message || 'Gemini API error');
-    }
-
-    const data = await response.json();
-    return data.candidates[0].content.parts[0].text;
-  } catch (err) {
-    console.error('[API] Error:', err);
-    throw err;
+  if (!apiKey) {
+    throw new Error('VITE_OPENROUTER_API_KEY is not configured in .env');
   }
+
+  console.log(`[API] Calling OpenRouter with model: ${model}`);
+
+  const payload = {
+    model,
+    messages: [
+      { role: 'system', content: systemPrompt },
+      ...messages.map((m) => ({ role: m.role, content: m.content })),
+    ],
+    temperature: 0.7,
+    max_tokens: 1000,
+  };
+
+  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+      'HTTP-Referer': window.location.href,
+      'X-Title': 'Iran Tour Advisor',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  console.log(`[API] Response status: ${response.status}`);
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    console.error('[APIError] OpenRouter error:', errorData);
+    throw new Error(errorData.error?.message || `OpenRouter API error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  console.log('[API] Success response:', data);
+  return data.choices[0].message.content;
 }

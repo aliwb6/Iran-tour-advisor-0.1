@@ -27,9 +27,28 @@ export default function GuideDetails() {
     navigate(`/chat/${id}`);
   };
 
+  const renderStars = (ratingValue) => {
+    const stars = [];
+    const fullStars = Math.floor(ratingValue);
+    const hasHalfStar = ratingValue % 1 !== 0;
+
+    for (let i = 0; i < 5; i++) {
+      if (i < fullStars) {
+        stars.push('★');
+      } else if (i === fullStars && hasHalfStar) {
+        stars.push('◆');
+      } else {
+        stars.push('☆');
+      }
+    }
+
+    return stars.join('');
+  };
+
   const [guide, setGuide] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isContactUnlocked, setIsContactUnlocked] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -60,6 +79,27 @@ export default function GuideDetails() {
 
     if (id) fetchGuide();
     return () => { isMounted = false; };
+  }, [id]);
+
+  // Check payment status on component load
+  useEffect(() => {
+    const checkPaymentStatus = async () => {
+      try {
+        // TODO: Replace with actual API call to check payment
+        // Example: const payment = await checkUserPayment(id);
+        // if (payment?.status === 'completed') {
+        //   setIsContactUnlocked(true);
+        // }
+
+        // For testing - remove later:
+        // const isUnlocked = localStorage.getItem(`guide_${id}_paid`);
+        // setIsContactUnlocked(isUnlocked === 'true');
+      } catch (error) {
+        console.error('Error checking payment status:', error);
+      }
+    };
+
+    checkPaymentStatus();
   }, [id]);
 
   if (loading) {
@@ -111,13 +151,13 @@ export default function GuideDetails() {
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/20" />
 
         {/* Back button */}
-        <Link
-          to="/guides"
+        <button
+          onClick={() => navigate(-1)}
           className="absolute top-24 start-6 flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm text-white hover:bg-white/20 transition-colors"
         >
           <Arrow className={`w-4 h-4 ${dir === 'rtl' ? 'rotate-180' : ''}`} />
-          {t('back_to_home')}
-        </Link>
+          {lang === 'fa' ? 'بازگشت' : lang === 'ar' ? 'عودة' : 'Back'}
+        </button>
 
         {/* Profile overlay */}
         <div className="absolute bottom-0 inset-x-0 p-6 sm:p-10">
@@ -238,10 +278,69 @@ export default function GuideDetails() {
           {/* Sidebar */}
           <div className="lg:col-span-1">
             <div className="sticky top-24 space-y-6">
+              {/* Ratings & Reviews Section */}
+              {(guide.rating != null || guide.reviews) && (
+                <div className="p-6 rounded-2xl bg-card border border-border/50">
+                  <h3 className="font-heading text-xl font-semibold text-foreground mb-4">
+                    {lang === 'fa' ? '⭐ نظرات و امتیازات' : lang === 'ar' ? '⭐ التقييمات والتقييمات' : '⭐ Ratings & Reviews'}
+                  </h3>
+
+                  {/* Overall Rating */}
+                  {guide.rating != null && (
+                    <div className="flex items-center gap-4 pb-6 border-b border-border/50">
+                      <div className="text-center">
+                        <p className="text-4xl font-bold text-foreground">{guide.rating}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {lang === 'fa' ? 'از 5' : lang === 'ar' ? 'من 5' : 'out of 5'}
+                        </p>
+                      </div>
+
+                      <div>
+                        <p className="text-2xl text-yellow-400 mb-1">
+                          {renderStars(guide.rating)}
+                        </p>
+                        <p className="text-sm text-foreground/70">
+                          {guide.reviews || 0} {(guide.reviews || 0) === 1 ? (lang === 'fa' ? 'نظر' : 'review') : (lang === 'fa' ? 'نظر' : 'reviews')}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Individual Reviews */}
+                  {guide.review_list && guide.review_list.length > 0 ? (
+                    <div className="mt-6 space-y-4">
+                      {guide.review_list.slice(0, 3).map((review, idx) => (
+                        <div key={idx} className="pb-4 border-b border-border/50 last:border-b-0">
+                          <div className="flex items-start justify-between mb-2">
+                            <div>
+                              <p className="font-semibold text-foreground">{review.userName || 'Anonymous'}</p>
+                              <p className="text-xs text-muted-foreground">{review.date || 'Recently'}</p>
+                            </div>
+                          </div>
+
+                          <p className="text-yellow-400 text-lg mb-2">
+                            {renderStars(review.rating || 5)}
+                          </p>
+
+                          {review.title && (
+                            <p className="font-semibold text-foreground text-sm mb-1">{review.title}</p>
+                          )}
+                          <p className="text-foreground/70 text-sm leading-relaxed">{review.comment}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-muted-foreground text-sm py-4">
+                      {lang === 'fa' ? 'هنوز نظری ثبت نشده است' : 'No reviews yet'}
+                    </p>
+                  )}
+                </div>
+              )}
+
               {/* Contact Card */}
               <div className="p-6 rounded-2xl bg-card border border-border/50">
                 <h3 className="font-heading text-xl font-semibold text-foreground mb-4">
-                  {lang === 'fa' ? 'ارتباط' : lang === 'ar' ? 'الاتصال' : 'Contact'}
+                  {lang === 'fa' ? '📞 اطلاعات تماس' : lang === 'ar' ? '📞 معلومات الاتصال' : '📞 Contact Information'}
                 </h3>
 
                 <div className="space-y-4 mb-6">
@@ -255,26 +354,64 @@ export default function GuideDetails() {
                   </button>
                 </div>
 
-                <div className="space-y-3 pt-4 border-t border-border/50">
-                  {guide.phone && (
-                    <div className="flex items-center gap-3">
-                      <Phone className="w-4 h-4 text-muted-foreground" />
-                      <span className="font-body text-sm text-foreground/70">{guide.phone}</span>
+                {isContactUnlocked ? (
+                  // Show contact info
+                  <div className="space-y-3 pt-4 border-t border-border/50">
+                    {guide.phone && (
+                      <div className="flex items-center gap-3 p-3 rounded-lg bg-accent/10">
+                        <Phone className="w-4 h-4 text-accent" />
+                        <div>
+                          <p className="text-xs text-muted-foreground">{lang === 'fa' ? 'شماره تلفن' : 'Phone'}</p>
+                          <p className="font-semibold text-foreground">{guide.phone}</p>
+                        </div>
+                      </div>
+                    )}
+                    {guide.email && (
+                      <div className="flex items-center gap-3 p-3 rounded-lg bg-accent/10">
+                        <Mail className="w-4 h-4 text-accent" />
+                        <div>
+                          <p className="text-xs text-muted-foreground">{lang === 'fa' ? 'ایمیل' : 'Email'}</p>
+                          <p className="font-semibold text-foreground">{guide.email}</p>
+                        </div>
+                      </div>
+                    )}
+                    {guide.instagram && (
+                      <div className="flex items-center gap-3 p-3 rounded-lg bg-accent/10">
+                        <Instagram className="w-4 h-4 text-accent" />
+                        <div>
+                          <p className="text-xs text-muted-foreground">Instagram</p>
+                          <p className="font-semibold text-foreground">@{guide.instagram}</p>
+                        </div>
+                      </div>
+                    )}
+                    <p className="text-sm text-green-600 font-medium">✓ {lang === 'fa' ? 'اطلاعات باز شد' : 'Contact unlocked'}</p>
+                  </div>
+                ) : (
+                  // Show locked state
+                  <div className="space-y-4 pt-4 border-t border-border/50">
+                    <div className="p-6 rounded-lg bg-gradient-to-br from-slate-50 to-slate-100 border-2 border-accent text-center dark:from-slate-800 dark:to-slate-700">
+                      <p className="text-4xl mb-2">🔒</p>
+                      <p className="text-lg font-bold text-foreground">{lang === 'fa' ? 'اطلاعات تماس قفل شده' : 'Contact Info Locked'}</p>
+                      <p className="text-sm text-foreground/70 mt-2">
+                        {lang === 'fa' ? 'برای دیدن شماره تلفن و ایمیل، ابتدا پرداخت را تکمیل کنید.' : 'Complete payment to unlock contact details'}
+                      </p>
                     </div>
-                  )}
-                  {guide.email && (
-                    <div className="flex items-center gap-3">
-                      <Mail className="w-4 h-4 text-muted-foreground" />
-                      <span className="font-body text-sm text-foreground/70">{guide.email}</span>
-                    </div>
-                  )}
-                  {guide.instagram && (
-                    <div className="flex items-center gap-3">
-                      <Instagram className="w-4 h-4 text-muted-foreground" />
-                      <span className="font-body text-sm text-foreground/70">@{guide.instagram}</span>
-                    </div>
-                  )}
-                </div>
+
+                    <button
+                      onClick={() => {
+                        // TODO: Navigate to payment page or open payment modal
+                        alert(lang === 'fa' ? 'ویژگی پرداخت به زودی!': 'Payment feature coming soon!');
+                      }}
+                      className="w-full bg-accent hover:bg-accent/90 text-white font-bold py-3 px-4 rounded-lg transition flex items-center justify-center gap-2"
+                    >
+                      🔓 {lang === 'fa' ? 'باز کردن و پرداخت' : 'Unlock & Complete Payment'}
+                    </button>
+
+                    <p className="text-xs text-muted-foreground text-center">
+                      {lang === 'fa' ? 'پرداخت امن | راهنما پس از پرداخت مطلع خواهد شد' : 'Safe & Secure Payment | Guide will be notified'}
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Social */}
