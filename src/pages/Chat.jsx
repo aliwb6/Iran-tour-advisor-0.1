@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { supabase } from '@/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { useI18n } from '@/lib/i18n.jsx';
@@ -253,17 +253,19 @@ function LanguageSwitcher({ lang, onChange }) {
 export default function Chat() {
   const { guideId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, isAuthenticated, isLoadingAuth } = useAuth();
   const { lang, dir } = useI18n();
   const [chatLang, setChatLang] = useState(lang);
   const isRtl = dir === 'rtl';
   const BackArrow = isRtl ? ArrowRight : ArrowLeft;
 
+  const initialMessage = location.state?.initialMessage || '';
   const [guide, setGuide] = useState(null);
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState(initialMessage);
   const [sending, setSending] = useState(false);
 
   const scrollerRef = useRef(null);

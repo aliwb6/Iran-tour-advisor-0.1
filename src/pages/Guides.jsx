@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Search, Star, MessageCircle, ShieldCheck } from 'lucide-react';
+import { Search, Star, ShieldCheck } from 'lucide-react';
 import { useI18n } from '@/lib/i18n.jsx';
 import { useGuides } from '@/hooks/useSupabase';
 import { avatarFor } from '@/lib/avatar';
@@ -10,6 +10,8 @@ import {
   FiltersShell, FilterSection, MultiSelectChips, SingleSelectChips,
   RatingFilter, PriceRange, ToggleRow, ActiveChips,
 } from '@/components/filters/FilterPrimitives';
+import CityFilterWithOther from '@/components/filters/CityFilterWithOther';
+import LanguageFilterWithOther from '@/components/filters/LanguageFilterWithOther';
 
 // ── Filter catalog ───────────────────────────────────────────────────────────
 const CITIES      = ['Tehran', 'Isfahan', 'Shiraz', 'Yazd', 'Mashhad', 'Tabriz', 'Kerman', 'Rasht'];
@@ -188,34 +190,32 @@ export default function Guides() {
           <h1 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-light text-foreground mb-4">
             {t('guides_title')}
           </h1>
-          <p className="font-body text-muted-foreground max-w-xl text-lg mb-8">
+          <p className="font-body text-muted-foreground max-w-xl text-lg">
             {t('guides_subtitle')}
           </p>
-
-          {/* Search */}
-          <div className="relative max-w-md">
-            <Search className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground ${dir === 'rtl' ? 'end-4' : 'start-4'}`} />
-            <input
-              type="text"
-              value={filters.search}
-              onChange={(e) => update({ search: e.target.value })}
-              placeholder={t('guides_search')}
-              className={`w-full ${dir === 'rtl' ? 'pe-11 ps-4' : 'ps-11 pe-4'} py-3 bg-secondary rounded-xl font-body text-sm border border-border/50 focus:border-accent/50 outline-none transition-colors`}
-            />
-          </div>
         </motion.div>
 
         {/* Layout: filters + grid */}
         <div className="flex flex-col lg:flex-row gap-8">
           <FiltersShell activeCount={activeCount} onClearAll={clearAll}>
             <FilterSection label={tx.section.city}>
-              <MultiSelectChips options={CITIES.map(toOpt)} value={filters.cities} onChange={(v) => update({ cities: v })} />
+              <CityFilterWithOther
+                selectedCities={filters.cities}
+                citiesInList={CITIES}
+                onCityChange={(v) => update({ cities: v })}
+                placeholder={lang === 'fa' ? 'شهر دیگری را جستجو کنید...' : lang === 'ar' ? 'ابحث عن مدينة أخرى...' : 'Search other cities...'}
+              />
             </FilterSection>
             <FilterSection label={tx.section.gender}>
               <SingleSelectChips options={GENDERS(lang)} value={filters.gender} onChange={(v) => update({ gender: v })} />
             </FilterSection>
             <FilterSection label={tx.section.lang}>
-              <MultiSelectChips options={LANGUAGES.map(toOpt)} value={filters.languages} onChange={(v) => update({ languages: v })} />
+              <LanguageFilterWithOther
+                selectedLanguages={filters.languages}
+                languagesInList={LANGUAGES}
+                onLanguageChange={(v) => update({ languages: v })}
+                placeholder={lang === 'fa' ? 'زبان دیگری را جستجو کنید...' : lang === 'ar' ? 'ابحث عن لغة أخرى...' : 'Search other languages...'}
+              />
             </FilterSection>
             <FilterSection label={tx.section.spec}>
               <MultiSelectChips options={SPECIALTIES.map(toOpt)} value={filters.specialties} onChange={(v) => update({ specialties: v })} />
@@ -228,9 +228,6 @@ export default function Guides() {
             </FilterSection>
             <FilterSection label={tx.section.price}>
               <PriceRange value={filters.price} onChange={(v) => update({ price: v })} />
-            </FilterSection>
-            <FilterSection label={tx.section.verified} defaultOpen={true}>
-              <ToggleRow label={tx.verifiedOnly} checked={filters.verifiedOnly} onChange={(v) => update({ verifiedOnly: v })} />
             </FilterSection>
           </FiltersShell>
 
@@ -302,19 +299,6 @@ export default function Guides() {
                           </div>
                         </div>
                       )}
-
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (!isAuthenticated) navigate('/login');
-                          else navigate(`/chat/${guide.id}`);
-                        }}
-                        className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-accent/10 text-accent font-body text-sm font-medium hover:bg-accent hover:text-white transition-all duration-300"
-                      >
-                        <MessageCircle className="w-4 h-4" />
-                        {t('guides_connect')}
-                      </button>
                     </motion.div>
                   );
                 })}

@@ -76,6 +76,76 @@ const cityData = {
     highlights: ['Bisheh Waterfall', 'Falak-ol-Aflak Castle', 'Khorramabad River', 'Zagros Mountains'],
     bestTime: 'April – June & September – October',
   },
+  tabriz: {
+    name: 'Tabriz',
+    nameI18n: { fa: 'تبریز', ar: 'تبريز' },
+    category: 'Culture & History',
+    image: '/images/destinations/tabriz.jpg',
+    description:
+      "One of Iran's oldest cities, Tabriz is a UNESCO-listed bazaar city with rich Azerbaijani culture, stunning architecture, and the famous Tabriz Historic Bazaar Complex — one of the world's largest covered bazaars.",
+    highlights: ['Tabriz Historic Bazaar', 'Blue Mosque', 'St. Stepanos Church', 'Arg of Tabriz'],
+    bestTime: 'April – May & September – October',
+  },
+  kerman: {
+    name: 'Kerman',
+    nameI18n: { fa: 'کرمان', ar: 'كرمان' },
+    category: 'History & Desert',
+    image: '/images/destinations/kerman.jpg',
+    description:
+      "Gateway to the Lut Desert, Kerman is home to the magnificent Ganjali Khan Complex, ancient bazaars, and some of Iran's finest Persian gardens with a landscape shaped by history and nature.",
+    highlights: ['Ganjali Khan Complex', 'Arg of Bam', 'Lut Desert Gateway', 'Kerman Bazaar'],
+    bestTime: 'October – April (cooler desert season)',
+  },
+  kashan: {
+    name: 'Kashan',
+    nameI18n: { fa: 'کاشان', ar: 'كاشان' },
+    category: 'Architecture',
+    image: '/images/destinations/kashan.jpg',
+    description:
+      "Famous for its stunning historic houses with intricate tilework, rose water production, and the ancient Fin Garden — one of Iran's oldest Persian gardens and a UNESCO World Heritage Site.",
+    highlights: ['Fin Garden', 'Tabatabaei House', 'Borujerdi House', 'Kashan Bazaar'],
+    bestTime: 'March – May & September – November',
+  },
+  qom: {
+    name: 'Qom',
+    nameI18n: { fa: 'قم', ar: 'قم' },
+    category: 'Spiritual',
+    image: '/images/destinations/qom.jpg',
+    description:
+      "Iran's most important religious city, home to the magnificent Fatima Masumeh Shrine with its turquoise dome, dozens of seminaries, and a deep insight into Persian Islamic culture and spirituality.",
+    highlights: ['Fatima Masumeh Shrine', 'Qom Bazaar', 'Jamkaran Mosque', 'Holy Shrine Museums'],
+    bestTime: 'September – May (avoid extreme heat)',
+  },
+  'kish-island': {
+    name: 'Kish Island',
+    nameI18n: { fa: 'جزیره کیش', ar: 'جزيرة كيش' },
+    category: 'Nature & Leisure',
+    image: '/images/destinations/kish-island.jpg',
+    description:
+      "A free-trade island in the Persian Gulf with crystal-clear waters, pristine beaches, coral reefs, duty-free shopping, and water sports — Iran's premier leisure and beach destination.",
+    highlights: ['Kish Beaches', 'Coral Reefs', 'Dolphin Watching', 'Shopping & Nightlife'],
+    bestTime: 'November – April (pleasant weather)',
+  },
+  'qeshm-island': {
+    name: 'Qeshm Island',
+    nameI18n: { fa: 'جزیره قشم', ar: 'جزيرة قشم' },
+    category: 'Nature',
+    image: '/images/destinations/qeshm-island.jpg',
+    description:
+      "Iran's largest island and a UNESCO Geopark with dramatic Star Valley formations, pristine mangrove forests, Persian Gulf coastlines, and unique geological wonders carved by nature.",
+    highlights: ['Stars Valley', 'Mangrove Forests', 'Persian Gulf Beaches', 'Geologically Unique Sites'],
+    bestTime: 'October – April',
+  },
+  'hormuz-island': {
+    name: 'Hormuz Island',
+    nameI18n: { fa: 'جزیره هرمز', ar: 'جزيرة هرمز' },
+    category: 'Nature & Art',
+    image: '/images/destinations/hormuz-island.jpg',
+    description:
+      "Known as the Rainbow Island, Hormuz is famous for its multicolored soil, red beaches, vibrant rock formations, and unique geological features in the heart of the Persian Gulf.",
+    highlights: ['Red Beach', 'Rainbow Valley', 'Portuguese Castle Ruins', 'Multicolored Rock Formations'],
+    bestTime: 'October – April',
+  },
 };
 
 // ── Page ─────────────────────────────────────────────────────────────────────

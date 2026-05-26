@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Search, Star, MessageCircle, ShieldCheck, Building2, Calendar } from 'lucide-react';
+import { Search, Star, ShieldCheck, Building2, Calendar } from 'lucide-react';
 import { useI18n } from '@/lib/i18n.jsx';
 import { useAgencies } from '@/hooks/useSupabase';
 import { avatarFor } from '@/lib/avatar';
@@ -10,6 +10,8 @@ import {
   FiltersShell, FilterSection, MultiSelectChips, SingleSelectChips,
   RatingFilter, ToggleRow, ActiveChips,
 } from '@/components/filters/FilterPrimitives';
+import CityFilterWithOther from '@/components/filters/CityFilterWithOther';
+import LanguageFilterWithOther from '@/components/filters/LanguageFilterWithOther';
 
 // ── Filter catalog ───────────────────────────────────────────────────────────
 const HQ_CITIES        = ['Tehran', 'Isfahan', 'Shiraz', 'Yazd', 'Mashhad', 'Tabriz'];
@@ -163,32 +165,31 @@ export default function Agencies() {
           <h1 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-light text-foreground mb-4">
             {tx.title}
           </h1>
-          <p className="font-body text-muted-foreground max-w-xl text-lg mb-8">
+          <p className="font-body text-muted-foreground max-w-xl text-lg">
             {tx.subtitle}
           </p>
-
-          <div className="relative max-w-md">
-            <Search className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground ${dir === 'rtl' ? 'end-4' : 'start-4'}`} />
-            <input
-              type="text"
-              value={filters.search}
-              onChange={(e) => update({ search: e.target.value })}
-              placeholder={tx.search}
-              className={`w-full ${dir === 'rtl' ? 'pe-11 ps-4' : 'ps-11 pe-4'} py-3 bg-secondary rounded-xl font-body text-sm border border-border/50 focus:border-accent/50 outline-none transition-colors`}
-            />
-          </div>
         </motion.div>
 
         <div className="flex flex-col lg:flex-row gap-8">
           <FiltersShell activeCount={activeCount} onClearAll={clearAll}>
             <FilterSection label={tx.section.hq}>
-              <MultiSelectChips options={HQ_CITIES.map(toOpt)} value={filters.cities} onChange={(v) => update({ cities: v })} />
+              <CityFilterWithOther
+                selectedCities={filters.cities}
+                citiesInList={HQ_CITIES}
+                onCityChange={(v) => update({ cities: v })}
+                placeholder={lang === 'fa' ? 'شهر دیگری را جستجو کنید...' : lang === 'ar' ? 'ابحث عن مدينة أخرى...' : 'Search other cities...'}
+              />
             </FilterSection>
             <FilterSection label={tx.section.tourType}>
               <MultiSelectChips options={TOUR_TYPES.map(toOpt)} value={filters.tourTypes} onChange={(v) => update({ tourTypes: v })} />
             </FilterSection>
             <FilterSection label={tx.section.langs}>
-              <MultiSelectChips options={SUPPORT_LANGS.map(toOpt)} value={filters.languages} onChange={(v) => update({ languages: v })} />
+              <LanguageFilterWithOther
+                selectedLanguages={filters.languages}
+                languagesInList={SUPPORT_LANGS}
+                onLanguageChange={(v) => update({ languages: v })}
+                placeholder={lang === 'fa' ? 'زبان دیگری را جستجو کنید...' : lang === 'ar' ? 'ابحث عن لغة أخرى...' : 'Search other languages...'}
+              />
             </FilterSection>
             <FilterSection label={tx.section.duration}>
               <MultiSelectChips options={TOUR_DURATIONS(lang)} value={filters.durations} onChange={(v) => update({ durations: v })} />
@@ -198,9 +199,6 @@ export default function Agencies() {
             </FilterSection>
             <FilterSection label={tx.section.years}>
               <SingleSelectChips options={YEARS_EXP(lang)} value={filters.yearsExp} onChange={(v) => update({ yearsExp: v })} />
-            </FilterSection>
-            <FilterSection label={tx.section.licensed} defaultOpen>
-              <ToggleRow label={tx.licensedOnly} checked={filters.licensedOnly} onChange={(v) => update({ licensedOnly: v })} />
             </FilterSection>
           </FiltersShell>
 
@@ -285,19 +283,6 @@ export default function Agencies() {
                           </div>
                         </div>
                       )}
-
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (!isAuthenticated) navigate('/login');
-                          else navigate(`/chat/${agency.id}`);
-                        }}
-                        className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-accent/10 text-accent font-body text-sm font-medium hover:bg-accent hover:text-white transition-all duration-300"
-                      >
-                        <MessageCircle className="w-4 h-4" />
-                        {tx.connect}
-                      </button>
                     </motion.div>
                   );
                 })}

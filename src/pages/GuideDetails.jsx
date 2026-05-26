@@ -3,12 +3,11 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useI18n } from '@/lib/i18n.jsx';
 import { motion } from 'framer-motion';
 import {
-  Star, Mail, Phone, Instagram, MapPin, Calendar,
-  ArrowRight, ArrowLeft, MessageCircle,
+  Star, Instagram, MapPin, Calendar,
+  ArrowRight, ArrowLeft,
 } from 'lucide-react';
 import { supabase } from '@/supabaseClient';
 import { avatarFor } from '@/lib/avatar';
-import { useAuth } from '@/lib/AuthContext';
 
 const FALLBACK_COVER = 'https://images.unsplash.com/photo-1564960723835-2898c9df9297?w=1600&h=900&fit=crop';
 
@@ -18,14 +17,6 @@ export default function GuideDetails() {
   const { t, lang, dir } = useI18n();
   const { isAuthenticated } = useAuth();
   const Arrow = dir === 'rtl' ? ArrowLeft : ArrowRight;
-
-  const openChat = () => {
-    if (!isAuthenticated) {
-      navigate('/login');
-      return;
-    }
-    navigate(`/chat/${id}`);
-  };
 
   const renderStars = (ratingValue) => {
     const stars = [];
@@ -48,7 +39,6 @@ export default function GuideDetails() {
   const [guide, setGuide] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isContactUnlocked, setIsContactUnlocked] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -79,27 +69,6 @@ export default function GuideDetails() {
 
     if (id) fetchGuide();
     return () => { isMounted = false; };
-  }, [id]);
-
-  // Check payment status on component load
-  useEffect(() => {
-    const checkPaymentStatus = async () => {
-      try {
-        // TODO: Replace with actual API call to check payment
-        // Example: const payment = await checkUserPayment(id);
-        // if (payment?.status === 'completed') {
-        //   setIsContactUnlocked(true);
-        // }
-
-        // For testing - remove later:
-        // const isUnlocked = localStorage.getItem(`guide_${id}_paid`);
-        // setIsContactUnlocked(isUnlocked === 'true');
-      } catch (error) {
-        console.error('Error checking payment status:', error);
-      }
-    };
-
-    checkPaymentStatus();
   }, [id]);
 
   if (loading) {
@@ -337,84 +306,7 @@ export default function GuideDetails() {
                 </div>
               )}
 
-              {/* Contact Card */}
-              <div className="p-6 rounded-2xl bg-card border border-border/50">
-                <h3 className="font-heading text-xl font-semibold text-foreground mb-4">
-                  {lang === 'fa' ? '📞 اطلاعات تماس' : lang === 'ar' ? '📞 معلومات الاتصال' : '📞 Contact Information'}
-                </h3>
-
-                <div className="space-y-4 mb-6">
-                  <button
-                    type="button"
-                    onClick={openChat}
-                    className="w-full py-3 rounded-xl bg-accent text-white font-body font-semibold hover:bg-accent/90 transition-colors flex items-center justify-center gap-2"
-                  >
-                    <MessageCircle className="w-4 h-4" />
-                    {t('guides_connect')}
-                  </button>
-                </div>
-
-                {isContactUnlocked ? (
-                  // Show contact info
-                  <div className="space-y-3 pt-4 border-t border-border/50">
-                    {guide.phone && (
-                      <div className="flex items-center gap-3 p-3 rounded-lg bg-accent/10">
-                        <Phone className="w-4 h-4 text-accent" />
-                        <div>
-                          <p className="text-xs text-muted-foreground">{lang === 'fa' ? 'شماره تلفن' : 'Phone'}</p>
-                          <p className="font-semibold text-foreground">{guide.phone}</p>
-                        </div>
-                      </div>
-                    )}
-                    {guide.email && (
-                      <div className="flex items-center gap-3 p-3 rounded-lg bg-accent/10">
-                        <Mail className="w-4 h-4 text-accent" />
-                        <div>
-                          <p className="text-xs text-muted-foreground">{lang === 'fa' ? 'ایمیل' : 'Email'}</p>
-                          <p className="font-semibold text-foreground">{guide.email}</p>
-                        </div>
-                      </div>
-                    )}
-                    {guide.instagram && (
-                      <div className="flex items-center gap-3 p-3 rounded-lg bg-accent/10">
-                        <Instagram className="w-4 h-4 text-accent" />
-                        <div>
-                          <p className="text-xs text-muted-foreground">Instagram</p>
-                          <p className="font-semibold text-foreground">@{guide.instagram}</p>
-                        </div>
-                      </div>
-                    )}
-                    <p className="text-sm text-green-600 font-medium">✓ {lang === 'fa' ? 'اطلاعات باز شد' : 'Contact unlocked'}</p>
-                  </div>
-                ) : (
-                  // Show locked state
-                  <div className="space-y-4 pt-4 border-t border-border/50">
-                    <div className="p-6 rounded-lg bg-gradient-to-br from-slate-50 to-slate-100 border-2 border-accent text-center dark:from-slate-800 dark:to-slate-700">
-                      <p className="text-4xl mb-2">🔒</p>
-                      <p className="text-lg font-bold text-foreground">{lang === 'fa' ? 'اطلاعات تماس قفل شده' : 'Contact Info Locked'}</p>
-                      <p className="text-sm text-foreground/70 mt-2">
-                        {lang === 'fa' ? 'برای دیدن شماره تلفن و ایمیل، ابتدا پرداخت را تکمیل کنید.' : 'Complete payment to unlock contact details'}
-                      </p>
-                    </div>
-
-                    <button
-                      onClick={() => {
-                        // TODO: Navigate to payment page or open payment modal
-                        alert(lang === 'fa' ? 'ویژگی پرداخت به زودی!': 'Payment feature coming soon!');
-                      }}
-                      className="w-full bg-accent hover:bg-accent/90 text-white font-bold py-3 px-4 rounded-lg transition flex items-center justify-center gap-2"
-                    >
-                      🔓 {lang === 'fa' ? 'باز کردن و پرداخت' : 'Unlock & Complete Payment'}
-                    </button>
-
-                    <p className="text-xs text-muted-foreground text-center">
-                      {lang === 'fa' ? 'پرداخت امن | راهنما پس از پرداخت مطلع خواهد شد' : 'Safe & Secure Payment | Guide will be notified'}
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* Social */}
+{/* Social */}
               <div className="p-6 rounded-2xl bg-card border border-border/50">
                 <h3 className="font-heading text-lg font-semibold text-foreground mb-3">
                   {lang === 'fa' ? 'شبکه‌های اجتماعی' : lang === 'ar' ? 'وسائل التواصل' : 'Social'}

@@ -71,9 +71,10 @@ function StarRating({ rating }) {
 
 // ─── Sidebar ─────────────────────────────────────────────────────────────────
 
-function Sidebar({ section, onNavigate, profileExpanded, setProfileExpanded, userName, userRole, onLogout }) {
+function Sidebar({ section, onNavigate, profileExpanded, setProfileExpanded, userName, userRole, onLogout, profile }) {
   const { t } = useI18n();
   const activeId = section || 'home';
+  const canAddTour = !profile || profile.role === 'traveler' || profile.license_status === 'verified';
 
   const NAV_LABELS = {
     home:        t('dashboard_nav_home'),
@@ -122,15 +123,25 @@ function Sidebar({ section, onNavigate, profileExpanded, setProfileExpanded, use
 
       {/* Nav */}
       <nav className="flex-1 px-2 py-3 space-y-0.5">
-        {NAV.map(item => (
+        {NAV.map(item => {
+          const isDisabled = item.id === 'add-tour' && !canAddTour;
+          return (
           <div key={item.id}>
             <button
               onClick={() => {
+                if (isDisabled) {
+                  alert(item.id === 'add-tour' && profile?.role !== 'traveler' ? 'Please verify your license document before creating tours.' : '');
+                  return;
+                }
                 if (item.sub) setProfileExpanded(v => !v);
                 else onNavigate(item.id);
               }}
+              disabled={isDisabled}
+              title={isDisabled ? 'License verification required' : ''}
               className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-left text-xs font-medium transition-all duration-150 group ${
-                isActive(item.id)
+                isDisabled
+                  ? 'text-white/25 cursor-not-allowed opacity-50'
+                  : isActive(item.id)
                   ? 'bg-[hsl(178,85%,32%)]/20 text-[hsl(178,85%,50%)]'
                   : 'text-white/55 hover:text-white hover:bg-white/[0.06]'
               }`}
@@ -173,7 +184,8 @@ function Sidebar({ section, onNavigate, profileExpanded, setProfileExpanded, use
               )}
             </AnimatePresence>
           </div>
-        ))}
+          );
+        })}
       </nav>
 
       {/* Logout */}
@@ -783,6 +795,17 @@ function ProfileView({ profile, userId, onSave }) {
         </div>
       </div>
 
+      {/* License Warning Banner */}
+      {(profile?.role === 'guide' || profile?.role === 'agency') && profile?.license_status !== 'verified' && (
+        <div className="mb-4 p-4 rounded-xl bg-red-500/10 border border-red-500/25 flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-red-400 font-semibold text-sm">License Document Required</p>
+            <p className="text-red-400/70 text-xs mt-1">Your profile is hidden from travelers until you upload and verify your license document. You won't be able to create new tours until your license is verified.</p>
+          </div>
+        </div>
+      )}
+
       {error && (
         <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/25 text-red-400 text-sm">{error}</div>
       )}
@@ -829,6 +852,40 @@ function ProfileView({ profile, userId, onSave }) {
           <label className={labelClass}>Bio</label>
           <textarea name="bio" value={form.bio} onChange={handleChange} rows={4} className={`${inputClass} resize-none`} placeholder="Tell travelers about yourself, your expertise, and your passion for Iran..." />
         </div>
+
+        {/* License Document Section */}
+        {(profile?.role === 'guide' || profile?.role === 'agency') && (
+          <div className="border-t border-white/[0.07] pt-5">
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-3">
+                <label className={labelClass}>License Document</label>
+                <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
+                  profile?.license_status === 'verified'
+                    ? 'bg-emerald-500/20 text-emerald-400'
+                    : profile?.license_status === 'pending_review'
+                    ? 'bg-yellow-500/20 text-yellow-400'
+                    : 'bg-red-500/20 text-red-400'
+                }`}>
+                  {profile?.license_status === 'verified' ? '✓ Verified' : profile?.license_status === 'pending_review' ? '⏳ Pending Review' : '✗ Not Uploaded'}
+                </span>
+              </div>
+              <p className="text-white/30 text-xs mb-3">Upload PDF, JPG, or PNG (max 5MB)</p>
+              <div className="relative">
+                <input
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  disabled={true}
+                  className="absolute inset-0 opacity-0 cursor-not-allowed"
+                  title="License upload coming soon"
+                />
+                <div className="w-full px-4 py-3 rounded-xl border-2 border-dashed border-white/20 bg-white/[0.02] flex items-center justify-center gap-2 text-white/40 text-sm cursor-not-allowed">
+                  <Upload className="w-4 h-4" />
+                  License Upload (Coming Soon)
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="flex items-center justify-between pt-2">
           {saved && (
@@ -1633,6 +1690,7 @@ export default function Dashboard() {
         userName={profile?.full_name || authUser?.user_metadata?.full_name}
         userRole={profile?.role || authUser?.user_metadata?.role}
         onLogout={handleLogout}
+        profile={profile}
       />
 
       {/* Main content */}
