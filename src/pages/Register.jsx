@@ -76,6 +76,9 @@ export default function Register() {
     if (!formData.email.trim()) {
       return lang === 'fa' ? 'ایمیل الزامی است' : 'Email is required';
     }
+    if (!formData.phone.trim()) {
+      return lang === 'fa' ? 'شماره تلفن الزامی است' : 'Phone number is required';
+    }
     if (formData.password.length < 8) {
       return lang === 'fa'
         ? 'رمز عبور باید حداقل ۸ کاراکتر باشد'
@@ -332,6 +335,26 @@ export default function Register() {
               </div>
             </div>
 
+            {/* Phone Number */}
+            <div>
+              <label className="block font-body text-xs text-muted-foreground mb-1.5">
+                {lang === 'fa' ? 'شماره تلفن' : 'Phone Number'} *
+              </label>
+              <div className="relative">
+                <Phone className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none ${isRtl ? 'end-3.5' : 'start-3.5'}`} />
+                <input
+                  type="tel"
+                  required
+                  value={formData.phone}
+                  onChange={e => set('phone', e.target.value)}
+                  className={`w-full ${isRtl ? 'pe-10 ps-3.5' : 'ps-10 pe-3.5'} py-2.5 rounded-xl border border-border bg-background font-body text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-accent/50 transition`}
+                  placeholder={lang === 'fa' ? '+98 XXX XXX XXXX' : '+1 (555) 000-0000'}
+                  autoComplete="tel"
+                  dir="ltr"
+                />
+              </div>
+            </div>
+
             {/* Password */}
             <div>
               <label className="block font-body text-xs text-muted-foreground mb-1.5">
@@ -381,25 +404,6 @@ export default function Register() {
                     <option key={c} value={c}>{c}</option>
                   ))}
                 </select>
-              </div>
-            </div>
-
-            {/* Phone */}
-            <div>
-              <label className="block font-body text-xs text-muted-foreground mb-1.5">
-                {lang === 'fa' ? 'شماره تلفن' : 'Phone Number'}
-              </label>
-              <div className="relative">
-                <Phone className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none ${isRtl ? 'end-3.5' : 'start-3.5'}`} />
-                <input
-                  type="tel"
-                  value={formData.phone}
-                  onChange={e => set('phone', e.target.value)}
-                  className={`w-full ${isRtl ? 'pe-10 ps-3.5' : 'ps-10 pe-3.5'} py-2.5 rounded-xl border border-border bg-background font-body text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-accent/50 transition`}
-                  placeholder="+1 555 000 0000"
-                  autoComplete="tel"
-                  dir="ltr"
-                />
               </div>
             </div>
 

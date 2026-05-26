@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useSearchParams, useNavigate } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { useI18n } from '@/lib/i18n.jsx';
 import { supabase } from '@/supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -412,10 +412,12 @@ function extractRecommendation(raw, tours, guides) {
 export default function AIAssistant() {
   const { t, dir, lang, switchLang } = useI18n();
   const navigate = useNavigate();
+  const location = useLocation();
   const scrollerRef = useRef(null);
   const inputRef = useRef(null);
   const [searchParams] = useSearchParams();
   const cityHint = searchParams.get('city') || '';
+  const initialMessage = location.state?.initialMessage || '';
 
   // Load messages from localStorage or initialize empty
   const [messages, setMessages] = useState(() => {
@@ -444,7 +446,7 @@ export default function AIAssistant() {
     }
   });
 
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState(initialMessage);
   const [loading, setLoading] = useState(false);
   const [catalogue, setCatalogue] = useState({ tours: [], guides: [], ready: false });
   const [profile] = useState({ goal: '', duration: '', group: '', budget: '', vibes: [] });

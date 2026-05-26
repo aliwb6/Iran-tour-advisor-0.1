@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useI18n } from '@/lib/i18n.jsx';
 import { motion } from 'framer-motion';
 import { ArrowRight, ArrowLeft, Sparkles, Star } from 'lucide-react';
+import HeroSearchBar from './HeroSearchBar';
 
 const HERO_IMAGES = [
   "https://media.base44.com/images/public/69fddcfab0730c36bda3631e/7a7bd2ab5_generated_847e20ff.png",
@@ -91,6 +92,16 @@ export default function HeroSection() {
         >
           {t('hero_subtitle')}
         </motion.p>
+
+        {/* Search bar */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.7, duration: 0.6 }}
+          className="w-full"
+        >
+          <HeroSearchBar />
+        </motion.div>
 
         {/* CTA row */}
         <motion.div
