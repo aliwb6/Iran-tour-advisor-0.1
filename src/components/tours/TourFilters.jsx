@@ -25,19 +25,27 @@ const themeOptions = [
 ];
 
 const durationOptions = [
-  { key: 'all', en: 'Any Duration', fa: 'هر مدت', ar: 'أي مدة' },
-  { key: 'short', en: 'Up to 7 days', fa: 'تا ۷ روز', ar: 'حتى 7 أيام' },
-  { key: 'medium', en: '8–11 days', fa: '۸ تا ۱۱ روز', ar: '8-11 أيام' },
-  { key: 'long', en: '12+ days', fa: '۱۲+ روز', ar: '12+ أيام' },
+  { key: 'all',    en: 'Any Duration', fa: 'هر مدت',      ar: 'أي مدة'    },
+  { key: 'day',    en: 'Day trip',     fa: 'یک‌روزه',     ar: 'يوم واحد'  },
+  { key: '2to3',   en: '2–3 days',    fa: '۲ تا ۳ روز',  ar: '2-3 أيام'  },
+  { key: 'week',   en: 'Week-long',   fa: 'یک هفته',      ar: 'أسبوع'     },
+  { key: 'custom', en: 'Custom',      fa: 'سفارشی',        ar: 'مخصص'      },
+];
+
+const priceOptions = [
+  { key: 'all',       en: 'All Prices',  fa: 'همه قیمت‌ها',  ar: 'كل الأسعار' },
+  { key: 'budget',    en: 'Budget',      fa: 'اقتصادی',       ar: 'اقتصادي'    },
+  { key: 'midrange',  en: 'Mid-range',   fa: 'متوسط',          ar: 'متوسط'       },
+  { key: 'luxury',    en: 'Luxury',      fa: 'لاکچری',         ar: 'فاخر'        },
 ];
 
 export default function TourFilters({ filters, onChange, resultCount }) {
   const { lang, dir, t } = useI18n();
   const label = (opt) => opt[lang] || opt.en;
 
-  const hasActive = filters.purpose !== 'all' || filters.theme !== 'all' || filters.duration !== 'all';
+  const hasActive = filters.purpose !== 'all' || filters.theme !== 'all' || filters.duration !== 'all' || filters.price !== 'all';
 
-  const reset = () => onChange({ purpose: 'all', theme: 'all', duration: 'all' });
+  const reset = () => onChange({ purpose: 'all', theme: 'all', duration: 'all', price: 'all' });
 
   return (
     <div dir={dir} className="mb-12">
@@ -105,6 +113,23 @@ export default function TourFilters({ filters, onChange, resultCount }) {
               <button key={opt.key} onClick={() => onChange({ ...filters, duration: opt.key })}
                 className={`px-3 py-1.5 rounded-full text-xs font-body border transition-all
                   ${filters.duration === opt.key ? 'bg-accent text-white border-accent' : 'border-border/50 text-muted-foreground hover:border-accent/40 hover:text-foreground'}`}>
+                {label(opt)}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Price Range */}
+        <div className="min-w-[160px]">
+          <p className="font-body text-xs text-muted-foreground mb-2 flex items-center gap-1.5">
+            <span className="text-gold text-[10px]">◆</span>
+            {lang === 'fa' ? 'محدوده قیمت' : lang === 'ar' ? 'نطاق السعر' : 'Price Range'}
+          </p>
+          <div className="flex gap-2 flex-wrap">
+            {priceOptions.map(opt => (
+              <button key={opt.key} onClick={() => onChange({ ...filters, price: opt.key })}
+                className={`px-3 py-1.5 rounded-full text-xs font-body border transition-all
+                  ${filters.price === opt.key ? 'bg-gold text-black border-gold' : 'border-border/50 text-muted-foreground hover:border-gold/40 hover:text-foreground'}`}>
                 {label(opt)}
               </button>
             ))}

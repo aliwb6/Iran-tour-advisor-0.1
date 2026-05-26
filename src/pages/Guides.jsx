@@ -1,14 +1,14 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Search, Star, ShieldCheck } from 'lucide-react';
+import { Search, Star, ShieldCheck, MapPin } from 'lucide-react';
 import { useI18n } from '@/lib/i18n.jsx';
 import { useGuides } from '@/hooks/useSupabase';
 import { avatarFor } from '@/lib/avatar';
-import { useAuth } from '@/lib/AuthContext';
+import { supabase } from '@/supabaseClient';
 import {
   FiltersShell, FilterSection, MultiSelectChips, SingleSelectChips,
-  RatingFilter, PriceRange, ToggleRow, ActiveChips,
+  RatingFilter, PriceRange, ActiveChips,
 } from '@/components/filters/FilterPrimitives';
 import CityFilterWithOther from '@/components/filters/CityFilterWithOther';
 import LanguageFilterWithOther from '@/components/filters/LanguageFilterWithOther';
@@ -16,7 +16,6 @@ import LanguageFilterWithOther from '@/components/filters/LanguageFilterWithOthe
 // ── Filter catalog ───────────────────────────────────────────────────────────
 const CITIES      = ['Tehran', 'Isfahan', 'Shiraz', 'Yazd', 'Mashhad', 'Tabriz', 'Kerman', 'Rasht'];
 const LANGUAGES   = ['English', 'Arabic', 'French', 'German', 'Spanish', 'Italian', 'Chinese'];
-const SPECIALTIES = ['Architecture', 'History', 'Nature', 'Photography', 'Food & Cuisine', 'Desert Adventure', 'Art & Crafts'];
 
 const GENDERS = (lang) => [
   { value: 'male',   label: lang === 'fa' ? 'مرد' : lang === 'ar' ? 'ذكر'  : 'Male' },
@@ -38,13 +37,8 @@ const DEFAULT_FILTERS = {
   rating: 0,
   experience: '',
   price: { min: null, max: null },
-  verifiedOnly: false,
 };
 
-// Field-by-field passes the row through the filter. Returns true when the row
-// matches. Missing columns on the row are treated as "pass" so the UI keeps
-// working even before the DB has every column added (e.g. price_per_day,
-// experience_years).
 function rowMatches(g, f) {
   if (f.search) {
     const q = f.search.toLowerCase();
@@ -84,28 +78,151 @@ function rowMatches(g, f) {
       if (f.price.max != null && p > f.price.max) return false;
     }
   }
-  if (f.verifiedOnly) {
-    if (!g.is_approved && !g.is_verified) return false;
-  }
   return true;
 }
 
-// Languages / specialties columns are stored as either a comma-separated
-// string or a text[] in Supabase depending on the row's vintage. Normalise.
 function parseList(val) {
   if (!val) return [];
   if (Array.isArray(val)) return val.map((s) => String(s).toLowerCase());
   return String(val).split(/[,·;]/).map((s) => s.trim().toLowerCase()).filter(Boolean);
 }
 
-const cityColors = ['bg-accent/10 text-accent', 'bg-gold/20 text-gold', 'bg-primary/10 text-primary'];
+// ── Guide Card ────────────────────────────────────────────────────────────────
+
+function GuideCard({ guide, lang, onNavigate }) {
+  const specialties = Array.isArray(guide.specialties)
+    ? guide.specialties
+    : guide.specialty
+    ? [guide.specialty]
+    : [];
+  const verified = guide.is_approved || guide.is_verified;
+  const reviewCount = guide.reviews ?? guide.review_count ?? 0;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      whileHover={{ y: -4 }}
+      onClick={() => onNavigate(`/guides/${guide.id}`)}
+      className="bg-card rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden border border-border/40 hover:border-gold/30 group"
+    >
+      {/* Photo */}
+      <div className="relative aspect-[4/3] overflow-hidden bg-muted">
+        <img
+          src={avatarFor(guide)}
+          alt={guide.full_name || ''}
+          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+        />
+        {/* City badge top-left */}
+        {guide.city && (
+          <span className="absolute top-3 start-3 flex items-center gap-1 px-2.5 py-1 rounded-full bg-black/50 backdrop-blur-sm text-white text-xs font-medium">
+            <MapPin className="w-3 h-3 text-gold" />
+            {guide.city}
+          </span>
+        )}
+        {/* Verified badge top-right */}
+        {verified && (
+          <span className="absolute top-3 end-3 flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-500/90 text-white text-xs font-medium">
+            <ShieldCheck className="w-3 h-3" />
+            {lang === 'fa' ? 'تأیید شده' : lang === 'ar' ? 'موثق' : 'Verified'}
+          </span>
+        )}
+      </div>
+
+      {/* Card body */}
+      <div className="p-4">
+        {/* Name */}
+        <h3 className="font-heading text-lg font-semibold text-foreground truncate mb-1">
+          {guide.full_name || (lang === 'fa' ? 'راهنما' : 'Guide')}
+        </h3>
+
+        {/* Stars + rating + reviews */}
+        <div className="flex items-center gap-1.5 mb-2">
+          <div className="flex items-center gap-0.5">
+            {[1, 2, 3, 4, 5].map((n) => (
+              <Star
+                key={n}
+                className={`w-3.5 h-3.5 ${
+                  n <= Math.round(guide.rating ?? 0)
+                    ? 'fill-gold text-gold'
+                    : 'fill-border text-border'
+                }`}
+              />
+            ))}
+          </div>
+          {guide.rating != null && (
+            <span className="font-body text-sm font-semibold text-foreground">{Number(guide.rating).toFixed(1)}</span>
+          )}
+          <span className="font-body text-xs text-muted-foreground">
+            · {reviewCount} {lang === 'fa' ? 'نظر' : lang === 'ar' ? 'تقييم' : 'Reviews'}
+          </span>
+        </div>
+
+        {/* Bio excerpt */}
+        {guide.bio && (
+          <p className="font-body text-sm text-muted-foreground leading-relaxed line-clamp-2 mb-3">
+            {guide.bio}
+          </p>
+        )}
+
+        {/* Specialty tags */}
+        {specialties.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {specialties.slice(0, 3).map((s, i) => (
+              <span
+                key={i}
+                className="px-2 py-0.5 rounded-full text-[11px] font-body font-medium bg-gold/10 text-gold border border-gold/20"
+              >
+                {s}
+              </span>
+            ))}
+            {specialties.length > 3 && (
+              <span className="px-2 py-0.5 rounded-full text-[11px] font-body text-muted-foreground bg-muted">
+                +{specialties.length - 3}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 export default function Guides() {
   const { t, dir, lang } = useI18n();
   const navigate = useNavigate();
   const { guides, loading, error } = useGuides();
-  const { isAuthenticated } = useAuth();
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  const [dynamicSpecialties, setDynamicSpecialties] = useState([]);
+
+  // Load unique specialties from Supabase
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from('profiles')
+          .select('specialties, specialty')
+          .eq('role', 'guide');
+        if (data) {
+          const all = data.flatMap((g) => {
+            if (Array.isArray(g.specialties)) return g.specialties;
+            if (g.specialty) return [g.specialty];
+            return [];
+          });
+          setDynamicSpecialties([...new Set(all.map((s) => String(s).trim()).filter(Boolean))]);
+        }
+      } catch {
+        // silently fail — static fallback used
+      }
+    })();
+  }, []);
+
+  const specialtyOptions = (dynamicSpecialties.length > 0 ? dynamicSpecialties : [
+    'Architecture', 'History', 'Nature', 'Photography', 'Food & Cuisine', 'Desert Adventure', 'Art & Crafts',
+  ]).map((s) => ({ value: s, label: s }));
 
   const update = (patch) => setFilters((f) => ({ ...f, ...patch }));
   const clearAll = () => setFilters(DEFAULT_FILTERS);
@@ -124,9 +241,7 @@ export default function Guides() {
       rating:    lang === 'fa' ? 'امتیاز'         : lang === 'ar' ? 'التقييم'       : 'Rating',
       experience:lang === 'fa' ? 'تجربه'          : lang === 'ar' ? 'الخبرة'         : 'Experience',
       price:     lang === 'fa' ? 'قیمت روزانه'    : lang === 'ar' ? 'السعر اليومي'  : 'Price per day',
-      verified:  lang === 'fa' ? 'فقط تایید شده‌ها' : lang === 'ar' ? 'الموثق فقط'    : 'Verified only',
     },
-    verifiedOnly: lang === 'fa' ? 'فقط تایید شده‌ها' : lang === 'ar' ? 'الموثق فقط' : 'Verified only',
     results: (n) => lang === 'fa'
       ? `${n} راهنما یافت شد`
       : lang === 'ar'
@@ -134,7 +249,6 @@ export default function Guides() {
       : `${n} guide${n === 1 ? '' : 's'} found`,
   };
 
-  // Summarise active filters as removable chips above the grid.
   const activeChips = useMemo(() => {
     const chips = [];
     if (filters.search) {
@@ -160,13 +274,6 @@ export default function Guides() {
       const e = EXPERIENCE(lang).find((x) => x.value === filters.experience);
       if (e) chips.push({ key: 'exp', label: e.label, onRemove: () => update({ experience: '' }) });
     }
-    if (filters.price.min != null || filters.price.max != null) {
-      const range = `$${filters.price.min ?? 0} — ${filters.price.max != null ? `$${filters.price.max}` : '∞'}`;
-      chips.push({ key: 'price', label: range, onRemove: () => update({ price: { min: null, max: null } }) });
-    }
-    if (filters.verifiedOnly) {
-      chips.push({ key: 'verified', label: tx.verifiedOnly, onRemove: () => update({ verifiedOnly: false }) });
-    }
     return chips;
   }, [filters, lang]);
 
@@ -175,8 +282,6 @@ export default function Guides() {
   const loadingText = lang === 'fa' ? 'در حال بارگذاری راهنماها...' : lang === 'ar' ? 'جار تحميل المرشدين...' : 'Loading guides...';
   const errorText   = lang === 'fa' ? 'بارگذاری راهنماها با خطا مواجه شد' : lang === 'ar' ? 'فشل تحميل المرشدين' : 'Failed to load guides';
   const emptyText   = lang === 'fa' ? 'راهنمایی با این فیلترها یافت نشد' : lang === 'ar' ? 'لا توجد نتائج بهذه الفلاتر' : 'No guides match these filters';
-
-  const toOpt = (s) => ({ value: s, label: s });
 
   return (
     <div dir={dir} className="pt-24 pb-16">
@@ -195,6 +300,18 @@ export default function Guides() {
           </p>
         </motion.div>
 
+        {/* Search bar */}
+        <div className="relative mb-8">
+          <Search className="absolute start-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+          <input
+            type="text"
+            value={filters.search}
+            onChange={(e) => update({ search: e.target.value })}
+            placeholder={lang === 'fa' ? 'جستجو در راهنماها...' : lang === 'ar' ? 'ابحث عن مرشدين...' : 'Search guides by name, city, specialty...'}
+            className="w-full ps-11 pe-4 py-3 rounded-2xl border border-border bg-card font-body text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-gold/40 focus:border-gold/40 transition shadow-sm"
+          />
+        </div>
+
         {/* Layout: filters + grid */}
         <div className="flex flex-col lg:flex-row gap-8">
           <FiltersShell activeCount={activeCount} onClearAll={clearAll}>
@@ -206,9 +323,6 @@ export default function Guides() {
                 placeholder={lang === 'fa' ? 'شهر دیگری را جستجو کنید...' : lang === 'ar' ? 'ابحث عن مدينة أخرى...' : 'Search other cities...'}
               />
             </FilterSection>
-            <FilterSection label={tx.section.gender}>
-              <SingleSelectChips options={GENDERS(lang)} value={filters.gender} onChange={(v) => update({ gender: v })} />
-            </FilterSection>
             <FilterSection label={tx.section.lang}>
               <LanguageFilterWithOther
                 selectedLanguages={filters.languages}
@@ -217,8 +331,11 @@ export default function Guides() {
                 placeholder={lang === 'fa' ? 'زبان دیگری را جستجو کنید...' : lang === 'ar' ? 'ابحث عن لغة أخرى...' : 'Search other languages...'}
               />
             </FilterSection>
+            <FilterSection label={tx.section.gender}>
+              <SingleSelectChips options={GENDERS(lang)} value={filters.gender} onChange={(v) => update({ gender: v })} />
+            </FilterSection>
             <FilterSection label={tx.section.spec}>
-              <MultiSelectChips options={SPECIALTIES.map(toOpt)} value={filters.specialties} onChange={(v) => update({ specialties: v })} />
+              <MultiSelectChips options={specialtyOptions} value={filters.specialties} onChange={(v) => update({ specialties: v })} />
             </FilterSection>
             <FilterSection label={tx.section.rating}>
               <RatingFilter value={filters.rating} onChange={(v) => update({ rating: v })} />
@@ -233,7 +350,7 @@ export default function Guides() {
 
           <div className="flex-1 min-w-0">
             {/* Active chips + result count */}
-            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
               <ActiveChips chips={activeChips} />
               <p className="font-body text-sm text-muted-foreground ms-auto">
                 {tx.results(filtered.length)}
@@ -250,58 +367,10 @@ export default function Guides() {
             ) : filtered.length === 0 ? (
               <p className="font-body text-muted-foreground text-center py-16">{emptyText}</p>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {filtered.map((guide, i) => {
-                  const specialties = Array.isArray(guide.specialties) ? guide.specialties : (guide.specialty ? [guide.specialty] : []);
-                  const verified = guide.is_approved || guide.is_verified;
-                  return (
-                    <motion.div
-                      key={guide.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      viewport={{ once: true }}
-                      transition={{ delay: Math.min(i * 0.04, 0.3) }}
-                      onClick={() => navigate(`/guides/${guide.id}`)}
-                      className="p-6 rounded-2xl border border-border/50 bg-card hover:shadow-lg hover:border-gold/30 transition-all duration-300 cursor-pointer"
-                    >
-                      <div className="flex items-start gap-4 mb-4">
-                        <img
-                          src={avatarFor(guide)}
-                          alt={guide.full_name || ''}
-                          className="w-14 h-14 rounded-full border-2 border-gold object-cover shrink-0"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <h3 className="font-heading text-lg font-semibold text-foreground truncate">{guide.full_name}</h3>
-                            {verified && <ShieldCheck className="w-4 h-4 text-emerald-500 flex-shrink-0" title="Verified" />}
-                          </div>
-                          {guide.city && <p className="font-body text-sm text-muted-foreground">{guide.city}</p>}
-                          {guide.rating != null && (
-                            <div className="flex items-center gap-1 mt-1">
-                              <Star className="w-3.5 h-3.5 fill-gold text-gold" />
-                              <span className="font-body text-sm font-medium text-foreground">{guide.rating}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {guide.bio && (
-                        <p className="font-body text-sm text-foreground/70 leading-relaxed mb-4 line-clamp-3">{guide.bio}</p>
-                      )}
-
-                      {specialties.length > 0 && (
-                        <div className="mb-5">
-                          <span className="font-body text-xs text-muted-foreground font-medium mb-2 block">{t('guides_specialties')}</span>
-                          <div className="flex flex-wrap gap-1.5">
-                            {specialties.map((s, j) => (
-                              <span key={j} className={`px-2.5 py-0.5 rounded-full text-xs font-body font-medium ${cityColors[j % cityColors.length]}`}>{s}</span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </motion.div>
-                  );
-                })}
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
+                {filtered.map((guide) => (
+                  <GuideCard key={guide.id} guide={guide} lang={lang} onNavigate={navigate} />
+                ))}
               </div>
             )}
           </div>

@@ -20,6 +20,8 @@ import AdminDashboard from '@/pages/AdminDashboard';
 import Guides from '@/pages/Guides';
 import Agencies from '@/pages/Agencies';
 import GuideDetails from '@/pages/GuideDetails';
+import AgencyProfile from '@/pages/AgencyProfile';
+import TripRequest from '@/pages/TripRequest';
 import AIAssistant from '@/pages/AIAssistant';
 import About from '@/pages/About';
 import Blog from '@/pages/Blog';
@@ -30,6 +32,8 @@ import SettingsPage from '@/pages/profile/SettingsPage';
 import BookingsPage from '@/pages/profile/BookingsPage';
 import RequestsPage from '@/pages/profile/RequestsPage';
 import CityPage from '@/pages/CityPage';
+import FindJobs from '@/pages/FindJobs';
+import MyTripRequests from '@/pages/MyTripRequests';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth } = useAuth();
@@ -57,6 +61,9 @@ const AuthenticatedApp = () => {
         <Route path="/guides" element={<Guides />} />
         <Route path="/guides/:id" element={<GuideDetails />} />
         <Route path="/agencies" element={<Agencies />} />
+        <Route path="/agencies/:id" element={<AgencyProfile />} />
+        <Route path="/request-trip/:guideId" element={<TripRequest />} />
+        <Route path="/request-trip/agency/:guideId" element={<TripRequest />} />
         <Route path="/about" element={<About />} />
         <Route path="/blog" element={<Blog />} />
         <Route path="/blog/:slug" element={<ArticleDetails />} />
@@ -65,6 +72,8 @@ const AuthenticatedApp = () => {
         <Route path="/profile/settings" element={<SettingsPage />} />
         <Route path="/profile/bookings" element={<BookingsPage />} />
         <Route path="/profile/requests" element={<RequestsPage />} />
+        <Route path="/find-jobs" element={<FindJobs />} />
+        <Route path="/my-trips" element={<MyTripRequests />} />
       </Route>
       <Route path="/ai-assistant" element={<AIAssistant />} />
       <Route path="/signup" element={<Signup />} />

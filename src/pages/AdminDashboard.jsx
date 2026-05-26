@@ -6,10 +6,13 @@ import {
   LayoutDashboard, Clock, Briefcase, Users, MessageSquare, Shield,
   Loader2, LogOut, CheckCircle2, XCircle, Edit2, Trash2, X, MapPin,
   DollarSign, Star, AlertTriangle, Send, Image as ImageIcon,
-  Search, Sparkles, PlusCircle,
+  Search, Sparkles, PlusCircle, BookOpen,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { avatarFor } from '@/lib/avatar';
 import TourForm from '@/components/dashboard/TourForm';
+import { useAllArticlesAdmin } from '@/hooks/useSupabase';
+import ArticleEditor from '@/components/articles/ArticleEditor';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -20,6 +23,7 @@ const NAV = [
   { id: 'platform', label: 'Platform Tours', Icon: Sparkles },
   { id: 'guides',   label: 'All Guides',     Icon: Users },
   { id: 'comments', label: 'Comments',       Icon: MessageSquare },
+  { id: 'articles', label: 'Articles',       Icon: BookOpen },
 ];
 
 const STATUS_CFG = {
@@ -102,6 +106,7 @@ function Sidebar({ section, onNavigate, counts, profile, onLogout }) {
     if (id === 'platform') return counts.platform;
     if (id === 'guides')   return counts.guides;
     if (id === 'comments') return counts.comments;
+    if (id === 'articles') return counts.articles;
     return null;
   };
 
@@ -878,6 +883,201 @@ function CommentsView({ reviews, loading, onReply, onDelete, busyId }) {
   );
 }
 
+// ─── Articles View ────────────────────────────────────────────────────────────
+
+const ART_STATUS = {
+  approved: { label: 'منتشر شده',      cls: 'bg-teal-500/20 text-teal-300 border-teal-500/30' },
+  pending:  { label: 'در انتظار',      cls: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30' },
+  rejected: { label: 'رد شده',         cls: 'bg-red-500/20 text-red-300 border-red-500/30' },
+};
+
+function ArticlesView({ profile }) {
+  const { articles, loading, refetch } = useAllArticlesAdmin();
+  const [filter, setFilter] = useState('pending');
+  const [showEditor, setShowEditor] = useState(false);
+  const [busyId, setBusyId] = useState(null);
+
+  const filtered = filter === 'all' ? articles : articles.filter(a => a.status === filter);
+
+  const setStatus = async (id, status, adminNote) => {
+    setBusyId(id);
+    const update = { status };
+    if (adminNote !== undefined) update.admin_note = adminNote;
+    if (status === 'approved') { update.is_published = true; }
+    const { error } = await supabase.from('articles').update(update).eq('id', id);
+    setBusyId(null);
+    if (error) { toast.error(error.message); return; }
+    toast.success(status === 'approved' ? 'مقاله تایید شد.' : 'مقاله رد شد.');
+    refetch();
+  };
+
+  const toggleFeatured = async (article) => {
+    setBusyId(article.id);
+    const { error } = await supabase
+      .from('articles')
+      .update({ is_featured: !article.is_featured })
+      .eq('id', article.id);
+    setBusyId(null);
+    if (error) { toast.error(error.message); return; }
+    toast.success(article.is_featured ? 'از ویژه‌ها حذف شد.' : 'به ویژه‌ها اضافه شد.');
+    refetch();
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('این مقاله حذف شود؟')) return;
+    setBusyId(id);
+    const { error } = await supabase.from('articles').delete().eq('id', id);
+    setBusyId(null);
+    if (error) { toast.error(error.message); return; }
+    toast.success('مقاله حذف شد.');
+    refetch();
+  };
+
+  const pendingCount = articles.filter(a => a.status === 'pending').length;
+
+  return (
+    <div dir="rtl" className="space-y-6">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-3">
+          <h2 className="text-white font-bold text-lg">Articles</h2>
+          {pendingCount > 0 && (
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-yellow-500/20 text-yellow-300 border border-yellow-500/30">
+              {pendingCount} در انتظار
+            </span>
+          )}
+        </div>
+        <button
+          onClick={() => setShowEditor(v => !v)}
+          className="flex items-center gap-1.5 text-sm font-medium text-teal-400 hover:text-teal-300 transition-colors"
+        >
+          {showEditor ? 'بستن فرم' : '+ مقاله جدید'}
+        </button>
+      </div>
+
+      {showEditor && (
+        <ArticleEditor
+          userId={profile?.id}
+          authorType="admin"
+          onSuccess={() => { setShowEditor(false); refetch(); }}
+          onCancel={() => setShowEditor(false)}
+        />
+      )}
+
+      {/* Filter tabs */}
+      <div className="flex gap-2 flex-wrap">
+        {[
+          { key: 'pending',  label: 'در انتظار' },
+          { key: 'approved', label: 'منتشر شده' },
+          { key: 'rejected', label: 'رد شده' },
+          { key: 'all',      label: 'همه' },
+        ].map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setFilter(tab.key)}
+            className={`px-4 py-1.5 rounded-full text-xs font-medium border transition-all ${
+              filter === tab.key
+                ? 'bg-teal-600 text-white border-teal-600'
+                : 'border-white/10 text-white/50 hover:text-white hover:border-white/30'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {loading ? (
+        <SectionLoader />
+      ) : filtered.length === 0 ? (
+        <EmptyState Icon={BookOpen} title="مقاله‌ای یافت نشد" desc="مقاله‌ای در این دسته وجود ندارد." />
+      ) : (
+        <div className="space-y-4">
+          {filtered.map(article => {
+            const s = ART_STATUS[article.status] || ART_STATUS.pending;
+            const busy = busyId === article.id;
+            return (
+              <div key={article.id} className={`${CARD} p-4`}>
+                <div className="flex gap-4 items-start">
+                  {article.image_url ? (
+                    <img
+                      src={article.image_url}
+                      alt=""
+                      className="w-20 h-16 rounded-xl object-cover shrink-0 border border-white/10"
+                    />
+                  ) : (
+                    <div className="w-20 h-16 rounded-xl bg-white/[0.06] shrink-0 flex items-center justify-center border border-white/10">
+                      <BookOpen className="w-5 h-5 text-white/20" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start gap-2 flex-wrap">
+                      <p className="text-white font-semibold text-sm flex-1 truncate">{article.title_fa || 'بدون عنوان'}</p>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full border font-medium shrink-0 ${s.cls}`}>
+                        {s.label}
+                      </span>
+                      {article.is_featured && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full border font-medium shrink-0 bg-yellow-500/20 text-yellow-300 border-yellow-500/30">
+                          ⭐ ویژه
+                        </span>
+                      )}
+                    </div>
+                    {article.excerpt_fa && (
+                      <p className="text-xs text-white/50 mt-1 line-clamp-2">{article.excerpt_fa}</p>
+                    )}
+                    <p className="text-[10px] text-white/30 mt-1">
+                      {article.author_profile?.full_name || '—'} ·{' '}
+                      {new Date(article.created_at).toLocaleDateString('fa-IR')}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex flex-wrap gap-2 mt-4 pt-3 border-t border-white/[0.06]">
+                  {article.status !== 'approved' && (
+                    <button
+                      disabled={busy}
+                      onClick={() => setStatus(article.id, 'approved')}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-500/15 hover:bg-teal-500/25 text-teal-400 text-xs font-medium transition disabled:opacity-50"
+                    >
+                      {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                      تایید
+                    </button>
+                  )}
+                  {article.status !== 'rejected' && (
+                    <button
+                      disabled={busy}
+                      onClick={() => setStatus(article.id, 'rejected')}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/15 hover:bg-red-500/25 text-red-400 text-xs font-medium transition disabled:opacity-50"
+                    >
+                      {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-3.5 h-3.5" />}
+                      رد
+                    </button>
+                  )}
+                  <button
+                    disabled={busy}
+                    onClick={() => toggleFeatured(article)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 text-xs font-medium transition disabled:opacity-50"
+                  >
+                    <Star className={`w-3.5 h-3.5 ${article.is_featured ? 'fill-yellow-400' : ''}`} />
+                    {article.is_featured ? 'حذف از ویژه' : 'افزودن به ویژه'}
+                  </button>
+                  <button
+                    disabled={busy}
+                    onClick={() => handleDelete(article.id)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-medium transition disabled:opacity-50 ms-auto"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    حذف
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main AdminDashboard ─────────────────────────────────────────────────────
 
 export default function AdminDashboard() {
@@ -1054,6 +1254,7 @@ export default function AdminDashboard() {
     platform: platformTours.length,
     guides:   guides.length,
     comments: reviews.length,
+    articles: 0, // ArticlesView manages its own data via useAllArticlesAdmin
   };
 
   const handlePlatformTourSaved = (saved, isNew) => {
@@ -1153,6 +1354,8 @@ export default function AdminDashboard() {
             onDelete={handleDeleteReview}
           />
         );
+      case 'articles':
+        return <ArticlesView profile={profile} />;
       default:
         return null;
     }

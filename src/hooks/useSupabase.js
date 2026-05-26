@@ -30,14 +30,11 @@ export function useTours(filters = {}) {
         if (filters.theme && filters.theme !== 'all') {
           query = query.contains('theme', [filters.theme]);
         }
-        if (filters.duration) {
-          if (filters.duration === 'short') {
-            query = query.lte('duration', 7);
-          } else if (filters.duration === 'medium') {
-            query = query.gte('duration', 8).lte('duration', 11);
-          } else if (filters.duration === 'long') {
-            query = query.gte('duration', 12);
-          }
+        if (filters.duration && filters.duration !== 'all') {
+          if (filters.duration === 'day')    query = query.lte('duration', 1);
+          if (filters.duration === '2to3')   query = query.gte('duration', 2).lte('duration', 3);
+          if (filters.duration === 'week')   query = query.gte('duration', 4).lte('duration', 7);
+          if (filters.duration === 'custom') query = query.gte('duration', 8);
         }
 
         const { data, error: supabaseError } = await query.order('created_at', { ascending: false });
@@ -368,6 +365,308 @@ export function useGuides() {
 export function useAgencies() {
   const { data, loading, error } = useProfilesByRole(['agency']);
   return { agencies: data, loading, error };
+}
+
+export function useGuideProfile(guideId) {
+  const [guide, setGuide] = useState(null);
+  const [reviews, setReviews] = useState([]);
+  const [tours, setTours] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!guideId) return;
+    let isMounted = true;
+    setLoading(true);
+
+    const fetchAll = async () => {
+      try {
+        const [profileResult, toursResult, reviewsResult] = await Promise.all([
+          supabase.from('profiles').select('*').eq('id', guideId).single(),
+          supabase.from('tours').select('*').eq('guide_id', guideId).eq('status', 'published'),
+          supabase.from('reviews').select('*').eq('guide_id', guideId).order('created_at', { ascending: false }),
+        ]);
+
+        if (profileResult.error) throw profileResult.error;
+        if (isMounted) {
+          setGuide(profileResult.data);
+          setTours(toursResult.data || []);
+          setReviews(reviewsResult.data || []);
+          setError(null);
+        }
+      } catch (err) {
+        if (isMounted) setError(err.message);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    fetchAll();
+    return () => { isMounted = false; };
+  }, [guideId]);
+
+  return { guide, reviews, tours, loading, error };
+}
+
+export function useAgencyProfile(agencyId) {
+  const [agency, setAgency] = useState(null);
+  const [reviews, setReviews] = useState([]);
+  const [tours, setTours] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!agencyId) return;
+    let isMounted = true;
+    setLoading(true);
+
+    const fetchAll = async () => {
+      try {
+        const [profileResult, toursResult, reviewsResult] = await Promise.all([
+          supabase.from('profiles').select('*').eq('id', agencyId).single(),
+          supabase.from('tours').select('*').eq('agency_id', agencyId).eq('status', 'published'),
+          supabase.from('reviews').select('*').eq('agency_id', agencyId).order('created_at', { ascending: false }),
+        ]);
+
+        if (profileResult.error) throw profileResult.error;
+        if (isMounted) {
+          setAgency(profileResult.data);
+          setTours(toursResult.data || []);
+          setReviews(reviewsResult.data || []);
+          setError(null);
+        }
+      } catch (err) {
+        if (isMounted) setError(err.message);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    fetchAll();
+    return () => { isMounted = false; };
+  }, [agencyId]);
+
+  return { agency, reviews, tours, loading, error };
+}
+
+export function useSpecialties(role = 'guide') {
+  const [specialties, setSpecialties] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchSpecialties = async () => {
+      try {
+        const { data } = await supabase
+          .from('profiles')
+          .select('specialties')
+          .eq('role', role);
+
+        if (isMounted) {
+          const all = new Set();
+          (data || []).forEach((row) => {
+            const list = Array.isArray(row.specialties)
+              ? row.specialties
+              : typeof row.specialties === 'string'
+              ? row.specialties.split(',').map((s) => s.trim())
+              : [];
+            list.filter(Boolean).forEach((s) => all.add(s));
+          });
+          setSpecialties([...all].sort());
+        }
+      } catch {
+        if (isMounted) setSpecialties([]);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    fetchSpecialties();
+    return () => { isMounted = false; };
+  }, [role]);
+
+  return { specialties, loading };
+}
+
+export function useSubmitTripRequest() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const submit = async (payload) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { error: supabaseError } = await supabase.from('trip_requests').insert([{
+        guide_id: payload.guideId || null,
+        agency_id: payload.agencyId || null,
+        traveler_id: payload.travelerId || null,
+        traveler_name: payload.travelerName || null,
+        traveler_email: payload.travelerEmail || null,
+        traveler_phone: payload.travelerPhone || null,
+        country: payload.country || null,
+        destination_city: payload.destinationCity || null,
+        adult_count: payload.adults || 1,
+        child_count: payload.children || 0,
+        language: payload.language || null,
+        needs_transport: payload.needsTransport || false,
+        needs_accommodation: payload.needsAccommodation || false,
+        accommodation_type: payload.accommodationType || null,
+        requirements: payload.requirements || null,
+        status: 'pending',
+      }]);
+
+      if (supabaseError) throw supabaseError;
+      return { success: true };
+    } catch (err) {
+      setError(err.message);
+      return { success: false, error: err.message };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { submit, loading, error };
+}
+
+// ── Article hooks ─────────────────────────────────────────────────────────────
+
+export function useArticles({ featured = false } = {}) {
+  const [articles, setArticles] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    setLoading(true);
+
+    const fetchArticles = async () => {
+      try {
+        let query = supabase
+          .from('articles')
+          .select('*, author_profile:profiles!author_id(full_name, avatar_url, city, role)')
+          .eq('status', 'approved');
+
+        if (featured) query = query.eq('is_featured', true);
+
+        query = query.order('created_at', { ascending: false });
+
+        const { data, error: err } = await query;
+        if (err) throw err;
+        if (isMounted) { setArticles(data || []); setError(null); }
+      } catch (err) {
+        if (isMounted) { setError(err.message); setArticles([]); }
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    fetchArticles();
+    return () => { isMounted = false; };
+  }, [featured]);
+
+  return { articles, loading, error };
+}
+
+export function useGuideArticles(authorId) {
+  const [articles, setArticles] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!authorId) return;
+    let isMounted = true;
+    setLoading(true);
+
+    const fetchArticles = async () => {
+      try {
+        const { data, error: err } = await supabase
+          .from('articles')
+          .select('*')
+          .eq('author_id', authorId)
+          .eq('status', 'approved')
+          .order('created_at', { ascending: false });
+
+        if (err) throw err;
+        if (isMounted) { setArticles(data || []); setError(null); }
+      } catch (err) {
+        if (isMounted) { setError(err.message); setArticles([]); }
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    fetchArticles();
+    return () => { isMounted = false; };
+  }, [authorId]);
+
+  return { articles, loading, error };
+}
+
+export function useMyArticles(userId) {
+  const [articles, setArticles] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    if (!userId) return;
+    let isMounted = true;
+    setLoading(true);
+
+    const fetchArticles = async () => {
+      try {
+        const { data, error: err } = await supabase
+          .from('articles')
+          .select('*')
+          .eq('author_id', userId)
+          .order('created_at', { ascending: false });
+
+        if (err) throw err;
+        if (isMounted) setArticles(data || []);
+      } catch {
+        if (isMounted) setArticles([]);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    fetchArticles();
+    return () => { isMounted = false; };
+  }, [userId, tick]);
+
+  return { articles, loading, refetch: () => setTick(t => t + 1) };
+}
+
+export function useAllArticlesAdmin() {
+  const [articles, setArticles] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    let isMounted = true;
+    setLoading(true);
+
+    const fetchArticles = async () => {
+      try {
+        const { data, error: err } = await supabase
+          .from('articles')
+          .select('*, author_profile:profiles!author_id(full_name, role)')
+          .order('created_at', { ascending: false });
+
+        if (err) throw err;
+        if (isMounted) setArticles(data || []);
+      } catch {
+        if (isMounted) setArticles([]);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    fetchArticles();
+    return () => { isMounted = false; };
+  }, [tick]);
+
+  return { articles, loading, refetch: () => setTick(t => t + 1) };
 }
 
 export { FALLBACK_IMAGE };
