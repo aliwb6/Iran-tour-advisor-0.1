@@ -5,7 +5,18 @@ import TourFilters from '@/components/tours/TourFilters';
 import TourCard from '@/components/tours/TourCard';
 import { useTours, FALLBACK_IMAGE } from '@/hooks/useSupabase';
 
-const DEFAULT_FILTERS = { purpose: 'all', theme: 'all', duration: 'all' };
+const DEFAULT_FILTERS = { purpose: 'all', theme: 'all', duration: 'all', price: 'all' };
+
+// Price tier thresholds (USD). Budget < 100, Mid-range 100–299, Luxury 300+
+const priceMatches = (tour, priceTier) => {
+  if (priceTier === 'all') return true;
+  const p = tour.priceFrom ?? tour.price_from ?? tour.price ?? null;
+  if (p == null) return true; // no price data — show in all tiers
+  if (priceTier === 'budget')   return p < 100;
+  if (priceTier === 'midrange') return p >= 100 && p < 300;
+  if (priceTier === 'luxury')   return p >= 300;
+  return true;
+};
 
 // TourCard expects multilingual objects ({ en, fa, ar }) for title/desc/cities/highlights.
 // Supabase stores flat strings, so we wrap them here without changing the TourCard UI.
@@ -42,7 +53,8 @@ const pickImage = (tour) => {
 export default function Tours() {
   const { dir, lang } = useI18n();
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
-  const { tours, loading, error } = useTours(filters);
+  const { tours: rawTours, loading, error } = useTours(filters);
+  const tours = rawTours.filter(t => priceMatches(t, filters.price));
 
   const loadingText = lang === 'fa' ? 'در حال بارگذاری تورها...' : lang === 'ar' ? 'جار تحميل الرحلات...' : 'Loading tours...';
   const errorTitle = lang === 'fa' ? 'بارگذاری تورها با خطا مواجه شد' : lang === 'ar' ? 'فشل تحميل الرحلات' : 'Failed to load tours';

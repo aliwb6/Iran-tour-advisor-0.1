@@ -146,6 +146,26 @@ const cityData = {
     highlights: ['Red Beach', 'Rainbow Valley', 'Portuguese Castle Ruins', 'Multicolored Rock Formations'],
     bestTime: 'October – April',
   },
+  tehran: {
+    name: 'Tehran',
+    nameI18n: { fa: 'تهران', ar: 'طهران' },
+    category: 'Urban & Modern',
+    image: 'https://images.unsplash.com/photo-1549880338-65ddcdfd017b?w=1200&h=800&fit=crop',
+    description:
+      "Iran's vibrant capital and largest city. Tehran blends a cosmopolitan urban energy with world-class museums, the snow-capped Alborz Mountains as a backdrop, and a thriving food and arts scene that surprises every visitor.",
+    highlights: ['Golestan Palace', 'National Museum of Iran', 'Milad Tower', 'Grand Bazaar of Tehran', 'Darband Mountain Trail', 'Sadabad Complex'],
+    bestTime: 'April – June & September – November',
+  },
+  rasht: {
+    name: 'Rasht',
+    nameI18n: { fa: 'رشت', ar: 'رشت' },
+    category: 'Food & Nature',
+    image: 'https://images.unsplash.com/photo-1587595431973-160d0d94add1?w=1200&h=800&fit=crop',
+    description:
+      "The culinary capital of Iran and gateway to the lush Caspian coast. Rasht is a UNESCO Creative City of Gastronomy, famous for its hearty Gilaki cuisine, vibrant covered bazaar, and easy access to misty forest villages like Masuleh.",
+    highlights: ['Rasht Grand Bazaar', 'Rasht Municipality Square', 'Gilaki Cuisine & Food Tour', 'Masuleh Village Day Trip', 'Anzali Lagoon', 'Saravan Forest Park'],
+    bestTime: 'May – September (green season)',
+  },
 };
 
 // ── Page ─────────────────────────────────────────────────────────────────────

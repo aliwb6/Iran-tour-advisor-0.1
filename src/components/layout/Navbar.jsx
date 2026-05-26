@@ -23,13 +23,27 @@ export default function Navbar() {
 
   useEffect(() => { setMobileOpen(false); }, [location.pathname]);
 
-  const navLinks = [
+  // Role derivations must come first — used by navLinks below
+  const role = profile?.role || user?.user_metadata?.role;
+  const isAdmin = profile?.role === 'admin';
+  const isGuideOrAgency = role === 'guide' || role === 'agency';
+  const isTourist = role === 'tourist' || role === 'traveler';
+
+  const baseLinks = [
     { path: '/tours', label: t('nav_tours') },
     { path: '/guides', label: t('nav_guides') },
     { path: '/agencies', label: t('nav_agencies') },
     { path: '/ai-assistant', label: t('nav_ai') },
     { path: '/blog', label: t('nav_blog') },
   ];
+
+  const roleLinks = isGuideOrAgency
+    ? [{ path: '/find-jobs', label: 'Find Jobs' }]
+    : isTourist
+    ? [{ path: '/my-trips', label: 'My Trips' }]
+    : [];
+
+  const navLinks = [...baseLinks, ...roleLinks];
 
   const isActive = (path) => location.pathname === path;
   const isHome = location.pathname === '/';
@@ -43,10 +57,6 @@ export default function Navbar() {
     .join('')
     .slice(0, 2)
     .toUpperCase() || '?';
-  const role = profile?.role || user?.user_metadata?.role;
-  const isAdmin = profile?.role === 'admin';
-  const isGuideOrAgency = role === 'guide' || role === 'agency';
-  const isTourist = role === 'tourist' || role === 'traveler';
 
   return (
     <>
