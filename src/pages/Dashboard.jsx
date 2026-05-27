@@ -9,12 +9,14 @@ import {
   ChevronDown, ChevronRight, LogOut, Edit2, Trash2, ExternalLink,
   Loader2, Clock, MapPin, DollarSign, Upload, Shield, TrendingUp,
   MessageSquare, Package, CheckCircle2, X, Plus, Globe, AlertTriangle,
+  BookOpen,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
 import { avatarFor } from '@/lib/avatar';
 import TourForm from '@/components/dashboard/TourForm';
+import MyArticlesSection from '../components/dashboard/MyArticlesSection';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -37,6 +39,7 @@ const NAV = [
   { id: 'bookings',   label: 'My Bookings',      Icon: CalendarDays },
   { id: 'payment',    label: 'Payment History',  Icon: CreditCard },
   { id: 'my-reviews', label: 'My Reviews',       Icon: Star },
+  { id: 'articles',   label: 'مقالات من',         Icon: BookOpen },
   { id: 'settings',   label: 'Settings',         Icon: Settings },
 ];
 
@@ -87,6 +90,7 @@ function Sidebar({ section, onNavigate, profileExpanded, setProfileExpanded, use
     bookings:    t('dashboard_nav_bookings'),
     payment:     t('dashboard_nav_payment'),
     'my-reviews':t('dashboard_nav_reviews'),
+    'articles':  'مقالات من',
     settings:    t('dashboard_nav_settings'),
   };
 
@@ -1664,6 +1668,8 @@ export default function Dashboard() {
         return <SettingsView profile={profile} userId={authUser?.id} onSave={handleProfileSaved} />;
       case 'chat':
         return <MessagesView userId={authUser?.id} onOpen={(otherId) => navigate(`/chat/${otherId}`)} />;
+      case 'articles':
+        return <MyArticlesSection user={{ id: authUser?.id, profile }} />;
       default:
         return <EmptySection section={section} />;
     }

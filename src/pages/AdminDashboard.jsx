@@ -23,7 +23,7 @@ const NAV = [
   { id: 'platform', label: 'Platform Tours', Icon: Sparkles },
   { id: 'guides',   label: 'All Guides',     Icon: Users },
   { id: 'comments', label: 'Comments',       Icon: MessageSquare },
-  { id: 'articles', label: 'Articles',       Icon: BookOpen },
+  { id: 'articles', label: 'مقالات',          Icon: BookOpen },
 ];
 
 const STATUS_CFG = {
@@ -886,9 +886,9 @@ function CommentsView({ reviews, loading, onReply, onDelete, busyId }) {
 // ─── Articles View ────────────────────────────────────────────────────────────
 
 const ART_STATUS = {
-  approved: { label: 'منتشر شده',      cls: 'bg-teal-500/20 text-teal-300 border-teal-500/30' },
-  pending:  { label: 'در انتظار',      cls: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30' },
-  rejected: { label: 'رد شده',         cls: 'bg-red-500/20 text-red-300 border-red-500/30' },
+  approved: { label: 'Published', cls: 'bg-teal-500/20 text-teal-300 border-teal-500/30' },
+  pending:  { label: 'Pending',   cls: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30' },
+  rejected: { label: 'Rejected',  cls: 'bg-red-500/20 text-red-300 border-red-500/30' },
 };
 
 function ArticlesView({ profile }) {
@@ -907,7 +907,7 @@ function ArticlesView({ profile }) {
     const { error } = await supabase.from('articles').update(update).eq('id', id);
     setBusyId(null);
     if (error) { toast.error(error.message); return; }
-    toast.success(status === 'approved' ? 'مقاله تایید شد.' : 'مقاله رد شد.');
+    toast.success(status === 'approved' ? 'Article approved.' : 'Article rejected.');
     refetch();
   };
 
@@ -919,30 +919,30 @@ function ArticlesView({ profile }) {
       .eq('id', article.id);
     setBusyId(null);
     if (error) { toast.error(error.message); return; }
-    toast.success(article.is_featured ? 'از ویژه‌ها حذف شد.' : 'به ویژه‌ها اضافه شد.');
+    toast.success(article.is_featured ? 'Removed from featured.' : 'Added to featured.');
     refetch();
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('این مقاله حذف شود؟')) return;
+    if (!window.confirm('Delete this article? This cannot be undone.')) return;
     setBusyId(id);
     const { error } = await supabase.from('articles').delete().eq('id', id);
     setBusyId(null);
     if (error) { toast.error(error.message); return; }
-    toast.success('مقاله حذف شد.');
+    toast.success('Article deleted.');
     refetch();
   };
 
   const pendingCount = articles.filter(a => a.status === 'pending').length;
 
   return (
-    <div dir="rtl" className="space-y-6">
+    <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
-          <h2 className="text-white font-bold text-lg">Articles</h2>
+          <h2 className="text-white font-bold text-lg">مقالات</h2>
           {pendingCount > 0 && (
             <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-yellow-500/20 text-yellow-300 border border-yellow-500/30">
-              {pendingCount} در انتظار
+              {pendingCount} pending
             </span>
           )}
         </div>
@@ -950,7 +950,7 @@ function ArticlesView({ profile }) {
           onClick={() => setShowEditor(v => !v)}
           className="flex items-center gap-1.5 text-sm font-medium text-teal-400 hover:text-teal-300 transition-colors"
         >
-          {showEditor ? 'بستن فرم' : '+ مقاله جدید'}
+          {showEditor ? 'Close Form' : '+ New Article'}
         </button>
       </div>
 
@@ -966,10 +966,10 @@ function ArticlesView({ profile }) {
       {/* Filter tabs */}
       <div className="flex gap-2 flex-wrap">
         {[
-          { key: 'pending',  label: 'در انتظار' },
-          { key: 'approved', label: 'منتشر شده' },
-          { key: 'rejected', label: 'رد شده' },
-          { key: 'all',      label: 'همه' },
+          { key: 'pending',  label: 'Pending' },
+          { key: 'approved', label: 'Published' },
+          { key: 'rejected', label: 'Rejected' },
+          { key: 'all',      label: 'All' },
         ].map(tab => (
           <button
             key={tab.key}
@@ -988,7 +988,7 @@ function ArticlesView({ profile }) {
       {loading ? (
         <SectionLoader />
       ) : filtered.length === 0 ? (
-        <EmptyState Icon={BookOpen} title="مقاله‌ای یافت نشد" desc="مقاله‌ای در این دسته وجود ندارد." />
+        <EmptyState Icon={BookOpen} title="No articles found" desc="No articles in this category." />
       ) : (
         <div className="space-y-4">
           {filtered.map(article => {
@@ -1010,13 +1010,13 @@ function ArticlesView({ profile }) {
                   )}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start gap-2 flex-wrap">
-                      <p className="text-white font-semibold text-sm flex-1 truncate">{article.title_fa || 'بدون عنوان'}</p>
+                      <p className="text-white font-semibold text-sm flex-1 truncate">{article.title_fa || 'Untitled'}</p>
                       <span className={`text-[10px] px-2 py-0.5 rounded-full border font-medium shrink-0 ${s.cls}`}>
                         {s.label}
                       </span>
                       {article.is_featured && (
                         <span className="text-[10px] px-2 py-0.5 rounded-full border font-medium shrink-0 bg-yellow-500/20 text-yellow-300 border-yellow-500/30">
-                          ⭐ ویژه
+                          ⭐ Featured
                         </span>
                       )}
                     </div>
@@ -1025,7 +1025,7 @@ function ArticlesView({ profile }) {
                     )}
                     <p className="text-[10px] text-white/30 mt-1">
                       {article.author_profile?.full_name || '—'} ·{' '}
-                      {new Date(article.created_at).toLocaleDateString('fa-IR')}
+                      {new Date(article.created_at).toLocaleDateString()}
                     </p>
                   </div>
                 </div>
@@ -1039,7 +1039,7 @@ function ArticlesView({ profile }) {
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-500/15 hover:bg-teal-500/25 text-teal-400 text-xs font-medium transition disabled:opacity-50"
                     >
                       {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
-                      تایید
+                      Approve
                     </button>
                   )}
                   {article.status !== 'rejected' && (
@@ -1049,7 +1049,7 @@ function ArticlesView({ profile }) {
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/15 hover:bg-red-500/25 text-red-400 text-xs font-medium transition disabled:opacity-50"
                     >
                       {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-3.5 h-3.5" />}
-                      رد
+                      Reject
                     </button>
                   )}
                   <button
@@ -1058,7 +1058,7 @@ function ArticlesView({ profile }) {
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 text-xs font-medium transition disabled:opacity-50"
                   >
                     <Star className={`w-3.5 h-3.5 ${article.is_featured ? 'fill-yellow-400' : ''}`} />
-                    {article.is_featured ? 'حذف از ویژه' : 'افزودن به ویژه'}
+                    {article.is_featured ? 'Unfeature' : 'Feature'}
                   </button>
                   <button
                     disabled={busy}
@@ -1066,7 +1066,7 @@ function ArticlesView({ profile }) {
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-medium transition disabled:opacity-50 ms-auto"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
-                    حذف
+                    Delete
                   </button>
                 </div>
               </div>
