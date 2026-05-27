@@ -22,7 +22,7 @@ export async function sendChatMessage(messages, systemPrompt, language = 'en', m
     headers: {
       Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
-      'HTTP-Referer': window.location.href,
+      'HTTP-Referer': window.location.origin,
       'X-Title': 'Iran Tour Advisor',
     },
     body: JSON.stringify(payload),
@@ -33,7 +33,9 @@ export async function sendChatMessage(messages, systemPrompt, language = 'en', m
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     console.error('[APIError] OpenRouter error:', errorData);
-    throw new Error(errorData.error?.message || `OpenRouter API error: ${response.status}`);
+    const err = new Error(errorData.error?.message || `OpenRouter API error: ${response.status}`);
+    err.status = response.status;
+    throw err;
   }
 
   const data = await response.json();
