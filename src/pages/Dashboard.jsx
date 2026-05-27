@@ -39,7 +39,7 @@ const NAV = [
   { id: 'bookings',   label: 'My Bookings',      Icon: CalendarDays },
   { id: 'payment',    label: 'Payment History',  Icon: CreditCard },
   { id: 'my-reviews', label: 'My Reviews',       Icon: Star },
-  { id: 'articles',   label: 'مقالات من',         Icon: BookOpen },
+  { id: 'articles',   label: 'My Articles',       Icon: BookOpen },
   { id: 'settings',   label: 'Settings',         Icon: Settings },
 ];
 
@@ -90,7 +90,7 @@ function Sidebar({ section, onNavigate, profileExpanded, setProfileExpanded, use
     bookings:    t('dashboard_nav_bookings'),
     payment:     t('dashboard_nav_payment'),
     'my-reviews':t('dashboard_nav_reviews'),
-    'articles':  'مقالات من',
+    'articles':  t('article_section_title'),
     settings:    t('dashboard_nav_settings'),
   };
 

@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/supabaseClient';
 import { avatarFor } from '@/lib/avatar';
+import { useAuth } from '@/lib/AuthContext';
 
 const FALLBACK_IMG = 'https://images.unsplash.com/photo-1589562784072-9ede7d082e5e?w=800&h=1000&fit=crop';
 const CITIES_LIST = ['Tehran', 'Isfahan', 'Shiraz', 'Yazd', 'Mashhad', 'Tabriz', 'Kerman', 'Rasht', 'Qom', 'Kashan'];
