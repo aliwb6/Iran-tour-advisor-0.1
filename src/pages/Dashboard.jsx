@@ -18,6 +18,7 @@ import { avatarFor } from '@/lib/avatar';
 import TourForm from '@/components/dashboard/TourForm';
 import MyArticlesSection from '../components/dashboard/MyArticlesSection';
 import GuideRequestsView from '@/components/dashboard/GuideRequestsView';
+import NotificationsView from '@/components/dashboard/NotificationsView';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -28,8 +29,9 @@ const NAV = [
   { id: 'home',       label: 'Dashboard',       Icon: LayoutDashboard },
   { id: 'my-tours',   label: 'My Tours',         Icon: Briefcase },
   { id: 'add-tour',   label: 'Add New Tour',     Icon: PlusCircle },
-  { id: 'requests',   label: 'Requests',         Icon: Bell },
-  { id: 'chat',       label: 'Chat',             Icon: MessageCircle },
+  { id: 'requests',       label: 'Requests',         Icon: Bell },
+  { id: 'notifications',  label: 'Notifications',    Icon: Bell },
+  { id: 'chat',           label: 'Chat',             Icon: MessageCircle },
   {
     id: 'profile', label: 'Profile', Icon: User,
     sub: [
@@ -84,8 +86,9 @@ function Sidebar({ section, onNavigate, profileExpanded, setProfileExpanded, use
     home:        t('dashboard_nav_home'),
     'my-tours':  t('dashboard_nav_tours'),
     'add-tour':  t('dashboard_nav_add_tour'),
-    requests:    t('dashboard_nav_requests'),
-    chat:        t('dashboard_nav_chat'),
+    requests:       t('dashboard_nav_requests'),
+    notifications:  'Notifications',
+    chat:           t('dashboard_nav_chat'),
     profile:     t('dashboard_nav_profile'),
     gallery:     t('dashboard_nav_gallery'),
     bookings:    t('dashboard_nav_bookings'),
@@ -1661,6 +1664,8 @@ export default function Dashboard() {
         );
       case 'requests':
         return <GuideRequestsView userId={authUser?.id} />;
+      case 'notifications':
+        return <NotificationsView userId={authUser?.id} />;
       case 'my-tours':
         return <MyToursView tours={tours} onEdit={setEditingTour} onDelete={handleDeleteTour} />;
       case 'profile':

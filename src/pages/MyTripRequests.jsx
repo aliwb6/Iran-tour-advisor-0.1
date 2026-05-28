@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, MapPin, Calendar, Users, MessageCircle,
   RefreshCw, CheckCircle2, Clock, Zap, AlertCircle, Loader2,
-  Star, UserCheck,
+  Star, UserCheck, ChevronDown, ChevronUp, Globe, FileText, Home,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '../lib/AuthContext';
@@ -158,6 +158,7 @@ function GuideSlot({ slot, tripId, tripStatus, onSelect, selecting }) {
 function TripCard({ trip, onRebroadcast, onRefresh }) {
   const [rebroadcasting, setRebroadcasting] = useState(false);
   const [selecting, setSelecting] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
 
   const startDate = trip.travel_dates?.start
     ? new Date(trip.travel_dates.start).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
@@ -272,12 +273,10 @@ function TripCard({ trip, onRebroadcast, onRefresh }) {
           )}
         </div>
 
-        {/* Slot bar — only for legacy trips that have slot_count */}
-        {trip.slot_count != null && (
-          <div className="mb-4">
-            <SlotBar slotCount={trip.slot_count} />
-          </div>
-        )}
+        {/* Slot bar — shows real guide count from trip_slots */}
+        <div className="mb-4">
+          <SlotBar slotCount={activeSlots.length} />
+        </div>
 
         {/* Guide slots */}
         {activeSlots.length > 0 && (
@@ -297,6 +296,66 @@ function TripCard({ trip, onRebroadcast, onRefresh }) {
             ))}
           </div>
         )}
+
+        {/* View trip details toggle */}
+        <button
+          onClick={() => setShowDetails(d => !d)}
+          className="w-full flex items-center justify-center gap-1 py-1.5 font-body text-xs text-muted-foreground hover:text-foreground transition"
+        >
+          {showDetails ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+          {showDetails ? 'Hide details' : 'View trip details'}
+        </button>
+
+        <AnimatePresence>
+          {showDetails && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+              style={{ overflow: 'hidden' }}
+            >
+              <div className="border-t border-border/30 pt-3 mt-1 space-y-2.5">
+                {trip.tour_type && (
+                  <p className="font-body text-xs text-muted-foreground flex items-start gap-1.5">
+                    <span className="font-semibold text-foreground/60 min-w-[90px]">Tour type:</span>
+                    {trip.tour_type}
+                  </p>
+                )}
+                {trip.guide_languages?.length > 0 && (
+                  <p className="font-body text-xs text-muted-foreground flex items-start gap-1.5">
+                    <span className="font-semibold text-foreground/60 min-w-[90px]">Language:</span>
+                    {trip.guide_languages.join(', ')}
+                  </p>
+                )}
+                {trip.accommodation_stars && (
+                  <p className="font-body text-xs text-muted-foreground flex items-start gap-1.5">
+                    <span className="font-semibold text-foreground/60 min-w-[90px]">Accommodation:</span>
+                    {trip.accommodation_stars}★ hotel
+                  </p>
+                )}
+                {trip.assistance?.length > 0 && (
+                  <p className="font-body text-xs text-muted-foreground flex items-start gap-1.5">
+                    <span className="font-semibold text-foreground/60 min-w-[90px]">Assistance:</span>
+                    {trip.assistance.join(', ')}
+                  </p>
+                )}
+                {trip.holiday_types?.length > 0 && (
+                  <p className="font-body text-xs text-muted-foreground flex items-start gap-1.5">
+                    <span className="font-semibold text-foreground/60 min-w-[90px]">Interests:</span>
+                    {trip.holiday_types.join(', ')}
+                  </p>
+                )}
+                {trip.requirements && (
+                  <div className="font-body text-xs text-muted-foreground">
+                    <span className="font-semibold text-foreground/60 block mb-1">Requirements:</span>
+                    <p className="leading-relaxed">{trip.requirements}</p>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Re-broadcast for expired */}
         {trip.status === 'expired' && (
