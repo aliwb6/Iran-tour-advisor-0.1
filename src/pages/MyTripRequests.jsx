@@ -4,18 +4,14 @@ import { motion } from 'framer-motion';
 import {
   Plus, MapPin, Calendar, Users, MessageCircle,
   RefreshCw, CheckCircle2, Clock, Zap, AlertCircle, Loader2,
+  Star, UserCheck,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '../lib/AuthContext';
 import { getMyTripRequests, rebroadcastTripRequest } from '../api/tripRequests';
-import TripRequestForm from '../components/trips/TripRequestForm';
+import { touristSelectGuide } from '../api/tourRequestFlow';
+import TripRequestForm from '@/components/profile/TripRequestForm';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const STATUS_CONFIG = {
@@ -31,6 +27,16 @@ const STATUS_CONFIG = {
   },
   matched: {
     label: 'Matched',
+    icon: CheckCircle2,
+    classes: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
+  },
+  proposals_ready: {
+    label: 'Choose a Guide',
+    icon: UserCheck,
+    classes: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300',
+  },
+  confirmed: {
+    label: 'Confirmed',
     icon: CheckCircle2,
     classes: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
   },
@@ -78,55 +84,80 @@ function SlotBar({ slotCount }) {
   );
 }
 
-function GuideSlot({ slot, tripId }) {
+function GuideSlot({ slot, tripId, tripStatus, onSelect, selecting }) {
   const navigate = useNavigate();
   const guideName = slot.guide?.full_name || 'Guide';
   const avatarUrl = slot.guide?.avatar_url;
   const initials = (slot.guide?.full_name || 'G')
-    .split(' ')
-    .map(n => n[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
+    .split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
 
   const slotStatusLabel = {
-    chatting:  { label: 'Chatting', color: 'text-accent' },
-    rejected:  { label: 'Declined', color: 'text-muted-foreground line-through' },
+    chatting:  { label: 'Chatting',  color: 'text-accent' },
+    accepted:  { label: 'Ready',     color: 'text-emerald-600' },
+    selected:  { label: 'Selected ✓',color: 'text-emerald-600' },
+    rejected:  { label: 'Declined',  color: 'text-muted-foreground line-through' },
     finalized: { label: 'Finalized', color: 'text-emerald-600' },
   }[slot.status] || { label: slot.status, color: 'text-muted-foreground' };
 
   if (slot.status === 'rejected') return null;
 
+  const canSelect = tripStatus === 'proposals_ready';
+
   return (
     <div className="flex items-center justify-between gap-3 py-2 px-3 rounded-xl bg-muted/30 border border-border/30">
-      <div className="flex items-center gap-2.5">
-        <div className="w-8 h-8 rounded-full overflow-hidden bg-accent/20 flex items-center justify-center shrink-0">
+      <div className="flex items-center gap-2.5 min-w-0">
+        <div className="w-9 h-9 rounded-full overflow-hidden bg-accent/20 flex items-center justify-center shrink-0">
           {avatarUrl ? (
             <img src={avatarUrl} alt={guideName} className="w-full h-full object-cover" />
           ) : (
             <span className="font-body text-xs font-bold text-accent">{initials}</span>
           )}
         </div>
-        <div>
-          <p className="font-body text-sm font-medium text-foreground">{guideName}</p>
-          <p className={`font-body text-xs ${slotStatusLabel.color}`}>{slotStatusLabel.label}</p>
+        <div className="min-w-0">
+          <p className="font-body text-sm font-medium text-foreground truncate">{guideName}</p>
+          <div className="flex items-center gap-2">
+            <p className={`font-body text-xs ${slotStatusLabel.color}`}>{slotStatusLabel.label}</p>
+            {slot.guide?.city && (
+              <span className="font-body text-xs text-muted-foreground">· {slot.guide.city}</span>
+            )}
+            {slot.guide?.rating > 0 && (
+              <span className="font-body text-xs text-muted-foreground flex items-center gap-0.5">
+                <Star className="w-2.5 h-2.5 fill-gold text-gold" />
+                {Number(slot.guide.rating).toFixed(1)}
+              </span>
+            )}
+          </div>
         </div>
       </div>
-      <Button
-        size="sm"
-        variant="outline"
-        onClick={() => navigate(`/chat/${slot.guide_id}`)}
-        className="font-body text-xs rounded-lg h-7 border-border/60 gap-1"
-      >
-        <MessageCircle className="w-3 h-3" />
-        Message
-      </Button>
+
+      {canSelect ? (
+        <Button
+          size="sm"
+          onClick={() => onSelect(slot.guide_id)}
+          disabled={selecting}
+          className="bg-accent hover:bg-accent/90 text-white font-body text-xs rounded-lg h-7 gap-1 shrink-0"
+        >
+          {selecting ? <Loader2 className="w-3 h-3 animate-spin" /> : <UserCheck className="w-3 h-3" />}
+          Select
+        </Button>
+      ) : (
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => navigate(`/chat/${slot.guide_id}`)}
+          className="font-body text-xs rounded-lg h-7 border-border/60 gap-1 shrink-0"
+        >
+          <MessageCircle className="w-3 h-3" />
+          Message
+        </Button>
+      )}
     </div>
   );
 }
 
-function TripCard({ trip, onRebroadcast }) {
+function TripCard({ trip, onRebroadcast, onRefresh }) {
   const [rebroadcasting, setRebroadcasting] = useState(false);
+  const [selecting, setSelecting] = useState(false);
 
   const startDate = trip.travel_dates?.start
     ? new Date(trip.travel_dates.start).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
@@ -150,6 +181,18 @@ function TripCard({ trip, onRebroadcast }) {
     }
   };
 
+  const handleSelectGuide = async (guideId) => {
+    setSelecting(true);
+    try {
+      await touristSelectGuide(trip.id, guideId);
+      toast.success('Guide selected! Your trip is now confirmed.');
+      onRefresh();
+    } catch (err) {
+      toast.error(err.message || 'Failed to select guide.');
+      setSelecting(false);
+    }
+  };
+
   return (
     <motion.div
       layout
@@ -157,6 +200,26 @@ function TripCard({ trip, onRebroadcast }) {
       animate={{ opacity: 1, y: 0 }}
       className="bg-card border border-border/50 rounded-2xl overflow-hidden shadow-sm"
     >
+      {/* proposals_ready banner */}
+      {trip.status === 'proposals_ready' && (
+        <div className="flex items-center gap-2 px-5 py-2.5 bg-violet-500/10 border-b border-violet-500/20">
+          <UserCheck className="w-4 h-4 text-violet-600 shrink-0" />
+          <span className="font-body text-sm font-medium text-violet-700 dark:text-violet-400">
+            3 guides are ready for your trip! Choose one below.
+          </span>
+        </div>
+      )}
+
+      {/* Confirmed banner */}
+      {trip.status === 'confirmed' && (
+        <div className="flex items-center gap-2 px-5 py-2.5 bg-emerald-500/10 border-b border-emerald-500/20">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+          <span className="font-body text-sm font-medium text-emerald-700 dark:text-emerald-400">
+            Guide confirmed — your trip is all set!
+          </span>
+        </div>
+      )}
+
       {/* Completed banner */}
       {trip.status === 'completed' && (
         <div className="flex items-center gap-2 px-5 py-2.5 bg-emerald-500/10 border-b border-emerald-500/20">
@@ -179,7 +242,14 @@ function TripCard({ trip, onRebroadcast }) {
               <span className="font-body text-sm">{trip.destination}</span>
             </div>
           </div>
-          <StatusBadge status={trip.status} />
+          <div className="flex items-center gap-2 shrink-0">
+            {trip.source === 'request' && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium font-body bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">
+                Request
+              </span>
+            )}
+            <StatusBadge status={trip.status} />
+          </div>
         </div>
 
         {/* Meta */}
@@ -202,19 +272,28 @@ function TripCard({ trip, onRebroadcast }) {
           )}
         </div>
 
-        {/* Slot bar */}
-        <div className="mb-4">
-          <SlotBar slotCount={trip.slot_count} />
-        </div>
+        {/* Slot bar — only for legacy trips that have slot_count */}
+        {trip.slot_count != null && (
+          <div className="mb-4">
+            <SlotBar slotCount={trip.slot_count} />
+          </div>
+        )}
 
         {/* Guide slots */}
         {activeSlots.length > 0 && (
           <div className="space-y-2 mb-4">
             <p className="font-body text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              Guides Connected
+              {trip.status === 'proposals_ready' ? 'Choose your guide' : 'Guides Connected'}
             </p>
             {activeSlots.map(slot => (
-              <GuideSlot key={slot.id} slot={slot} tripId={trip.id} />
+              <GuideSlot
+                key={slot.id}
+                slot={slot}
+                tripId={trip.id}
+                tripStatus={trip.status}
+                onSelect={handleSelectGuide}
+                selecting={selecting}
+              />
             ))}
           </div>
         )}
@@ -346,7 +425,7 @@ export default function MyTripRequests() {
         ) : (
           <div className="space-y-4">
             {trips.map(trip => (
-              <TripCard key={trip.id} trip={trip} onRebroadcast={loadTrips} />
+              <TripCard key={trip.id} trip={trip} onRebroadcast={loadTrips} onRefresh={loadTrips} />
             ))}
           </div>
         )}
@@ -367,20 +446,11 @@ export default function MyTripRequests() {
         </div>
       )}
 
-      {/* Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="font-heading text-xl font-semibold">
-              New Trip Request
-            </DialogTitle>
-            <p className="font-body text-sm text-muted-foreground">
-              Fill in your preferences and we'll match you with local guides.
-            </p>
-          </DialogHeader>
-          <TripRequestForm onClose={() => setDialogOpen(false)} />
-        </DialogContent>
-      </Dialog>
+      {/* Multi-step trip request modal (shared with /profile/requests) */}
+      <TripRequestForm
+        isOpen={dialogOpen}
+        onClose={() => { setDialogOpen(false); loadTrips(); }}
+      />
     </div>
   );
 }

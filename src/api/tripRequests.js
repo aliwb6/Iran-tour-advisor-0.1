@@ -5,15 +5,13 @@ export async function createTripRequest(travelerId, tripData) {
     .from('trip_requests')
     .insert({
       traveler_id: travelerId,
-      title: tripData.title,
       destination: tripData.destination,
-      travel_dates: tripData.dates || null,
-      interests: tripData.interests || [],
-      group_size: tripData.groupSize || 1,
-      budget_range: tripData.budget || null,
-      notes: tripData.notes || null,
+      start_date: tripData.dates?.start || null,
+      end_date: tripData.dates?.end || null,
+      adults: tripData.groupSize || 1,
+      tour_type: tripData.tourType || null,
+      requirements: tripData.notes || null,
       status: 'pending',
-      slot_count: 0,
     })
     .select()
     .single();
@@ -35,7 +33,6 @@ export async function getAvailableTripRequests(guideId) {
   let query = supabase
     .from('trip_requests')
     .select('*')
-    .lt('slot_count', 3)
     .in('status', ['pending', 'active'])
     .order('created_at', { ascending: false });
 
@@ -47,47 +44,72 @@ export async function getAvailableTripRequests(guideId) {
   if (error) throw error;
   if (!trips || trips.length === 0) return [];
 
+  // Compute accepted slot counts from trip_slots (no slot_count column in DB)
+  const reqIds = trips.map(t => t.id);
+  const { data: slots } = await supabase
+    .from('trip_slots')
+    .select('trip_request_id')
+    .in('trip_request_id', reqIds)
+    .neq('status', 'rejected');
+
+  const countMap = {};
+  (slots || []).forEach(s => {
+    countMap[s.trip_request_id] = (countMap[s.trip_request_id] || 0) + 1;
+  });
+
   // Fetch traveler profiles
-  const travelerIds = [...new Set(trips.map(t => t.traveler_id))];
-  const { data: profiles } = await supabase
-    .from('profiles')
-    .select('id, full_name, avatar_url')
-    .in('id', travelerIds);
+  const travelerIds = [...new Set(trips.map(t => t.user_id || t.traveler_id).filter(Boolean))];
+  let profileMap = {};
+  if (travelerIds.length > 0) {
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, full_name, avatar_url')
+      .in('id', travelerIds);
+    profileMap = Object.fromEntries((profiles || []).map(p => [p.id, p]));
+  }
 
-  const profileMap = Object.fromEntries((profiles || []).map(p => [p.id, p]));
-
-  return trips.map(trip => ({
-    ...trip,
-    traveler: profileMap[trip.traveler_id] || null,
-  }));
+  return trips
+    .map(trip => ({
+      ...trip,
+      accepted_count: countMap[trip.id] || 0,
+      traveler: profileMap[trip.user_id || trip.traveler_id] || null,
+    }))
+    .filter(trip => trip.accepted_count < 3);
 }
 
-export async function getMyTripRequests(travelerId) {
+export async function getMyTripRequests(userId) {
   const { data: trips, error } = await supabase
     .from('trip_requests')
     .select('*')
-    .eq('traveler_id', travelerId)
+    .or(`traveler_id.eq.${userId},user_id.eq.${userId}`)
     .order('created_at', { ascending: false });
 
   if (error) throw error;
   if (!trips || trips.length === 0) return [];
 
-  // Fetch slots for all trips
-  const tripIds = trips.map(t => t.id);
+  const normalized = trips.map(t => ({
+    ...t,
+    title: t.destination ? `Trip to ${t.destination}` : 'Trip Request',
+    travel_dates: t.start_date ? { start: t.start_date, end: t.end_date } : null,
+    group_size: (t.adults || t.adult_count || 1) + (t.children || t.child_count || 0),
+    status: t.status || 'pending',
+    source: t.traveler_id ? undefined : 'request',
+  }));
+
+  const tripIds = normalized.map(t => t.id);
   const { data: slots } = await supabase
     .from('trip_slots')
     .select('*')
     .in('trip_request_id', tripIds);
 
   if (!slots || slots.length === 0) {
-    return trips.map(t => ({ ...t, slots: [] }));
+    return normalized.map(t => ({ ...t, slots: [] }));
   }
 
-  // Fetch guide profiles for slot owners
   const guideIds = [...new Set(slots.map(s => s.guide_id))];
   const { data: guideProfiles } = await supabase
     .from('profiles')
-    .select('id, full_name, avatar_url')
+    .select('id, full_name, avatar_url, city, rating')
     .in('id', guideIds);
 
   const guideMap = Object.fromEntries((guideProfiles || []).map(p => [p.id, p]));
@@ -101,43 +123,44 @@ export async function getMyTripRequests(travelerId) {
     });
   });
 
-  return trips.map(trip => ({
+  return normalized.map(trip => ({
     ...trip,
     slots: slotsByTrip[trip.id] || [],
   }));
 }
 
 export async function acceptTripRequest(guideId, tripRequestId) {
-  const { data: trip, error: fetchError } = await supabase
-    .from('trip_requests')
-    .select('slot_count, status')
-    .eq('id', tripRequestId)
-    .single();
-
-  if (fetchError) throw fetchError;
-  if (!trip) throw new Error('Trip request not found.');
-  if (trip.slot_count >= 3) throw new Error('This trip request is already full.');
-
-  const { error: slotError } = await supabase
+  // Idempotency check
+  const { data: existing } = await supabase
     .from('trip_slots')
-    .insert({ trip_request_id: tripRequestId, guide_id: guideId, status: 'chatting' });
+    .select('id')
+    .eq('trip_request_id', tripRequestId)
+    .eq('guide_id', guideId)
+    .maybeSingle();
 
-  if (slotError) throw slotError;
+  if (existing) throw new Error('You have already accepted this request.');
 
-  const newSlotCount = trip.slot_count + 1;
+  // Check slot availability via trip_slots (no slot_count column in DB)
+  const { count } = await supabase
+    .from('trip_slots')
+    .select('id', { count: 'exact', head: true })
+    .eq('trip_request_id', tripRequestId)
+    .neq('status', 'rejected');
 
-  const { error: updateError } = await supabase
-    .from('trip_requests')
-    .update({
-      slot_count: newSlotCount,
-      status: 'active',
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', tripRequestId);
+  if ((count || 0) >= 3) {
+    throw new Error('This request already has 3 guides — it is no longer available.');
+  }
 
-  if (updateError) throw updateError;
+  const { error } = await supabase
+    .from('trip_slots')
+    .insert({
+      trip_request_id: tripRequestId,
+      guide_id: guideId,
+      status: 'accepted',
+      accepted_at: new Date().toISOString(),
+    });
 
-  return { success: true };
+  if (error) throw error;
 }
 
 export async function rejectTripSlot(guideId, tripRequestId) {
@@ -149,21 +172,7 @@ export async function rejectTripSlot(guideId, tripRequestId) {
 
   if (updateSlotError) throw updateSlotError;
 
-  // Decrement slot_count
-  const { data: trip } = await supabase
-    .from('trip_requests')
-    .select('slot_count')
-    .eq('id', tripRequestId)
-    .single();
-
-  const newSlotCount = Math.max(0, (trip?.slot_count || 1) - 1);
-
-  await supabase
-    .from('trip_requests')
-    .update({ slot_count: newSlotCount, updated_at: new Date().toISOString() })
-    .eq('id', tripRequestId);
-
-  // Check if all slots are now rejected
+  // Check if all slots are now rejected → re-broadcast
   const { data: allSlots } = await supabase
     .from('trip_slots')
     .select('status')
@@ -198,18 +207,10 @@ export async function rebroadcastTripRequest(tripRequestId) {
     .update({ status: 'rejected' })
     .eq('trip_request_id', tripRequestId);
 
-  const { data: trip } = await supabase
-    .from('trip_requests')
-    .select('broadcast_count')
-    .eq('id', tripRequestId)
-    .single();
-
   await supabase
     .from('trip_requests')
     .update({
-      slot_count: 0,
       status: 'pending',
-      broadcast_count: (trip?.broadcast_count || 0) + 1,
       updated_at: new Date().toISOString(),
     })
     .eq('id', tripRequestId);

@@ -17,6 +17,7 @@ import {
 import { avatarFor } from '@/lib/avatar';
 import TourForm from '@/components/dashboard/TourForm';
 import MyArticlesSection from '../components/dashboard/MyArticlesSection';
+import GuideRequestsView from '@/components/dashboard/GuideRequestsView';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -1658,6 +1659,8 @@ export default function Dashboard() {
             onOpenChat={(otherId) => navigate(`/chat/${otherId}`)}
           />
         );
+      case 'requests':
+        return <GuideRequestsView userId={authUser?.id} />;
       case 'my-tours':
         return <MyToursView tours={tours} onEdit={setEditingTour} onDelete={handleDeleteTour} />;
       case 'profile':
