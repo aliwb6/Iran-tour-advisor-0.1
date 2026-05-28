@@ -16,6 +16,7 @@ import { avatarFor } from '@/lib/avatar';
 import TripBuilder from '@/components/ai/TripBuilder';
 import { useChatHistory } from '@/hooks/useChatHistory';
 import { ChatMessage } from '@/components/chat/ChatMessage';
+import TripRequestForm from '@/components/profile/TripRequestForm';
 
 // ── Brand tokens ──────────────────────────────────────────────────────────────
 const C = {
@@ -469,55 +470,64 @@ function buildSystemPrompt(tours, guides) {
   const toursList = tours.length
     ? tours.map((t) => {
         const cities = Array.isArray(t.cities) ? t.cities.join(', ') : (t.cities || '');
-        return [
-          `- slug: ${t.slug || t.id}`,
-          `  title: ${t.title || ''}`,
-          `  cities: ${t.city || cities || t.location || ''}`,
-          `  duration: ${t.duration ?? '?'} days`,
-          `  price: ${t.price != null ? `$${t.price}` : '—'}`,
-          `  theme: ${Array.isArray(t.theme) ? t.theme.join(', ') : (t.theme || '')}`,
-          `  purpose: ${Array.isArray(t.purpose) ? t.purpose.join(', ') : (t.purpose || '')}`,
-          `  description: ${(t.description || '').slice(0, 160)}`,
-        ].join('\n');
-      }).join('\n\n')
+        return `- slug: ${t.slug || t.id}, title: ${t.title || ''}, cities: ${t.city || cities || t.location || ''}, duration: ${t.duration ?? '?'} days, price: ${t.price != null ? `$${t.price}` : '—'}`;
+      }).join('\n')
     : '(no published tours available right now)';
 
   const guidesList = guides.length
-    ? guides.map((g) => {
-        const specialties = Array.isArray(g.specialties) ? g.specialties.join(', ') : (g.specialties || '');
-        return [
-          `- id: ${g.id}`,
-          `  name: ${g.full_name || ''}`,
-          `  city: ${g.city || ''}`,
-          `  specialties: ${specialties}`,
-          `  bio: ${(g.bio || '').slice(0, 140)}`,
-        ].join('\n');
-      }).join('\n\n')
+    ? guides.map((g) => `- id: ${g.id}, name: ${g.full_name || ''}, city: ${g.city || ''}`)
+        .join('\n')
     : '(no guides available right now)';
 
-  return `You are a warm, knowledgeable Iranian travel advisor for Iran Tour Advisor. You chat with international travellers like a friendly local expert who happens to know everyone and everything in Iran.
+  return `You are Aria, a concise Iranian travel advisor. Keep every reply to 2-3 sentences max and use at most 1 emoji. When you recommend, suggest only ONE tour OR one guide — never both, never multiples. Always reply in the same language the traveller uses.
 
-HOW TO CHAT:
-- Have a real, flowing conversation. Ask ONE natural question at a time and react to what the traveller says before moving on. Never present checklists, numbered steps, or bullet menus.
-- Over the course of the conversation, gently learn: what draws them to Iran (interests/purpose), how long they're staying, which cities or regions appeal to them, their travel style / budget, and whether they're travelling solo / as a couple / in a group / with family.
-- Keep replies tight (2–4 sentences). Warm, culturally sensitive. Sprinkle Persian words naturally when it fits ("kheili khob", "ajab", "mashallah", "befarmaid"). No emoji spam.
-- Always reply in the same language the traveller writes in (English / Persian / Arabic).
-- IMPORTANT: After your very first greeting message in the conversation, do NOT repeat "salaam", "khosh amadid", or any welcome phrase in subsequent messages. Dive straight into the topic without re-greeting.
-
-HOW TO RECOMMEND:
-- Once you have enough context to recommend confidently (usually after 3–5 exchanges), write a friendly recommendation paragraph naming 2–3 specific tours and 1–2 specific guides FROM THE CATALOGUE BELOW.
-- IMMEDIATELY AFTER your recommendation paragraph, append a fenced JSON block on its own line — exactly this shape, no extra prose around it:
+When making a recommendation, append this JSON block (no extra text around it):
 \`\`\`json
-{"tour_slugs": ["slug-1", "slug-2"], "guide_ids": ["uuid-1"]}
+{"tour_slugs": ["slug"], "guide_ids": []}
 \`\`\`
-- Use slugs and ids EXACTLY as they appear below. Do NOT invent. Use empty arrays if you genuinely have nothing matching.
-- Do NOT include the JSON block while you are still asking questions. Only emit it on the turn where you are actually recommending. You may emit it again later if the traveller asks for different options.
+Use slugs/ids exactly as listed. Empty arrays if nothing matches. Only include the block on the turn you actually recommend — not while asking questions.
 
 AVAILABLE TOURS:
 ${toursList}
 
 LOCAL GUIDES:
 ${guidesList}`;
+}
+
+// ── Trip planning questions ───────────────────────────────────────────────────
+const TRIP_QUESTIONS = [
+  { id: 'destinations',   text: "Which cities or regions in Iran interest you? 🗺️" },
+  { id: 'start_date',     text: "When would you like to start your trip? (e.g. June 15 or 2025-06-15)" },
+  { id: 'end_date',       text: "And when would you like to return?" },
+  { id: 'adults',         text: "How many adults will be traveling?" },
+  { id: 'children',       text: "Will any children be joining? If so, how many? (say 0 if none)" },
+  { id: 'tour_type',      text: "Do you prefer a private tour or a group tour?" },
+  { id: 'holiday_type',   text: "What kind of experience? (Active / Nature / Culture / Relaxing / Local Living)" },
+  { id: 'budget',         text: "What's your approximate budget per person in USD?" },
+  { id: 'accommodation',  text: "Will you need help with accommodation? (yes / no)" },
+  { id: 'transport',      text: "Will you need help with local transportation? (yes / no)" },
+];
+
+async function extractTripDataFromAnswers(tripAnswers) {
+  const answersText = TRIP_QUESTIONS.map(q => `${q.id}: ${tripAnswers[q.id] || ''}`).join('\n');
+  const prompt = `Extract trip planning data from these Q&A answers and return ONLY valid JSON with no markdown fences or explanation:
+${answersText}
+
+Return exactly this JSON structure (fill in values from the answers, use sensible defaults):
+{"destinations_array":["city1"],"start_date":"YYYY-MM-DD","end_date":"YYYY-MM-DD","adults":1,"children":0,"tour_type":"private","holiday_types":["nature"],"needs_accommodation":true,"needs_transport":false,"notes":""}`;
+
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${import.meta.env.VITE_GEMINI_API_KEY}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+    }
+  );
+  const data = await res.json();
+  const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+  const cleaned = raw.replace(/```(?:json)?|```/g, '').trim();
+  return JSON.parse(cleaned);
 }
 
 // ── Recommendation parsing ────────────────────────────────────────────────────
@@ -622,6 +632,12 @@ export default function AIAssistant() {
   const [showModelPicker, setShowModelPicker] = useState(false);
   const [showTripBuilder, setShowTripBuilder] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [rejectionCount, setRejectionCount]     = useState(0);
+  const [tripPlanningMode, setTripPlanningMode] = useState(false);
+  const [currentQuestion, setCurrentQuestion]  = useState(0);
+  const [tripAnswers, setTripAnswers]           = useState({});
+  const [tripFormOpen, setTripFormOpen]         = useState(false);
+  const [tripFormData, setTripFormData]         = useState(null);
 
   // Create a new conversation on every page visit (mount)
   useEffect(() => {
@@ -665,11 +681,19 @@ export default function AIAssistant() {
     scrollerRef.current?.scrollTo({ top: scrollerRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages, loading]);
 
+  const resetTripPlanning = () => {
+    setTripPlanningMode(false);
+    setCurrentQuestion(0);
+    setTripAnswers({});
+    setRejectionCount(0);
+  };
+
   const handleNewChat = () => {
     const greeting = buildGreeting(cityHint, lang);
     createConversation(greeting, lang);
     setInput('');
     setSidebarOpen(false);
+    resetTripPlanning();
   };
 
   // Called by ChatMessage when user saves an edit.
@@ -712,12 +736,80 @@ export default function AIAssistant() {
   const sendMessage = async () => {
     const text = input.trim();
     if (!text || loading) return;
+    const lc = text.toLowerCase();
 
-    // Trip builder shortcut
-    const tripKeywords = ['custom trip', 'create trip', 'plan trip', 'custom itinerary', 'build trip'];
+    // ── Helper: resolve conversation id ────────────────────────────────────────
+    const resolveConvId = async (title) => {
+      let id = activeId;
+      if (!id && !isLoggedIn) id = createConversation(null, lang);
+      if (isLoggedIn && (!id || !conversations.some((c) => c.id === id))) {
+        id = await persistConversation(title || text.slice(0, 40));
+      }
+      return id;
+    };
+
+    // ── Trip planning mode: collect answers one at a time ──────────────────────
+    if (tripPlanningMode) {
+      const qId = TRIP_QUESTIONS[currentQuestion]?.id;
+      const updatedAnswers = { ...tripAnswers, [qId]: text };
+      setTripAnswers(updatedAnswers);
+      setInput('');
+
+      const convId = await resolveConvId('Trip Planning');
+      if (!convId) return;
+      appendMessage(convId, { role: 'user', content: text });
+
+      const nextQ = currentQuestion + 1;
+      if (nextQ < TRIP_QUESTIONS.length) {
+        setCurrentQuestion(nextQ);
+        appendMessage(convId, { role: 'assistant', content: TRIP_QUESTIONS[nextQ].text });
+      } else {
+        // All questions answered — extract and open form
+        setLoading(true);
+        appendMessage(convId, { role: 'assistant', content: 'Perfect! Let me put that together for you... ✨' });
+        try {
+          const extracted = await extractTripDataFromAnswers(updatedAnswers);
+          setTripFormData(extracted);
+          setTripFormOpen(true);
+        } catch {
+          appendMessage(convId, { role: 'assistant', content: "Something went wrong building your trip details. Please try again." });
+        } finally {
+          setLoading(false);
+          resetTripPlanning();
+          inputRef.current?.focus();
+        }
+      }
+      return;
+    }
+
+    // ── Rejection keyword tracking ─────────────────────────────────────────────
+    const rejectionKeywords = ['no thank', 'not interested', "don't want", 'not for me', 'skip', 'never mind', 'pass', 'nope', 'not really'];
+    const farsiRejections   = ['نه', 'نمی‌خوام', 'علاقه ندارم', 'نه ممنون'];
+    const arabicRejections  = ['لا', 'لا أريد', 'لا شكرا'];
+    const isRejection = rejectionKeywords.some(k => lc.includes(k)) ||
+      (lang === 'fa' && farsiRejections.some(k => text.includes(k))) ||
+      (lang === 'ar' && arabicRejections.some(k => text.includes(k)));
+
+    if (isRejection) {
+      const newCount = rejectionCount + 1;
+      setRejectionCount(newCount);
+      if (newCount >= 2) {
+        setTripPlanningMode(true);
+        setCurrentQuestion(0);
+        setTripAnswers({});
+        setInput('');
+        const convId = await resolveConvId('Trip Planning');
+        if (!convId) return;
+        appendMessage(convId, { role: 'user', content: text });
+        appendMessage(convId, { role: 'assistant', content: `Let me build something just for you! 🎯 First question:\n\n${TRIP_QUESTIONS[0].text}` });
+        return;
+      }
+    }
+
+    // ── Trip builder shortcut ──────────────────────────────────────────────────
+    const tripKeywords  = ['custom trip', 'create trip', 'plan trip', 'custom itinerary', 'build trip'];
     const farsiKeywords = ['سفر سفارشی', 'سفر شخصی', 'برنامه‌ریزی سفر', 'ایجاد برنامه'];
     const arabicKeywords = ['رحلة مخصصة', 'خطة رحلة', 'خطة سفر'];
-    const lc = text.toLowerCase();
     if (tripKeywords.some((kw) => lc.includes(kw)) ||
         (lang === 'fa' && farsiKeywords.some((kw) => text.includes(kw))) ||
         (lang === 'ar' && arabicKeywords.some((kw) => text.includes(kw)))) {
@@ -736,20 +828,11 @@ export default function AIAssistant() {
       return;
     }
 
-    // Ensure there is an active conversation
-    let convId = activeId;
-    if (!convId) {
-      if (!isLoggedIn) convId = createConversation(null, lang);
-    }
-
-    // For logged-in users: persist the conversation to Supabase on the first message
-    if (isLoggedIn && (!convId || !conversations.some((c) => c.id === convId))) {
-      convId = await persistConversation(text.slice(0, 40));
-      if (!convId) { setLoading(false); return; }
-    }
+    // ── Normal chat ────────────────────────────────────────────────────────────
+    const convId = await resolveConvId();
+    if (!convId) return;
 
     const userMsg = { role: 'user', content: text };
-    // Capture messages for the API call BEFORE state update
     const messagesForApi = [...messages, userMsg];
 
     appendMessage(convId, userMsg);
@@ -1101,6 +1184,22 @@ export default function AIAssistant() {
         onClose={() => setShowTripBuilder(false)}
         lang={lang}
         dir={dir}
+      />
+
+      {/* Trip Request Form — pre-filled from AI trip planning flow */}
+      <TripRequestForm
+        isOpen={tripFormOpen}
+        onClose={() => setTripFormOpen(false)}
+        initialData={tripFormData}
+        onSuccess={() => {
+          setTripFormOpen(false);
+          if (activeId) {
+            appendMessage(activeId, {
+              role: 'assistant',
+              content: "Done! 🎉 Guides will reach out soon — the first 5 to accept can message you directly.",
+            });
+          }
+        }}
       />
     </div>
   );
