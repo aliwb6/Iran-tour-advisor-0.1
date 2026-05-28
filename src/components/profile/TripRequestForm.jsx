@@ -651,7 +651,17 @@ export default function TripRequestForm({ isOpen, onClose }) {
     return () => window.removeEventListener('keydown', onKey);
   }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const set = (key, value) => setForm(f => ({ ...f, [key]: value }));
+  const set = (key, value) => setForm(f => {
+    // Auto-correct end_date: clamp to start_date when picked date is earlier
+    if (key === 'end_date' && f.start_date && value < f.start_date) {
+      return { ...f, end_date: f.start_date };
+    }
+    // Auto-clear end_date when start_date is pushed past the current end
+    if (key === 'start_date' && f.end_date && value > f.end_date) {
+      return { ...f, start_date: value, end_date: value };
+    }
+    return { ...f, [key]: value };
+  });
 
   const toggle = (key, item) => setForm(f => {
     const arr = f[key];
@@ -687,8 +697,8 @@ export default function TripRequestForm({ isOpen, onClose }) {
     if (!form.destination)    errs.destination    = 'Please select a destination.';
     if (!form.start_date)     errs.start_date     = 'Please select a start date.';
     if (!form.end_date)       errs.end_date       = 'Please select an end date.';
-    if (form.start_date && form.end_date && form.end_date <= form.start_date)
-      errs.end_date = 'End date must be after start date.';
+    if (form.start_date && form.end_date && form.end_date < form.start_date)
+      errs.end_date = 'End date cannot be before start date.';
     if (!form.guide_languages.length)
       errs.guide_languages = 'Please select at least one language.';
 
