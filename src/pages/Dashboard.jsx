@@ -9,8 +9,9 @@ import {
   ChevronDown, ChevronRight, LogOut, Edit2, Trash2, ExternalLink,
   Loader2, Clock, MapPin, DollarSign, Upload, Shield, TrendingUp,
   MessageSquare, Package, CheckCircle2, X, Plus, Globe, AlertTriangle,
-  BookOpen,
+  BookOpen, FileText, Camera, FileSignature,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
@@ -29,7 +30,7 @@ const NAV = [
   { id: 'home',       label: 'Dashboard',       Icon: LayoutDashboard },
   { id: 'my-tours',   label: 'My Tours',         Icon: Briefcase },
   { id: 'add-tour',   label: 'Add New Tour',     Icon: PlusCircle },
-  { id: 'requests',       label: 'Requests',         Icon: Bell },
+  { id: 'requests',       label: 'Tour Requests',    Icon: FileText },
   { id: 'notifications',  label: 'Notifications',    Icon: Bell },
   { id: 'chat',           label: 'Chat',             Icon: MessageCircle },
   {
@@ -80,7 +81,13 @@ function StarRating({ rating }) {
 function Sidebar({ section, onNavigate, profileExpanded, setProfileExpanded, userName, userRole, onLogout, profile }) {
   const { t } = useI18n();
   const activeId = section || 'home';
-  const canAddTour = !profile || profile.role === 'traveler' || profile.license_status === 'verified';
+
+  // Tour creation readiness — each level blocks for a different reason
+  const licenseVerified = profile?.license_status === 'verified';
+  const hasAvatar      = !!(profile?.avatar_url?.trim());
+  const hasBio         = !!(profile?.bio?.trim());
+  // Hard-block the nav item only for missing license; bio/avatar are soft-blocked on click
+  const canAddTour = !profile || licenseVerified;
 
   const NAV_LABELS = {
     home:        t('dashboard_nav_home'),
@@ -137,15 +144,30 @@ function Sidebar({ section, onNavigate, profileExpanded, setProfileExpanded, use
           <div key={item.id}>
             <button
               onClick={() => {
-                if (isDisabled) {
-                  alert(item.id === 'add-tour' && profile?.role !== 'traveler' ? 'Please verify your license document before creating tours.' : '');
+                if (item.id === 'add-tour') {
+                  if (!licenseVerified) {
+                    toast.error('License document required to create tours. Please upload your license in the Profile section.', {
+                      action: { label: 'Go to Profile', onClick: () => onNavigate('profile') },
+                    });
+                    onNavigate('profile');
+                    return;
+                  }
+                  if (!hasAvatar || !hasBio) {
+                    const missing = [!hasAvatar && 'profile photo', !hasBio && 'bio'].filter(Boolean).join(' and ');
+                    toast.warning(`Please add your ${missing} before creating tours.`, {
+                      action: { label: 'Go to Profile', onClick: () => onNavigate('profile') },
+                    });
+                    onNavigate('profile');
+                    return;
+                  }
+                  onNavigate('add-tour');
                   return;
                 }
                 if (item.sub) setProfileExpanded(v => !v);
                 else onNavigate(item.id);
               }}
               disabled={isDisabled}
-              title={isDisabled ? 'License verification required' : ''}
+              title={isDisabled ? 'Upload your license to unlock tour creation' : ''}
               className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-left text-xs font-medium transition-all duration-150 group ${
                 isDisabled
                   ? 'text-white/25 cursor-not-allowed opacity-50'
@@ -156,7 +178,9 @@ function Sidebar({ section, onNavigate, profileExpanded, setProfileExpanded, use
             >
               <span className="flex items-center gap-2.5">
                 <item.Icon className="w-3.5 h-3.5 flex-shrink-0" />
-                {NAV_LABELS[item.id] || item.label}
+                {isDisabled && item.id === 'add-tour'
+                  ? 'Upload License First'
+                  : (NAV_LABELS[item.id] || item.label)}
               </span>
               {item.sub && (
                 profileExpanded
@@ -803,16 +827,89 @@ function ProfileView({ profile, userId, onSave }) {
         </div>
       </div>
 
-      {/* License Warning Banner */}
-      {(profile?.role === 'guide' || profile?.role === 'agency') && profile?.license_status !== 'verified' && (
-        <div className="mb-4 p-4 rounded-xl bg-red-500/10 border border-red-500/25 flex items-start gap-3">
-          <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-          <div>
-            <p className="text-red-400 font-semibold text-sm">License Document Required</p>
-            <p className="text-red-400/70 text-xs mt-1">Your profile is hidden from travelers until you upload and verify your license document. You won't be able to create new tours until your license is verified.</p>
+      {/* Profile completion warning — shows every missing required field */}
+      {(profile?.role === 'guide' || profile?.role === 'agency') && (() => {
+        const missingItems = [
+          profile?.license_status !== 'verified' && {
+            key: 'license',
+            icon: FileSignature,
+            label: 'License document',
+            hint: profile?.license_status === 'pending_review' ? 'Pending review' : 'Not uploaded',
+            critical: true,
+          },
+          !form.avatar_url?.trim() && {
+            key: 'avatar',
+            icon: Camera,
+            label: 'Profile photo',
+            hint: 'Add a photo URL below',
+            critical: false,
+          },
+          !form.bio?.trim() && {
+            key: 'bio',
+            icon: FileText,
+            label: 'Guide bio',
+            hint: 'Fill in the Bio field below',
+            critical: false,
+          },
+          !form.city?.trim() && {
+            key: 'city',
+            icon: MapPin,
+            label: 'City / location',
+            hint: 'Fill in the City field below',
+            critical: false,
+          },
+        ].filter(Boolean);
+
+        if (missingItems.length === 0) {
+          return (
+            <div className="mb-5 p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-2.5">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+              <p className="text-emerald-400 text-xs font-medium">Profile complete — you're ready to create tours!</p>
+            </div>
+          );
+        }
+
+        const hasCritical = missingItems.some(m => m.critical);
+
+        return (
+          <div className={`mb-5 p-4 rounded-xl border ${
+            hasCritical
+              ? 'bg-red-500/10 border-red-500/25'
+              : 'bg-yellow-500/10 border-yellow-500/25'
+          }`}>
+            <div className="flex items-start gap-3">
+              <AlertTriangle className={`w-4 h-4 shrink-0 mt-0.5 ${hasCritical ? 'text-red-400' : 'text-yellow-400'}`} />
+              <div className="flex-1 min-w-0">
+                <p className={`font-semibold text-sm mb-0.5 ${hasCritical ? 'text-red-400' : 'text-yellow-400'}`}>
+                  Complete Your Profile to Publish Tours
+                </p>
+                <p className="text-white/40 text-xs mb-3">
+                  Fill in the missing fields on this page:
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {missingItems.map(item => {
+                    const Icon = item.icon;
+                    return (
+                      <span
+                        key={item.key}
+                        className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border font-medium ${
+                          item.critical
+                            ? 'bg-red-500/15 border-red-500/30 text-red-400'
+                            : 'bg-yellow-500/15 border-yellow-500/30 text-yellow-400'
+                        }`}
+                      >
+                        <Icon className="w-3 h-3" />
+                        {item.label}
+                        <span className="text-white/30 font-normal">— {item.hint}</span>
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {error && (
         <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/25 text-red-400 text-sm">{error}</div>
@@ -1570,6 +1667,48 @@ function EmptySection({ section }) {
   );
 }
 
+// ─── AddTourBlockedScreen ─────────────────────────────────────────────────────
+
+function AddTourBlockedScreen({ reason, profile, onNavigate }) {
+  const missingItems = reason === 'license'
+    ? [{ label: 'Guide license', detail: profile?.license_status === 'pending_review' ? 'Pending admin review' : 'Not uploaded yet' }]
+    : [
+        !profile?.avatar_url?.trim() && { label: 'Profile photo', detail: 'Add a photo URL in Profile' },
+        !profile?.bio?.trim()        && { label: 'Guide bio',     detail: 'Write a short description in Profile' },
+      ].filter(Boolean);
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+      <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-5">
+        <Shield className="w-8 h-8 text-red-400/60" />
+      </div>
+      <h2 className="text-white font-bold text-xl mb-2">Profile Incomplete</h2>
+      <p className="text-white/40 text-sm max-w-xs mb-5">
+        {reason === 'license'
+          ? 'Your guide license must be uploaded before you can create tours.'
+          : 'Please complete your profile before creating tours.'}
+      </p>
+      <div className="space-y-2 mb-6 text-left">
+        {missingItems.map(item => (
+          <div key={item.label} className="flex items-start gap-2.5 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-2.5">
+            <X className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
+            <div>
+              <p className="text-red-400 text-sm font-medium">{item.label}</p>
+              <p className="text-white/30 text-xs">{item.detail}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+      <button
+        onClick={() => onNavigate('profile')}
+        className="px-6 py-2.5 rounded-xl bg-[hsl(178,85%,32%)] hover:bg-[hsl(178,85%,28%)] text-white font-semibold text-sm transition"
+      >
+        Complete Profile →
+      </button>
+    </div>
+  );
+}
+
 // ─── Dashboard (main) ─────────────────────────────────────────────────────────
 
 export default function Dashboard() {
@@ -1622,9 +1761,12 @@ export default function Dashboard() {
   const handleTourSaved = (savedTour, isNew) => {
     if (isNew) {
       setTours(prev => [savedTour, ...prev]);
+      toast.success('Tour created! It will be visible to travelers after admin review.');
+      nav('my-tours');
     } else {
       setTours(prev => prev.map(t => t.id === savedTour.id ? savedTour : t));
       setEditingTour(null);
+      toast.success('Tour updated successfully.');
       nav('my-tours');
     }
   };
@@ -1639,16 +1781,36 @@ export default function Dashboard() {
   };
 
   const renderContent = () => {
-    if (editingTour || section === 'add-tour') {
+    // Editing an existing tour — skip all guards
+    if (editingTour) {
       return (
         <TourForm
-          key={editingTour?.id || 'new'}
+          key={editingTour.id}
           editing={editingTour}
           onDone={handleTourSaved}
           onCancel={() => { setEditingTour(null); nav('my-tours'); }}
         />
       );
     }
+
+    // New tour — enforce profile requirements even on direct URL access
+    if (section === 'add-tour') {
+      if (profile && profile.license_status !== 'verified') {
+        return <AddTourBlockedScreen reason="license" profile={profile} onNavigate={nav} />;
+      }
+      if (profile && (!profile.bio?.trim() || !profile.avatar_url?.trim())) {
+        return <AddTourBlockedScreen reason="profile" profile={profile} onNavigate={nav} />;
+      }
+      return (
+        <TourForm
+          key="new"
+          editing={null}
+          onDone={handleTourSaved}
+          onCancel={() => nav('my-tours')}
+        />
+      );
+    }
+
     switch (section) {
       case 'home':
         return (

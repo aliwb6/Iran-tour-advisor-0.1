@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, Fragment } from 'react';
 import { Link, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { useI18n } from '@/lib/i18n.jsx';
 import { supabase } from '@/supabaseClient';
@@ -7,16 +7,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sparkles, Send, MapPin, Clock, Users, Wallet,
   Globe2, ChevronDown, Building2, Mountain, UtensilsCrossed,
-  Leaf, Compass, Loader2, ArrowLeft, ArrowRight, DollarSign, Trash2,
+  Leaf, Compass, Loader2, ArrowLeft, ArrowRight, DollarSign,
+  Trash2, Plus, MessageSquare, Menu, X,
 } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
 import { sendChatMessage } from '../services/api.js';
+import { toast } from 'sonner';
 import { avatarFor } from '@/lib/avatar';
 import TripBuilder from '@/components/ai/TripBuilder';
-
-// ── localStorage keys ──────────────────────────────────────────────────────────
-const CHAT_STORAGE_KEY = 'iran_tour_ai_chat_history';
-const MODEL_STORAGE_KEY = 'iran_tour_ai_selected_model';
+import { useChatHistory } from '@/hooks/useChatHistory';
+import { ChatMessage } from '@/components/chat/ChatMessage';
 
 // ── Brand tokens ──────────────────────────────────────────────────────────────
 const C = {
@@ -106,6 +105,33 @@ const LANGS = [
   { code: 'ar', label: 'العربية',  dir: 'rtl' },
 ];
 
+// ── Available AI models ────────────────────────────────────────────────────────
+const AVAILABLE_MODELS = [
+  { id: 'openrouter/auto',                        name: 'Auto (Best Available)', icon: '⚡', free: false },
+  { id: 'openai/gpt-4-turbo',                     name: 'GPT-4 Turbo',          icon: '✨', free: false },
+  { id: 'openai/gpt-3.5-turbo',                   name: 'GPT-3.5 Turbo',        icon: '⚡', free: false },
+  { id: 'meta-llama/llama-3.1-8b-instruct:free',  name: 'Llama 3.1 8B',         icon: '🦙', free: true  },
+  { id: 'mistralai/mistral-7b-instruct:free',      name: 'Mistral 7B',           icon: '✨', free: true  },
+];
+
+const FREE_FALLBACK_MODEL = 'meta-llama/llama-3.1-8b-instruct:free';
+const MODEL_STORAGE_KEY = 'iran_tour_ai_selected_model';
+
+function ModelBadge({ free }) {
+  return (
+    <span
+      className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide"
+      style={
+        free
+          ? { background: '#dcfce7', color: '#15803d' }
+          : { background: '#fef9c3', color: '#a16207' }
+      }
+    >
+      {free ? 'FREE' : 'PRO'}
+    </span>
+  );
+}
+
 function ModelSelector({ model, onChange, open, setOpen }) {
   const current = AVAILABLE_MODELS.find((m) => m.id === model) || AVAILABLE_MODELS[0];
   return (
@@ -116,8 +142,9 @@ function ModelSelector({ model, onChange, open, setOpen }) {
         style={{ background: '#ffffff70', backdropFilter: 'blur(12px)', border: `1px solid ${C.muted}30`, color: C.teal }}
         title="Select AI Model"
       >
-        <span>🤖</span>
+        <span>{current.icon}</span>
         <span>{current.name}</span>
+        <ModelBadge free={current.free} />
         <ChevronDown
           className={`h-3.5 w-3.5 transition-transform ${open ? 'rotate-180' : ''}`}
           style={{ color: C.muted }}
@@ -130,18 +157,24 @@ function ModelSelector({ model, onChange, open, setOpen }) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -4, scale: 0.98 }}
             transition={{ duration: 0.15 }}
-            className="absolute right-0 mt-2 min-w-[200px] overflow-hidden rounded-2xl py-1 z-[9999]"
+            className="absolute right-0 mt-2 min-w-[220px] overflow-hidden rounded-2xl py-1 z-[9999]"
             style={{ background: C.white, border: `1px solid ${C.muted}25`, boxShadow: `0 12px 40px ${C.teal}15` }}
           >
             {AVAILABLE_MODELS.map((m) => (
               <button
                 key={m.id}
                 onClick={() => { onChange(m.id); setOpen(false); }}
-                className="flex w-full items-center justify-between px-4 py-2 text-sm hover:bg-gray-50 transition-colors text-left"
+                className="flex w-full items-center justify-between gap-2 px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors text-left"
                 style={{ color: C.teal }}
               >
-                <span>{m.name}</span>
-                {m.id === model && <span className="h-1.5 w-1.5 rounded-full" style={{ background: C.turq }} />}
+                <span className="flex items-center gap-2">
+                  <span>{m.icon}</span>
+                  <span>{m.name}</span>
+                </span>
+                <span className="flex items-center gap-2 shrink-0">
+                  <ModelBadge free={m.free} />
+                  {m.id === model && <span className="h-1.5 w-1.5 rounded-full" style={{ background: C.turq }} />}
+                </span>
               </button>
             ))}
           </motion.div>
@@ -196,60 +229,8 @@ function LanguageSwitcher({ lang, onChange }) {
   );
 }
 
-// ── Chat bubble ───────────────────────────────────────────────────────────────
-function MessageBubble({ msg }) {
-  const isUser = msg.role === 'user';
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -8 }}
-      transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-      className={`flex w-full items-end gap-3 ${isUser ? 'justify-end' : 'justify-start'}`}
-    >
-      {!isUser && <AriaMark size={32} />}
-      <div className={`group max-w-[78%] flex flex-col ${isUser ? 'items-end' : 'items-start'}`}>
-        {!isUser && (
-          <span className="mb-1 px-1 text-[11px] font-medium tracking-wide" style={{ color: C.muted }}>
-            Aria
-          </span>
-        )}
-        <div
-          className={`relative rounded-3xl px-5 py-3.5 text-[14.5px] leading-relaxed shadow-sm ${
-            isUser ? 'rounded-br-md' : 'rounded-bl-md'
-          }`}
-          style={
-            isUser
-              ? { background: `linear-gradient(135deg, ${C.turq} 0%, ${C.turqDeep} 100%)`, color: '#FFFFFF', boxShadow: `0 6px 18px ${C.turq}30` }
-              : { background: C.white, color: C.ink, border: `1px solid ${C.muted}20` }
-          }
-        >
-          {isUser ? (
-            <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
-          ) : (
-            <ReactMarkdown className="font-body text-sm prose prose-sm max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 leading-relaxed">
-              {msg.content}
-            </ReactMarkdown>
-          )}
-        </div>
-        {msg.cards && (msg.cards.tours.length > 0 || msg.cards.guides.length > 0) && (
-          <div className="mt-3 space-y-3 w-full">
-            {msg.cards.tours.length > 0 && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {msg.cards.tours.map((tour) => <TourCard key={tour.id} tour={tour} />)}
-              </div>
-            )}
-            {msg.cards.guides.length > 0 && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {msg.cards.guides.map((guide) => <GuideCard key={guide.id} guide={guide} />)}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    </motion.div>
-  );
-}
+// MessageBubble is now the ChatMessage component from src/components/chat/ChatMessage.jsx.
+// Card rendering for assistant messages is handled inline in the message list below.
 
 // ── Profile chip ──────────────────────────────────────────────────────────────
 function ProfileChip({ icon: Icon, label, value, filled, accent }) {
@@ -321,14 +302,167 @@ function SuggestedReplies({ suggestions, onPick }) {
   );
 }
 
-// ── Available AI models ────────────────────────────────────────────────────────
-const AVAILABLE_MODELS = [
-  { id: 'openrouter/auto', name: '🤖 Auto (Best Available)' },
-  { id: 'openai/gpt-4-turbo', name: '⚡ GPT-4 Turbo' },
-  { id: 'openai/gpt-3.5-turbo', name: '🔧 GPT-3.5 Turbo' },
-  { id: 'meta-llama/llama-2-70b-chat', name: '🦙 Llama 2 70B' },
-  { id: 'mistralai/mistral-7b-instruct', name: '✨ Mistral 7B' },
-];
+// ── Conversation history sidebar ──────────────────────────────────────────────
+function ConversationSidebar({ conversations, activeId, onNew, onSwitch, onDelete, lang, dir, open, onClose, isLoadingConvs, isLoggedIn }) {
+  const formatTime = (isoString) => {
+    try {
+      const date = new Date(isoString);
+      const locale = lang === 'fa' ? 'fa-IR' : lang === 'ar' ? 'ar-SA' : 'en-US';
+      const now = new Date();
+      const diffMs = now - date;
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      if (diffDays === 0) return date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+      if (diffDays < 7) return date.toLocaleDateString(locale, { weekday: 'short' });
+      return date.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
+    } catch {
+      return '';
+    }
+  };
+
+  const slideHidden = dir === 'rtl' ? 'translate-x-full' : '-translate-x-full';
+  const fixedSide = dir === 'rtl' ? 'right-0' : 'left-0';
+
+  return (
+    <>
+      {/* Mobile backdrop */}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            key="backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 bg-black/40 z-40 lg:hidden"
+            onClick={onClose}
+          />
+        )}
+      </AnimatePresence>
+
+      <aside
+        className={[
+          'flex flex-col w-64 shrink-0 z-50',
+          'fixed inset-y-0 lg:static lg:inset-auto',
+          fixedSide,
+          'transition-transform duration-300 ease-in-out',
+          open ? 'translate-x-0' : `${slideHidden} lg:translate-x-0`,
+        ].join(' ')}
+        style={{
+          background: C.mist,
+          borderInlineEnd: `1px solid ${C.muted}20`,
+          height: '100%',
+        }}
+      >
+        {/* Header */}
+        <div
+          className="flex items-center justify-between px-4 py-4 shrink-0"
+          style={{ borderBottom: `1px solid ${C.muted}15` }}
+        >
+          <span className="text-[11px] font-semibold uppercase tracking-[0.14em]" style={{ color: C.muted }}>
+            {lang === 'fa' ? 'گفتگوها' : lang === 'ar' ? 'المحادثات' : 'Conversations'}
+          </span>
+          {/* Close button — mobile only */}
+          <button
+            onClick={onClose}
+            className="lg:hidden h-7 w-7 flex items-center justify-center rounded-lg transition-colors hover:bg-black/10"
+            style={{ color: C.muted }}
+            aria-label="Close sidebar"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* New Chat button */}
+        <div className="px-3 pt-3 pb-2 shrink-0">
+          <button
+            onClick={() => { onNew(); onClose(); }}
+            className="w-full flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all hover:opacity-90 active:scale-95"
+            style={{
+              background: `linear-gradient(135deg, ${C.turq}, ${C.turqDeep})`,
+              color: C.white,
+              boxShadow: `0 4px 14px ${C.turq}35`,
+            }}
+          >
+            <Plus className="h-4 w-4 shrink-0" />
+            <span>{lang === 'fa' ? 'گفتگوی جدید' : lang === 'ar' ? 'محادثة جديدة' : 'New Chat'}</span>
+          </button>
+        </div>
+
+        {/* Guest notice */}
+        {!isLoggedIn && (
+          <div
+            className="mx-3 mb-2 px-3 py-2.5 rounded-xl text-[11px] leading-snug"
+            style={{ background: `${C.turq}12`, color: C.turq, border: `1px solid ${C.turq}25` }}
+          >
+            {lang === 'fa'
+              ? 'برای ذخیره گفتگوها وارد شوید'
+              : lang === 'ar'
+              ? 'سجّل دخولك لحفظ محادثاتك'
+              : 'Login to save your conversations'}
+          </div>
+        )}
+
+        {/* Conversation list */}
+        <div className="flex-1 overflow-y-auto px-2 pb-4 space-y-0.5">
+          {isLoadingConvs ? (
+            <div className="space-y-1.5 px-1 pt-1">
+              {[1, 2, 3].map((n) => (
+                <div key={n} className="flex flex-col gap-1.5 px-3 py-2.5 rounded-xl" style={{ background: `${C.muted}08` }}>
+                  <div className="h-3 rounded-full animate-pulse" style={{ background: `${C.muted}25`, width: `${60 + n * 10}%` }} />
+                  <div className="h-2 rounded-full animate-pulse" style={{ background: `${C.muted}15`, width: '40%' }} />
+                </div>
+              ))}
+            </div>
+          ) : conversations.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+              <MessageSquare className="h-8 w-8 mb-3" style={{ color: `${C.muted}60` }} />
+              <p className="text-xs" style={{ color: C.muted }}>
+                {lang === 'fa' ? 'هنوز گفتگویی ندارید' : lang === 'ar' ? 'لا توجد محادثات بعد' : 'No conversations yet'}
+              </p>
+            </div>
+          ) : (
+            conversations.map((conv) => {
+              const isActive = conv.id === activeId;
+              return (
+                <div
+                  key={conv.id}
+                  className="group flex items-start gap-2 w-full px-3 py-2.5 rounded-xl cursor-pointer transition-all"
+                  style={{
+                    background: isActive ? C.white : 'transparent',
+                    boxShadow: isActive ? `0 2px 8px ${C.teal}10` : 'none',
+                  }}
+                  onClick={() => { onSwitch(conv.id); onClose(); }}
+                  onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = `${C.white}80`; }}
+                  onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
+                >
+                  <div className="flex-1 min-w-0 pt-0.5">
+                    <p
+                      className="text-[12.5px] font-medium leading-snug line-clamp-2"
+                      style={{ color: isActive ? C.turq : C.teal }}
+                    >
+                      {conv.title || (lang === 'fa' ? 'گفتگوی جدید' : lang === 'ar' ? 'محادثة جديدة' : 'New conversation')}
+                    </p>
+                    <p className="text-[10px] mt-1" style={{ color: C.muted }}>
+                      {formatTime(conv.timestamp)}
+                    </p>
+                  </div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onDelete(conv.id); }}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-0.5 h-6 w-6 flex items-center justify-center rounded-lg hover:bg-red-50"
+                    style={{ color: '#ef4444' }}
+                    title={lang === 'fa' ? 'حذف' : lang === 'ar' ? 'حذف' : 'Delete'}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </aside>
+    </>
+  );
+}
 
 // ── System prompt ─────────────────────────────────────────────────────────────
 function buildSystemPrompt(tours, guides) {
@@ -366,8 +500,9 @@ function buildSystemPrompt(tours, guides) {
 HOW TO CHAT:
 - Have a real, flowing conversation. Ask ONE natural question at a time and react to what the traveller says before moving on. Never present checklists, numbered steps, or bullet menus.
 - Over the course of the conversation, gently learn: what draws them to Iran (interests/purpose), how long they're staying, which cities or regions appeal to them, their travel style / budget, and whether they're travelling solo / as a couple / in a group / with family.
-- Keep replies tight (2–4 sentences). Warm, culturally sensitive. Sprinkle a Persian word when natural ("salaam", "khosh amadid", "befarmaid"). No emoji spam.
+- Keep replies tight (2–4 sentences). Warm, culturally sensitive. Sprinkle Persian words naturally when it fits ("kheili khob", "ajab", "mashallah", "befarmaid"). No emoji spam.
 - Always reply in the same language the traveller writes in (English / Persian / Arabic).
+- IMPORTANT: After your very first greeting message in the conversation, do NOT repeat "salaam", "khosh amadid", or any welcome phrase in subsequent messages. Dive straight into the topic without re-greeting.
 
 HOW TO RECOMMEND:
 - Once you have enough context to recommend confidently (usually after 3–5 exchanges), write a friendly recommendation paragraph naming 2–3 specific tours and 1–2 specific guides FROM THE CATALOGUE BELOW.
@@ -408,6 +543,18 @@ function extractRecommendation(raw, tours, guides) {
   }
 }
 
+// ── Build greeting for a new conversation ─────────────────────────────────────
+function buildGreeting(cityHint, lang) {
+  if (cityHint) {
+    if (lang === 'fa') return `سلام! دیدم به ${cityHint} علاقه داری — عالیه! چه چیزی تو را به این شهر می‌کشاند؟`;
+    if (lang === 'ar') return `مرحباً! أرى أنك مهتم بـ ${cityHint} — اختيار رائع! ما الذي يجذبك إلى هذه المدينة؟`;
+    return `Salaam! I see you're curious about ${cityHint} — great choice. What's drawing you there?`;
+  }
+  if (lang === 'fa') return 'سلام! من راهنمای سفر هوشمند ایران تور ادوایزر هستم. بگو ببینم، چه چیزی تو را به ایران می‌کشاند؟';
+  if (lang === 'ar') return 'مرحباً! أنا مستشار سفرك إلى إيران من Iran Tour Advisor. أخبرني، ما الذي يجذبك إلى إيران؟';
+  return "Salaam! I'm your Iran travel advisor at Iran Tour Advisor. Tell me — what's drawing you to Iran?";
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 export default function AIAssistant() {
   const { t, dir, lang, switchLang } = useI18n();
@@ -415,36 +562,58 @@ export default function AIAssistant() {
   const location = useLocation();
   const scrollerRef = useRef(null);
   const inputRef = useRef(null);
+  const initDone = useRef(false);
   const [searchParams] = useSearchParams();
   const cityHint = searchParams.get('city') || '';
   const initialMessage = location.state?.initialMessage || '';
 
-  // Load messages from localStorage or initialize empty
-  const [messages, setMessages] = useState(() => {
-    try {
-      const saved = localStorage.getItem(CHAT_STORAGE_KEY);
-      if (saved) {
-        return JSON.parse(saved).map(msg => ({
-          ...msg,
-          timestamp: msg.timestamp ? new Date(msg.timestamp) : undefined
-        }));
-      }
-    } catch (error) {
-      console.error('Error loading chat history:', error);
-    }
-    return [];
+  const {
+    conversations,
+    activeId,
+    messages,
+    isLoggedIn,
+    isLoadingConvs,
+    isLoadingMsgs,
+    createConversation,
+    persistConversation,
+    appendMessage,
+    editMessage,
+    deleteConversation,
+    switchConversation,
+  } = useChatHistory();
+
+  const [selectedModel, setSelectedModel] = useState(() => {
+    try { return localStorage.getItem(MODEL_STORAGE_KEY) || FREE_FALLBACK_MODEL; }
+    catch { return FREE_FALLBACK_MODEL; }
   });
 
-  // Load selected model from localStorage or use default
-  const [selectedModel, setSelectedModel] = useState(() => {
+  // Calls the API with automatic fallback to the free model on 404 / 402
+  const callWithFallback = async (msgs, sysprompt, model) => {
     try {
-      const saved = localStorage.getItem(MODEL_STORAGE_KEY);
-      return saved || 'openrouter/auto';
-    } catch (error) {
-      console.error('Error loading model selection:', error);
-      return 'openrouter/auto';
+      return await sendChatMessage(msgs, sysprompt, lang, model);
+    } catch (err) {
+      if (err.status === 401) {
+        toast.error(
+          lang === 'fa' ? 'کلید API نامعتبر یا منقضی است'
+          : lang === 'ar' ? 'مفتاح API غير صالح أو منتهي الصلاحية'
+          : 'API key invalid or expired'
+        );
+        throw err;
+      }
+      if ((err.status === 404 || err.status === 402) && model !== FREE_FALLBACK_MODEL) {
+        const reason = err.status === 404 ? 'Model not available' : 'No credits';
+        toast.warning(
+          lang === 'fa' ? `${reason} — درحال تغییر به مدل رایگان`
+          : lang === 'ar' ? `${reason} — يتم التبديل إلى النموذج المجاني`
+          : `${reason} — switching to free model`
+        );
+        setSelectedModel(FREE_FALLBACK_MODEL);
+        try { localStorage.setItem(MODEL_STORAGE_KEY, FREE_FALLBACK_MODEL); } catch {}
+        return await sendChatMessage(msgs, sysprompt, lang, FREE_FALLBACK_MODEL);
+      }
+      throw err;
     }
-  });
+  };
 
   const [input, setInput] = useState(initialMessage);
   const [loading, setLoading] = useState(false);
@@ -452,26 +621,15 @@ export default function AIAssistant() {
   const [profile] = useState({ goal: '', duration: '', group: '', budget: '', vibes: [] });
   const [showModelPicker, setShowModelPicker] = useState(false);
   const [showTripBuilder, setShowTripBuilder] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY;
-
-  // Initial greeting (only if no messages loaded)
+  // Create a new conversation on every page visit (mount)
   useEffect(() => {
-    if (messages.length === 0) {
-      const greet = cityHint
-        ? (lang === 'fa'
-            ? `سلام! دیدم به ${cityHint} علاقه داری — عالیه! چه چیزی تو را به این شهر می‌کشاند؟`
-            : lang === 'ar'
-            ? `مرحباً! أرى أنك مهتم بـ ${cityHint} — اختيار رائع! ما الذي يجذبك إلى هذه المدينة؟`
-            : `Salaam! I see you're curious about ${cityHint} — great choice. What's drawing you there?`)
-        : (lang === 'fa'
-            ? 'سلام! من راهنمای سفر هوشمند ایران تور ادوایزر هستم. بگو ببینم، چه چیزی تو را به ایران می‌کشاند؟'
-            : lang === 'ar'
-            ? 'مرحباً! أنا مستشار سفرك إلى إيران من Iran Tour Advisor. أخبرني، ما الذي يجذبك إلى إيران؟'
-            : "Salaam! I'm your Iran travel advisor at Iran Tour Advisor. Tell me — what's drawing you to Iran?");
-      setMessages([{ role: 'assistant', content: greet }]);
-    }
-    if (cityHint && !input) {
+    if (initDone.current) return;
+    initDone.current = true;
+    const greeting = buildGreeting(cityHint, lang);
+    createConversation(greeting, lang);
+    if (cityHint && !initialMessage) {
       setInput(
         lang === 'fa'
           ? `می‌خواهم سفری به ${cityHint} برنامه‌ریزی کنم.`
@@ -480,24 +638,12 @@ export default function AIAssistant() {
           : `I'd like to plan a trip to ${cityHint}.`
       );
     }
-  }, [cityHint, lang, messages.length, input]);
+  }, []); // intentionally empty — runs once on mount
 
-  // Save messages to localStorage whenever they change
+  // Save selected model to localStorage
   useEffect(() => {
-    try {
-      localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messages));
-    } catch (error) {
-      console.error('Error saving chat history:', error);
-    }
-  }, [messages]);
-
-  // Save selected model to localStorage whenever it changes
-  useEffect(() => {
-    try {
-      localStorage.setItem(MODEL_STORAGE_KEY, selectedModel);
-    } catch (error) {
-      console.error('Error saving model selection:', error);
-    }
+    try { localStorage.setItem(MODEL_STORAGE_KEY, selectedModel); }
+    catch {}
   }, [selectedModel]);
 
   // Fetch tours + guides once
@@ -509,37 +655,72 @@ export default function AIAssistant() {
         supabase.from('profiles').select('*').in('role', ['guide', 'agency']),
       ]);
       if (cancelled) return;
-      if (toursRes.error) console.error('[AIAssistant] tours fetch:', toursRes.error);
-      if (guidesRes.error) console.error('[AIAssistant] guides fetch:', guidesRes.error);
       setCatalogue({ tours: toursRes.data || [], guides: guidesRes.data || [], ready: true });
     })();
     return () => { cancelled = true; };
   }, []);
 
-  useEffect(() => {
-    if (!apiKey) {
-      console.warn('[AIAssistant] VITE_OPENROUTER_API_KEY is missing. Did you restart the dev server after editing .env?');
-    }
-  }, [apiKey]);
-
+  // Auto-scroll on new messages
   useEffect(() => {
     scrollerRef.current?.scrollTo({ top: scrollerRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages, loading]);
 
+  const handleNewChat = () => {
+    const greeting = buildGreeting(cityHint, lang);
+    createConversation(greeting, lang);
+    setInput('');
+    setSidebarOpen(false);
+  };
+
+  // Called by ChatMessage when user saves an edit.
+  // Truncates the conversation at that message, then re-sends to the API.
+  const handleEditAndResend = async (convId, msgId, newText) => {
+    if (loading) return;
+
+    const idx = messages.findIndex((m) => m.id === msgId);
+    if (idx === -1) return;
+
+    const messagesForApi = [
+      ...messages.slice(0, idx).map((m) => ({ role: m.role, content: m.content })),
+      { role: 'user', content: newText },
+    ];
+
+    // Truncate state + mark as edited
+    editMessage(convId, msgId, newText);
+    setLoading(true);
+
+    try {
+      const systemPromptText = buildSystemPrompt(catalogue.tours, catalogue.guides);
+      const responseText = await callWithFallback(messagesForApi, systemPromptText, selectedModel);
+      const { content, tours, guides } = extractRecommendation(responseText, catalogue.tours, catalogue.guides);
+      const assistantMsg = { role: 'assistant', content };
+      if (tours.length > 0 || guides.length > 0) assistantMsg.cards = { tours, guides };
+      appendMessage(convId, assistantMsg);
+    } catch (err) {
+      const friendly = lang === 'fa'
+        ? `متأسفم، مشکلی پیش آمد. (${err.message})`
+        : lang === 'ar'
+        ? `عذراً، حدث خطأ. (${err.message})`
+        : `Sorry — couldn't reach the assistant. (${err.message})`;
+      appendMessage(convId, { role: 'assistant', content: friendly });
+    } finally {
+      setLoading(false);
+      inputRef.current?.focus();
+    }
+  };
+
   const sendMessage = async () => {
-    const text = input.trim().toLowerCase();
+    const text = input.trim();
     if (!text || loading) return;
 
-    // Check if user wants to create a custom trip
+    // Trip builder shortcut
     const tripKeywords = ['custom trip', 'create trip', 'plan trip', 'custom itinerary', 'build trip'];
     const farsiKeywords = ['سفر سفارشی', 'سفر شخصی', 'برنامه‌ریزی سفر', 'ایجاد برنامه'];
     const arabicKeywords = ['رحلة مخصصة', 'خطة رحلة', 'خطة سفر'];
-
-    const wantsTripBuilder = tripKeywords.some(kw => text.includes(kw)) ||
-                           (lang === 'fa' && farsiKeywords.some(kw => text.includes(kw))) ||
-                           (lang === 'ar' && arabicKeywords.some(kw => text.includes(kw)));
-
-    if (wantsTripBuilder) {
+    const lc = text.toLowerCase();
+    if (tripKeywords.some((kw) => lc.includes(kw)) ||
+        (lang === 'fa' && farsiKeywords.some((kw) => text.includes(kw))) ||
+        (lang === 'ar' && arabicKeywords.some((kw) => text.includes(kw)))) {
       setShowTripBuilder(true);
       return;
     }
@@ -550,33 +731,45 @@ export default function AIAssistant() {
         : lang === 'ar'
         ? 'مفتاح API مفقود. يرجى التحقق من ملف .env.'
         : 'API key is missing. Please check your .env file.';
-      setMessages((prev) => [...prev, { role: 'assistant', content: missing }]);
+      const errId = activeId || createConversation(null, lang);
+      appendMessage(errId, { role: 'assistant', content: missing });
       return;
     }
 
-    const userMsg = { role: 'user', content: input.trim() };
-    const nextMessages = [...messages, userMsg];
-    setMessages(nextMessages);
+    // Ensure there is an active conversation
+    let convId = activeId;
+    if (!convId) {
+      if (!isLoggedIn) convId = createConversation(null, lang);
+    }
+
+    // For logged-in users: persist the conversation to Supabase on the first message
+    if (isLoggedIn && (!convId || !conversations.some((c) => c.id === convId))) {
+      convId = await persistConversation(text.slice(0, 40));
+      if (!convId) { setLoading(false); return; }
+    }
+
+    const userMsg = { role: 'user', content: text };
+    // Capture messages for the API call BEFORE state update
+    const messagesForApi = [...messages, userMsg];
+
+    appendMessage(convId, userMsg);
     setInput('');
     setLoading(true);
 
     try {
-      console.log(`[API] Calling OpenRouter with model: ${selectedModel}`);
       const systemPromptText = buildSystemPrompt(catalogue.tours, catalogue.guides);
-      const responseText = await sendChatMessage(nextMessages, systemPromptText, lang, selectedModel);
-      console.log('[API] Success response received');
+      const responseText = await callWithFallback(messagesForApi, systemPromptText, selectedModel);
       const { content, tours, guides } = extractRecommendation(responseText, catalogue.tours, catalogue.guides);
       const assistantMsg = { role: 'assistant', content };
       if (tours.length > 0 || guides.length > 0) assistantMsg.cards = { tours, guides };
-      setMessages((prev) => [...prev, assistantMsg]);
+      appendMessage(convId, assistantMsg);
     } catch (err) {
-      console.error('[APIError] request failed:', err);
       const friendly = lang === 'fa'
         ? `متأسفم، در ارتباط با دستیار مشکلی پیش آمد. (${err.message})`
         : lang === 'ar'
         ? `عذراً، تعذر الاتصال بالمساعد. (${err.message})`
         : `Sorry — I couldn't reach the assistant. (${err.message})`;
-      setMessages((prev) => [...prev, { role: 'assistant', content: friendly }]);
+      appendMessage(convId, { role: 'assistant', content: friendly });
     } finally {
       setLoading(false);
       inputRef.current?.focus();
@@ -587,7 +780,7 @@ export default function AIAssistant() {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
   };
 
-  // Sidebar recommendation data: use AI-picked cards if available, else catalogue slice
+  // Sidebar recommendation data
   const sidebarTours = useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i--) {
       if (messages[i].cards?.tours?.length > 0) return messages[i].cards.tours.slice(0, 4);
@@ -614,36 +807,53 @@ export default function AIAssistant() {
   return (
     <div
       dir={dir}
-      className="min-h-screen lg:h-screen w-full lg:overflow-hidden"
+      className="flex min-h-screen lg:h-screen w-full lg:overflow-hidden"
       style={{ background: C.white, color: C.ink }}
     >
-      <div className="mx-auto flex flex-col lg:flex-row lg:h-full max-w-[1480px]">
+      {/* ── Conversation History Sidebar ────────────────────────────────── */}
+      <ConversationSidebar
+        conversations={conversations}
+        activeId={activeId}
+        onNew={handleNewChat}
+        onSwitch={switchConversation}
+        onDelete={deleteConversation}
+        lang={lang}
+        dir={dir}
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        isLoadingConvs={isLoadingConvs}
+        isLoggedIn={isLoggedIn}
+      />
 
-        {/* ── Chat column ─────────────────────────────────────────────────── */}
+      {/* ── Main area (Chat + Recommendations) ────────────────────────── */}
+      <div className="flex flex-1 min-w-0 flex-col lg:flex-row lg:h-full">
+
+        {/* ── Chat column ──────────────────────────────────────────────── */}
         <section
-          className="relative flex flex-col w-full lg:w-[60%] lg:border-r lg:h-full"
+          className="relative flex flex-col flex-1 min-w-0 lg:border-r lg:h-full"
           style={{ borderColor: `${C.muted}20` }}
         >
           {/* Header */}
-          <header className="relative overflow-visible px-6 pt-8 pb-7 sm:px-10 sm:pt-10 sm:pb-9 shrink-0 z-50">
+          <header className="relative overflow-visible px-4 pt-6 pb-5 sm:px-8 sm:pt-9 sm:pb-7 shrink-0 z-50">
             <PersianPattern opacity={0.055} color={C.turq} size={64} />
             <div
               className="absolute inset-x-0 top-0 h-px"
               style={{ background: `linear-gradient(90deg, transparent, ${C.turq}55, transparent)` }}
             />
-            {/* Mobile back button — fixed top-left, only on small screens */}
-            <button
-              onClick={() => navigate(-1)}
-              className="fixed left-4 top-4 z-20 lg:hidden flex h-9 w-9 items-center justify-center rounded-xl transition-colors"
-              style={{ background: C.white, border: `1px solid ${C.muted}20`, color: C.teal, boxShadow: `0 2px 8px ${C.teal}10` }}
-              aria-label="Go back"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </button>
 
-            <div className="relative flex items-start justify-between gap-4">
-              <div className="flex items-center gap-3.5">
-                {/* Desktop back button — inline in header row */}
+            <div className="relative flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                {/* Sidebar toggle — all screen sizes */}
+                <button
+                  onClick={() => setSidebarOpen(true)}
+                  className="flex h-9 w-9 items-center justify-center rounded-xl transition-colors shrink-0"
+                  style={{ background: `${C.muted}10`, color: C.teal }}
+                  aria-label="Open conversation history"
+                >
+                  <Menu className="h-4 w-4" />
+                </button>
+
+                {/* Back button — desktop only */}
                 <button
                   onClick={() => navigate(-1)}
                   className="hidden lg:flex h-9 w-9 items-center justify-center rounded-xl transition-colors shrink-0"
@@ -652,46 +862,38 @@ export default function AIAssistant() {
                 >
                   <ArrowLeft className="h-4 w-4" />
                 </button>
-                <AriaMark size={48} pulse />
+
+                <AriaMark size={40} pulse />
                 <div>
                   <div
-                    className="text-[10.5px] font-semibold uppercase tracking-[0.18em]"
+                    className="text-[10px] font-semibold uppercase tracking-[0.18em]"
                     style={{ color: C.turq }}
                   >
                     Iran Tour Advisor
                   </div>
                   <h1
-                    className="mt-1 text-[22px] font-bold leading-tight sm:text-[28px]"
+                    className="text-[18px] font-bold leading-tight sm:text-[22px]"
                     style={{ color: C.teal, letterSpacing: '-0.01em' }}
                   >
                     {t('ai_title')}
                   </h1>
-                  <p className="mt-1 max-w-md text-[13px] leading-relaxed" style={{ color: C.muted }}>
-                    {t('ai_subtitle')}
-                  </p>
                 </div>
               </div>
-              <div className="flex items-center gap-2.5">
-                <ModelSelector model={selectedModel} onChange={setSelectedModel} open={showModelPicker} setOpen={setShowModelPicker} />
-                <button
-                  onClick={() => {
-                    if (window.confirm(lang === 'fa' ? 'آیا مطمئن هستید که می‌خواهید تاریخچه چت را پاک کنید؟' : lang === 'ar' ? 'هل تريد حذف سجل المحادثة؟' : 'Clear chat history?')) {
-                      setMessages([]);
-                      localStorage.removeItem(CHAT_STORAGE_KEY);
-                    }
-                  }}
-                  className="flex items-center gap-2 rounded-full px-3.5 py-2 text-sm font-medium transition-colors hover:opacity-80"
-                  style={{ background: '#ffffff70', backdropFilter: 'blur(12px)', border: `1px solid ${C.muted}30`, color: C.teal }}
-                  title={lang === 'fa' ? 'پاک کردن تاریخچه' : lang === 'ar' ? 'مسح السجل' : 'Clear chat'}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
+
+              <div className="flex items-center gap-2">
+                <ModelSelector
+                  model={selectedModel}
+                  onChange={setSelectedModel}
+                  open={showModelPicker}
+                  setOpen={setShowModelPicker}
+                />
                 <LanguageSwitcher lang={lang} onChange={switchLang} />
               </div>
             </div>
-            {/* Decorative carpet hairline */}
+
+            {/* Carpet hairline */}
             <div
-              className="mt-6 h-[2px] w-full"
+              className="mt-5 h-[2px] w-full"
               style={{
                 background: `repeating-linear-gradient(90deg, ${C.turq} 0 6px, transparent 6px 12px, ${C.muted} 12px 14px, transparent 14px 20px)`,
                 opacity: 0.45,
@@ -702,12 +904,48 @@ export default function AIAssistant() {
           {/* Messages */}
           <div
             ref={scrollerRef}
-            className="flex-1 min-h-0 overflow-y-auto px-6 py-6 sm:px-10"
-            style={{ minHeight: 320 }}
+            className="flex-1 min-h-0 overflow-y-auto px-4 py-6 sm:px-8"
           >
+            {isLoadingMsgs ? (
+              <div className="flex items-center justify-center h-40 gap-3" style={{ color: C.muted }}>
+                <Loader2 className="h-5 w-5 animate-spin" style={{ color: C.turq }} />
+                <span className="text-sm">
+                  {lang === 'fa' ? 'در حال بارگذاری…' : lang === 'ar' ? 'جارٍ التحميل…' : 'Loading…'}
+                </span>
+              </div>
+            ) : null}
             <div className="mx-auto flex max-w-[680px] flex-col gap-5">
               <AnimatePresence initial={false}>
-                {messages.map((msg, i) => <MessageBubble key={i} msg={msg} />)}
+                {messages.map((msg, i) => {
+                  const key = msg.id || i;
+                  const cards = msg.role === 'assistant' && msg.cards
+                    ? (
+                      <div className="space-y-3">
+                        {msg.cards.tours?.length > 0 && (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {msg.cards.tours.map((tour) => <TourCard key={tour.id} tour={tour} />)}
+                          </div>
+                        )}
+                        {msg.cards.guides?.length > 0 && (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {msg.cards.guides.map((guide) => <GuideCard key={guide.id} guide={guide} />)}
+                          </div>
+                        )}
+                      </div>
+                    )
+                    : null;
+                  return (
+                    <ChatMessage
+                      key={key}
+                      msg={msg}
+                      convId={activeId}
+                      onEdit={handleEditAndResend}
+                      loading={loading}
+                      lang={lang}
+                      renderCards={cards}
+                    />
+                  );
+                })}
               </AnimatePresence>
               {loading && (
                 <motion.div
@@ -729,7 +967,7 @@ export default function AIAssistant() {
           </div>
 
           {/* Composer */}
-          <div className="relative px-6 pb-7 pt-4 sm:px-10 shrink-0" style={{ background: C.white }}>
+          <div className="relative px-4 pb-6 pt-4 sm:px-8 shrink-0" style={{ background: C.white }}>
             <SuggestedReplies
               suggestions={suggestions}
               onPick={(text) => { setInput(text); inputRef.current?.focus(); }}
@@ -767,8 +1005,7 @@ export default function AIAssistant() {
               >
                 {loading
                   ? <Loader2 className="h-4 w-4 animate-spin" />
-                  : <Send className="h-4 w-4" />
-                }
+                  : <Send className="h-4 w-4" />}
               </button>
             </div>
             <p className="mt-2.5 text-center text-[11px]" style={{ color: `${C.muted}AA` }}>
@@ -781,13 +1018,13 @@ export default function AIAssistant() {
           </div>
         </section>
 
-        {/* ── Profile + Recommendations sidebar ───────────────────────────── */}
+        {/* ── Profile + Recommendations sidebar ──────────────────────── */}
         <motion.aside
           initial={{ opacity: 0, x: 24 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}
-          className="flex flex-col w-full lg:w-[40%] lg:h-full"
-          style={{ background: C.mist }}
+          className="hidden lg:flex flex-col shrink-0 lg:h-full overflow-y-auto"
+          style={{ width: 360, background: C.mist }}
         >
           {/* Profile panel */}
           <div className="px-6 pt-9 pb-6 sm:px-8 shrink-0">
@@ -806,20 +1043,6 @@ export default function AIAssistant() {
               <ProfileChip icon={Users}     label={lang === 'fa' ? 'نوع گروه' : lang === 'ar' ? 'نوع المجموعة'  : 'Group Type'}   value={profile.group}    filled={!!profile.group}    accent={C.muted} />
               <ProfileChip icon={Wallet}    label={lang === 'fa' ? 'بودجه'    : lang === 'ar' ? 'الميزانية'     : 'Budget Level'} value={profile.budget}   filled={!!profile.budget}   accent={C.turq} />
             </div>
-            {profile.vibes.length > 0 && (
-              <div className="mt-5 flex flex-wrap gap-1.5">
-                {profile.vibes.map((v) => (
-                  <span
-                    key={v.label}
-                    className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11.5px] font-medium"
-                    style={{ background: C.white, border: `1px solid ${C.muted}25`, color: C.teal }}
-                  >
-                    <v.icon className="h-3 w-3" style={{ color: C.turq }} />
-                    {v.label}
-                  </span>
-                ))}
-              </div>
-            )}
           </div>
 
           {/* Divider */}
@@ -836,14 +1059,14 @@ export default function AIAssistant() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 18 }}
                 transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-                className="flex-1 min-h-0 overflow-y-auto px-6 py-6 sm:px-8"
+                className="flex-1 px-6 py-6 sm:px-8"
               >
                 <SectionHeading
                   eyebrow="Curated by Aria"
                   title={lang === 'fa' ? 'پیشنهادات برای شما' : lang === 'ar' ? 'موصى به لك' : 'Recommended for You'}
                 />
                 {sidebarTours.length > 0 && (
-                  <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div className="mt-5 grid grid-cols-1 gap-3">
                     {sidebarTours.map((tour) => <TourCard key={tour.id} tour={tour} />)}
                   </div>
                 )}
