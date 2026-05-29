@@ -16,6 +16,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 const TOUR_TYPES = ['City Tour', 'Adventure', 'Cultural', 'Historical', 'Nature', 'Religious', 'Custom'];
 
+// destination is a text[] column; tolerate legacy string values too
+const cityList = (d) => (Array.isArray(d) ? d : d ? [d] : []);
+
 function fmt(dateStr) {
   if (!dateStr) return null;
   return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -100,7 +103,7 @@ function DetailsModal({ trip, guideId, onClose, onAccepted }) {
         <div className="sticky top-0 bg-card border-b border-border/30 px-5 py-4 flex items-start justify-between gap-3 rounded-t-2xl z-10">
           <div>
             <h3 className="font-heading text-base font-semibold text-foreground">
-              Trip to {trip.destination || 'Iran'}
+              Trip to {cityList(trip.destination).join(', ') || 'Iran'}
             </h3>
             <p className="font-body text-xs text-muted-foreground mt-0.5">
               Submitted {fmt(trip.created_at)}
@@ -265,11 +268,22 @@ function TripRequestCard({ trip, guideId, onAccepted, onViewDetails }) {
         <div className="flex items-start justify-between gap-3 mb-3">
           <div className="flex-1 min-w-0">
             <h3 className="font-heading text-base font-semibold text-foreground leading-snug truncate">
-              Trip to {trip.destination || 'Iran'}
+              Trip to {cityList(trip.destination).join(', ') || 'Iran'}
             </h3>
-            <div className="flex items-center gap-1.5 mt-1 text-muted-foreground">
+            <div className="flex items-center gap-1.5 mt-1 flex-wrap text-muted-foreground">
               <MapPin className="w-3.5 h-3.5 shrink-0 text-gold" />
-              <span className="font-body text-sm truncate">{trip.destination || '—'}</span>
+              {cityList(trip.destination).length > 0 ? (
+                cityList(trip.destination).map(city => (
+                  <span
+                    key={city}
+                    className="inline-flex items-center px-2 py-0.5 rounded-full bg-accent/10 text-accent text-xs font-medium border border-accent/20"
+                  >
+                    {city}
+                  </span>
+                ))
+              ) : (
+                <span className="font-body text-sm">—</span>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -429,7 +443,7 @@ export default function FindJobs() {
   }, [user?.id, loadRequests]);
 
   const filtered = trips.filter(trip => {
-    if (destFilter && !trip.destination?.toLowerCase().includes(destFilter.toLowerCase())) return false;
+    if (destFilter && !cityList(trip.destination).some(c => c.toLowerCase().includes(destFilter.toLowerCase()))) return false;
     if (tourTypeFilter && trip.tour_type !== tourTypeFilter) return false;
     return true;
   });

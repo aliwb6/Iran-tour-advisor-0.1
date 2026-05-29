@@ -14,6 +14,9 @@ import TripRequestForm from '@/components/profile/TripRequestForm';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 
+// destination is a text[] column; tolerate legacy string values too
+const cityList = (d) => (Array.isArray(d) ? d : d ? [d] : []);
+
 const STATUS_CONFIG = {
   pending: {
     label: 'Pending',
@@ -238,9 +241,16 @@ function TripCard({ trip, onRebroadcast, onRefresh }) {
             <h3 className="font-heading text-base font-semibold text-foreground leading-snug">
               {trip.title}
             </h3>
-            <div className="flex items-center gap-1.5 mt-1 text-muted-foreground">
+            <div className="flex items-center gap-1.5 mt-1 flex-wrap text-muted-foreground">
               <MapPin className="w-3.5 h-3.5 shrink-0 text-gold" />
-              <span className="font-body text-sm">{trip.destination}</span>
+              {cityList(trip.destination).map(city => (
+                <span
+                  key={city}
+                  className="inline-flex items-center px-2 py-0.5 rounded-full bg-accent/10 text-accent text-xs font-medium border border-accent/20"
+                >
+                  {city}
+                </span>
+              ))}
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">

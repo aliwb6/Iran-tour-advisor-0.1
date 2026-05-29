@@ -62,6 +62,8 @@ export default function RequestsPage() {
   );
 
   const mapToCard = (r) => {
+    // destination is a text[] column; tolerate legacy string values too
+    const cities = Array.isArray(r.destination) ? r.destination : r.destination ? [r.destination] : [];
     const hasTransport = r.assistance?.includes('Transportation') || Boolean(r.transportation);
     const hasAccomm    = r.assistance?.includes('Accommodation')  || Boolean(r.accommodation);
     const holidayLabel = HOLIDAY_TYPE_LABELS[r.holiday_type] || r.holiday_type;
@@ -75,10 +77,10 @@ export default function RequestsPage() {
     return {
       id:            r.id,
       title:         r.title
-        || (r.destination
-          ? `${lang === 'fa' ? 'سفر به' : lang === 'ar' ? 'رحلة إلى' : 'Trip to'} ${r.destination}`
+        || (cities.length
+          ? `${lang === 'fa' ? 'سفر به' : lang === 'ar' ? 'رحلة إلى' : 'Trip to'} ${cities.join(', ')}`
           : (lang === 'fa' ? 'درخواست سفر' : lang === 'ar' ? 'طلب رحلة' : 'Trip Request')),
-      destination:   r.destination,
+      destination:   cities,
       adults:        r.adults   ?? 1,
       children:      r.children ?? 0,
       startDate:     r.start_date,

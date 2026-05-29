@@ -52,6 +52,10 @@ export default function RequestCard({ request, onOpen }) {
   const Arrow = dir === 'rtl' ? ArrowLeft : ArrowRight;
   const status = request.status || 'waiting';
   const statusLabel = (STATUS_LABELS[lang] || STATUS_LABELS.en)[status] || status;
+  // destination is a text[] column; tolerate legacy string values too
+  const cities = Array.isArray(request.destination)
+    ? request.destination
+    : request.destination ? [request.destination] : [];
 
   const labels = {
     transportation: lang === 'fa' ? 'حمل‌ونقل' : lang === 'ar' ? 'المواصلات' : 'Transportation',
@@ -77,10 +81,17 @@ export default function RequestCard({ request, onOpen }) {
           <h3 className="font-heading text-xl sm:text-2xl font-semibold text-foreground leading-tight">
             {request.title}
           </h3>
-          {request.destination && (
-            <div className="flex items-center gap-1.5 mt-2 text-sm text-muted-foreground">
-              <MapPin className="w-4 h-4 text-gold" />
-              {request.destination}
+          {cities.length > 0 && (
+            <div className="flex items-center gap-1.5 mt-2 flex-wrap text-sm text-muted-foreground">
+              <MapPin className="w-4 h-4 text-gold shrink-0" />
+              {cities.map(city => (
+                <span
+                  key={city}
+                  className="inline-flex items-center px-2 py-0.5 rounded-full bg-accent/10 text-accent text-xs font-medium border border-accent/20"
+                >
+                  {city}
+                </span>
+              ))}
             </div>
           )}
         </div>

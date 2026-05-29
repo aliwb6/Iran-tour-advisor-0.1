@@ -5,7 +5,10 @@ export async function createTripRequest(travelerId, tripData) {
     .from('trip_requests')
     .insert({
       traveler_id: travelerId,
-      destination: tripData.destination,
+      // destination is a text[] column — accept either a string or an array
+      destination: Array.isArray(tripData.destination)
+        ? tripData.destination
+        : tripData.destination ? [tripData.destination] : [],
       start_date: tripData.dates?.start || null,
       end_date: tripData.dates?.end || null,
       adults: tripData.groupSize || 1,
@@ -87,14 +90,19 @@ export async function getMyTripRequests(userId) {
   if (error) throw error;
   if (!trips || trips.length === 0) return [];
 
-  const normalized = trips.map(t => ({
+  const normalized = trips.map(t => {
+    // destination is text[]; guard against legacy string rows too
+    const cities = Array.isArray(t.destination) ? t.destination : t.destination ? [t.destination] : [];
+    return {
     ...t,
-    title: t.destination ? `Trip to ${t.destination}` : 'Trip Request',
+    destination: cities,
+    title: cities.length ? `Trip to ${cities.join(', ')}` : 'Trip Request',
     travel_dates: t.start_date ? { start: t.start_date, end: t.end_date } : null,
     group_size: (t.adults || t.adult_count || 1) + (t.children || t.child_count || 0),
     status: t.status || 'pending',
     source: t.traveler_id ? undefined : 'request',
-  }));
+    };
+  });
 
   const tripIds = normalized.map(t => t.id);
   const { data: slots } = await supabase

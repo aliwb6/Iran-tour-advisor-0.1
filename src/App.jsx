@@ -35,6 +35,7 @@ import RequestsPage from '@/pages/profile/RequestsPage';
 import CityPage from '@/pages/CityPage';
 import FindJobs from '@/pages/FindJobs';
 import MyTripRequests from '@/pages/MyTripRequests';
+import RequestDetailPage from '@/pages/profile/RequestDetailPage';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth } = useAuth();
@@ -73,6 +74,7 @@ const AuthenticatedApp = () => {
         <Route path="/profile/settings" element={<SettingsPage />} />
         <Route path="/profile/bookings" element={<BookingsPage />} />
         <Route path="/profile/requests" element={<RequestsPage />} />
+        <Route path="/profile/requests/:id" element={<RequestDetailPage />} />
         <Route path="/find-jobs" element={<FindJobs />} />
         <Route path="/my-trips" element={<MyTripRequests />} />
       </Route>

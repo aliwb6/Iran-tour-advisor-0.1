@@ -18,6 +18,9 @@ function fmt(dateStr) {
   return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+// destination is a text[] column; tolerate legacy string values too
+const cityList = (d) => (Array.isArray(d) ? d : d ? [d] : []);
+
 const SLOT_LABEL = {
   accepted:  { text: 'Waiting for tourist',  color: 'text-yellow-400' },
   selected:  { text: 'You were chosen! 🎉',  color: 'text-emerald-400' },
@@ -82,7 +85,7 @@ function AvailableCard({ req, guideId, onAccepted }) {
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex-1 min-w-0">
           <h3 className="text-white font-semibold text-sm leading-snug">
-            Trip to {req.destination || 'Iran'}
+            Trip to {cityList(req.destination).join(', ') || 'Iran'}
           </h3>
           <p className="text-white/40 text-[11px] mt-0.5">
             Submitted {fmt(req.created_at)}
