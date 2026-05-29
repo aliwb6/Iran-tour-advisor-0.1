@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  X, ChevronLeft, ChevronRight, Check, Plus, Package,
+  X, ChevronLeft, ChevronRight, Check,
   MapPin, Car, Hotel, ChevronDown, Loader2,
 } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
@@ -10,10 +10,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 const IRANIAN_CITIES = [
-  'Tehran', 'Isfahan', 'Shiraz', 'Yazd', 'Tabriz',
-  'Kashan', 'Mashhad', 'Kerman', 'Qom', 'Rasht',
-  'Ahvaz', 'Hamadan', 'Zanjan', 'Sari', 'Gorgan',
-  'Bandar Abbas', 'Kish', 'Qeshm', 'Urmia', 'Ardabil',
+  'Tehran', 'Isfahan', 'Shiraz', 'Yazd', 'Mashhad',
+  'Tabriz', 'Kerman', 'Kashan', 'Qom', 'Rasht',
 ];
 
 const GUIDE_LANGUAGES = [
@@ -29,11 +27,11 @@ const HOLIDAY_TYPES = [
 ];
 
 const ADDITIONAL_SERVICES = [
-  { id: 'Air Tickets',        label: 'Air Tickets',        emoji: '✈️' },
-  { id: 'Train Tickets',      label: 'Train Tickets',      emoji: '🚂' },
-  { id: 'Attraction Tickets', label: 'Attraction Tickets', emoji: '🎟️' },
-  { id: 'Visa',               label: 'Visa',               emoji: '📋' },
-  { id: 'Airport Transfer',   label: 'Airport Transfer',   emoji: '🚗' },
+  { id: 'air_tickets',        label: 'Air Tickets',        emoji: '✈️' },
+  { id: 'train_tickets',      label: 'Train Tickets',      emoji: '🚂' },
+  { id: 'attraction_tickets', label: 'Attraction Tickets', emoji: '🎟️' },
+  { id: 'visa',               label: 'Visa',               emoji: '📋' },
+  { id: 'airport_transfer',   label: 'Airport Transfer',   emoji: '🚗' },
 ];
 
 const STAR_RATINGS = [
@@ -71,7 +69,7 @@ const HOURS   = Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '
 const MINUTES = ['00', '15', '30', '45'];
 
 const INITIAL_FORM = {
-  destinations: [],
+  destination: '',
   start_date: '',
   end_date: '',
   arrival_hour: '09',
@@ -87,7 +85,7 @@ const INITIAL_FORM = {
   assistance: [],
   accommodation_stars: null,
   requirements: '',
-  holiday_types: [],
+  holiday_types: [],   // text[] in Supabase — migration: ALTER TABLE trip_requests ADD COLUMN holiday_types text[];
   additional_services: [],
   tour_type: '',
 };
@@ -119,6 +117,7 @@ function DatePickerInput({ value, onChange, otherDate }) {
   const wrapperRef = useRef(null);
   const todayStr   = getTodayStr();
 
+  // Sync view to selected (or other) date when the picker opens
   useEffect(() => {
     if (!open) return;
     const src = value || otherDate;
@@ -129,6 +128,7 @@ function DatePickerInput({ value, onChange, otherDate }) {
     }
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Close on outside click
   useEffect(() => {
     if (!open) return;
     const handler = (e) => {
@@ -150,7 +150,7 @@ function DatePickerInput({ value, onChange, otherDate }) {
 
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
   const offsetRaw   = new Date(viewYear, viewMonth, 1).getDay();
-  const offset      = offsetRaw === 0 ? 6 : offsetRaw - 1;
+  const offset      = offsetRaw === 0 ? 6 : offsetRaw - 1; // Mon = 0
 
   const rangeStart = value && otherDate ? (value <= otherDate ? value : otherDate) : null;
   const rangeEnd   = value && otherDate ? (value <= otherDate ? otherDate : value) : null;
@@ -183,6 +183,7 @@ function DatePickerInput({ value, onChange, otherDate }) {
             transition={{ duration: 0.15, ease: [0.22, 1, 0.36, 1] }}
             className="absolute top-full left-0 mt-1.5 z-50 bg-card border border-border/60 rounded-2xl shadow-2xl p-4 w-[272px]"
           >
+            {/* Month navigation */}
             <div className="flex items-center justify-between mb-3">
               <button
                 type="button" onClick={prevMonth}
@@ -201,6 +202,7 @@ function DatePickerInput({ value, onChange, otherDate }) {
               </button>
             </div>
 
+            {/* Day-of-week headers */}
             <div className="grid grid-cols-7 mb-0.5">
               {DAY_HEADERS.map(d => (
                 <div key={d} className="flex items-center justify-center text-[10px] font-medium text-muted-foreground/70 pb-1">
@@ -209,6 +211,7 @@ function DatePickerInput({ value, onChange, otherDate }) {
               ))}
             </div>
 
+            {/* Day cells */}
             <div className="grid grid-cols-7">
               {Array.from({ length: offset }, (_, i) => <div key={`p${i}`} className="h-9" />)}
               {Array.from({ length: daysInMonth }, (_, i) => {
@@ -248,91 +251,6 @@ function DatePickerInput({ value, onChange, otherDate }) {
                 );
               })}
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
-// ── CityMultiSelect ────────────────────────────────────────────────────────
-
-function CityMultiSelect({ values, onChange }) {
-  const [open, setOpen]     = useState(false);
-  const [search, setSearch] = useState('');
-  const wrapRef  = useRef(null);
-  const inputRef = useRef(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const h = (e) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
-    };
-    document.addEventListener('mousedown', h);
-    return () => document.removeEventListener('mousedown', h);
-  }, [open]);
-
-  const filtered = IRANIAN_CITIES.filter(
-    c => !values.includes(c) && c.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const remove = (city) => onChange(values.filter(c => c !== city));
-  const add    = (city) => { onChange([...values, city]); setSearch(''); inputRef.current?.focus(); };
-
-  return (
-    <div className="relative" ref={wrapRef}>
-      <div
-        className={`min-h-[42px] px-3 py-2 bg-background/50 border rounded-xl flex flex-wrap gap-1.5 cursor-text transition-colors ${
-          open ? 'border-accent' : 'border-border/40'
-        }`}
-        onClick={() => { setOpen(true); setTimeout(() => inputRef.current?.focus(), 0); }}
-      >
-        {values.map(city => (
-          <span
-            key={city}
-            className="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full text-xs font-medium bg-accent/10 text-accent border border-accent/25"
-          >
-            {city}
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); remove(city); }}
-              className="w-4 h-4 rounded-full hover:bg-accent/20 flex items-center justify-center transition-colors"
-            >
-              <X className="w-2.5 h-2.5" />
-            </button>
-          </span>
-        ))}
-        <input
-          ref={inputRef}
-          value={search}
-          onChange={e => { setSearch(e.target.value); setOpen(true); }}
-          onFocus={() => setOpen(true)}
-          onKeyDown={e => { if (e.key === 'Escape') setOpen(false); }}
-          placeholder={values.length === 0 ? 'Select one or more cities…' : ''}
-          className="flex-1 min-w-[120px] bg-transparent text-sm outline-none text-foreground placeholder:text-muted-foreground/50 py-0.5"
-        />
-      </div>
-
-      <AnimatePresence>
-        {open && filtered.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: -4, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -4, scale: 0.98 }}
-            transition={{ duration: 0.13, ease: [0.22, 1, 0.36, 1] }}
-            className="absolute left-0 top-full mt-1.5 z-50 w-full bg-card border border-border/60 rounded-xl shadow-xl max-h-48 overflow-y-auto py-1"
-          >
-            {filtered.map(city => (
-              <button
-                key={city}
-                type="button"
-                onMouseDown={(e) => { e.preventDefault(); add(city); }}
-                className="flex items-center gap-2 w-full px-3 py-2 text-sm text-foreground hover:bg-accent/10 hover:text-accent transition-colors text-left"
-              >
-                <MapPin className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                {city}
-              </button>
-            ))}
           </motion.div>
         )}
       </AnimatePresence>
@@ -494,17 +412,27 @@ function StepIndicator({ step }) {
 function Step1({ form, set, toggle, toggleAssistance, errors }) {
   return (
     <div className="space-y-5">
-      {/* Destination — multi-city select */}
+      {/* Destination */}
       <div>
         <FieldLabel>I am travelling to</FieldLabel>
-        <CityMultiSelect
-          values={form.destinations}
-          onChange={v => set('destinations', v)}
-        />
-        <FieldError msg={errors?.destinations} />
+        <div className="relative">
+          <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+          <select
+            value={form.destination}
+            onChange={e => set('destination', e.target.value)}
+            className="w-full pl-9 pr-8 py-2.5 bg-background/50 border border-border/40 rounded-xl text-sm text-foreground focus:outline-none focus:border-accent appearance-none cursor-pointer transition-colors"
+          >
+            <option value="">Select a city...</option>
+            {IRANIAN_CITIES.map(city => (
+              <option key={city} value={city}>{city}</option>
+            ))}
+          </select>
+          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+        </div>
+        <FieldError msg={errors?.destination} />
       </div>
 
-      {/* Dates */}
+      {/* Dates — custom animated pickers */}
       <div className="grid grid-cols-2 gap-3">
         <div>
           <p className="text-xs font-medium text-muted-foreground mb-2">Start Date</p>
@@ -578,7 +506,7 @@ function Step1({ form, set, toggle, toggleAssistance, errors }) {
         <FieldError msg={errors?.guide_languages} />
       </div>
 
-      {/* Assistance */}
+      {/* Assistance + star ratings */}
       <div>
         <FieldLabel>I need assistance with</FieldLabel>
         <div className="flex gap-3">
@@ -596,6 +524,7 @@ function Step1({ form, set, toggle, toggleAssistance, errors }) {
           />
         </div>
 
+        {/* FIX 1 — Star rating row, animates in when Accommodation is selected */}
         <AnimatePresence>
           {form.assistance.includes('Accommodation') && (
             <motion.div
@@ -632,34 +561,7 @@ function Step1({ form, set, toggle, toggleAssistance, errors }) {
 
 // ── Step 2: Preferences ────────────────────────────────────────────────────
 
-function Step2({
-  form, set, toggle, errors,
-  customHolidayTypes, onAddHolidayType,
-  customAdditionalServices, onAddAdditionalService,
-}) {
-  const [newHolidayType,    setNewHolidayType]    = useState('');
-  const [showHolidayInput,  setShowHolidayInput]  = useState(false);
-  const [newService,        setNewService]        = useState('');
-  const [showServiceInput,  setShowServiceInput]  = useState(false);
-  const holidayInputRef = useRef(null);
-  const serviceInputRef = useRef(null);
-
-  const submitHolidayType = () => {
-    const v = newHolidayType.trim();
-    if (!v) return;
-    onAddHolidayType(v);
-    setNewHolidayType('');
-    setShowHolidayInput(false);
-  };
-
-  const submitService = () => {
-    const v = newService.trim();
-    if (!v) return;
-    onAddAdditionalService(v);
-    setNewService('');
-    setShowServiceInput(false);
-  };
-
+function Step2({ form, set, toggle, errors }) {
   return (
     <div className="space-y-6">
       {/* Requirements */}
@@ -674,7 +576,7 @@ function Step2({
         />
       </div>
 
-      {/* Holiday types */}
+      {/* Holiday type — FIX 3: multi-select */}
       <div>
         <FieldLabel>Type of holiday I am looking for</FieldLabel>
         <div className="grid grid-cols-5 gap-2">
@@ -688,71 +590,6 @@ function Step2({
               multi
             />
           ))}
-          {customHolidayTypes.map(ct => (
-            <IconGridItem
-              key={ct}
-              selected={form.holiday_types.includes(ct)}
-              onClick={() => toggle('holiday_types', ct)}
-              emoji="✨"
-              label={ct}
-              multi
-            />
-          ))}
-        </div>
-
-        {/* Add custom holiday type */}
-        <div className="mt-2.5">
-          <AnimatePresence mode="wait">
-            {showHolidayInput ? (
-              <motion.div
-                key="input"
-                initial={{ opacity: 0, y: -4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -4 }}
-                className="flex gap-2"
-              >
-                <input
-                  ref={holidayInputRef}
-                  autoFocus
-                  value={newHolidayType}
-                  onChange={e => setNewHolidayType(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter') submitHolidayType();
-                    if (e.key === 'Escape') { setShowHolidayInput(false); setNewHolidayType(''); }
-                  }}
-                  placeholder="e.g. Spiritual, Photography…"
-                  className="flex-1 px-3 py-1.5 text-xs bg-background/50 border border-border/40 rounded-lg focus:outline-none focus:border-accent transition-colors"
-                />
-                <button
-                  type="button"
-                  onClick={submitHolidayType}
-                  disabled={!newHolidayType.trim()}
-                  className="px-3 py-1.5 rounded-lg bg-accent text-white text-xs font-medium disabled:opacity-40 transition-colors"
-                >
-                  Add
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setShowHolidayInput(false); setNewHolidayType(''); }}
-                  className="px-3 py-1.5 rounded-lg border border-border/40 text-muted-foreground text-xs hover:text-foreground transition-colors"
-                >
-                  Cancel
-                </button>
-              </motion.div>
-            ) : (
-              <motion.button
-                key="btn"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                type="button"
-                onClick={() => setShowHolidayInput(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-dashed border-border/60 text-xs font-medium text-muted-foreground hover:border-accent hover:text-accent transition-colors"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                Add custom
-              </motion.button>
-            )}
-          </AnimatePresence>
         </div>
         <FieldError msg={errors?.holiday_types} />
       </div>
@@ -771,71 +608,6 @@ function Step2({
               multi
             />
           ))}
-          {customAdditionalServices.map(cs => (
-            <IconGridItem
-              key={cs}
-              selected={form.additional_services.includes(cs)}
-              onClick={() => toggle('additional_services', cs)}
-              emoji="📦"
-              label={cs}
-              multi
-            />
-          ))}
-        </div>
-
-        {/* Add custom service */}
-        <div className="mt-2.5">
-          <AnimatePresence mode="wait">
-            {showServiceInput ? (
-              <motion.div
-                key="input"
-                initial={{ opacity: 0, y: -4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -4 }}
-                className="flex gap-2"
-              >
-                <input
-                  ref={serviceInputRef}
-                  autoFocus
-                  value={newService}
-                  onChange={e => setNewService(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter') submitService();
-                    if (e.key === 'Escape') { setShowServiceInput(false); setNewService(''); }
-                  }}
-                  placeholder="e.g. Camel Riding, Photography Guide…"
-                  className="flex-1 px-3 py-1.5 text-xs bg-background/50 border border-border/40 rounded-lg focus:outline-none focus:border-accent transition-colors"
-                />
-                <button
-                  type="button"
-                  onClick={submitService}
-                  disabled={!newService.trim()}
-                  className="px-3 py-1.5 rounded-lg bg-accent text-white text-xs font-medium disabled:opacity-40 transition-colors"
-                >
-                  Add
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setShowServiceInput(false); setNewService(''); }}
-                  className="px-3 py-1.5 rounded-lg border border-border/40 text-muted-foreground text-xs hover:text-foreground transition-colors"
-                >
-                  Cancel
-                </button>
-              </motion.div>
-            ) : (
-              <motion.button
-                key="btn"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                type="button"
-                onClick={() => setShowServiceInput(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-dashed border-border/60 text-xs font-medium text-muted-foreground hover:border-accent hover:text-accent transition-colors"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                Add service
-              </motion.button>
-            )}
-          </AnimatePresence>
         </div>
       </div>
 
@@ -862,7 +634,7 @@ function Step2({
 
 // ── Main export ────────────────────────────────────────────────────────────
 
-export default function TripRequestForm({ isOpen, onClose, onSuccess, initialData }) {
+export default function TripRequestForm({ isOpen, onClose }) {
   const { user }       = useAuth();
   const queryClient    = useQueryClient();
   const [step, setStep]           = useState(1);
@@ -870,49 +642,6 @@ export default function TripRequestForm({ isOpen, onClose, onSuccess, initialDat
   const [form, setForm]           = useState(INITIAL_FORM);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors]       = useState({});
-
-  const [customHolidayTypes,       setCustomHolidayTypes]       = useState([]);
-  const [customAdditionalServices, setCustomAdditionalServices] = useState([]);
-
-  // Pre-populate from initialData when modal opens
-  useEffect(() => {
-    if (!initialData || !isOpen) return;
-
-    const standardHT = HOLIDAY_TYPES.map(t => t.id);
-    const customHT   = (initialData.holiday_types || []).filter(t => !standardHT.includes(t));
-
-    const standardAS = ADDITIONAL_SERVICES.map(s => s.id);
-    const customAS   = (initialData.additional_services || []).filter(s => !standardAS.includes(s));
-
-    setCustomHolidayTypes(customHT);
-    setCustomAdditionalServices(customAS);
-
-    setForm(f => ({
-      ...f,
-      destinations:        initialData.destinations_array
-        || (initialData.destination
-            ? initialData.destination.split(',').map(s => s.trim()).filter(Boolean)
-            : []),
-      start_date:          initialData.start_date  || '',
-      end_date:            initialData.end_date    || '',
-      timings_flexible:    initialData.timings_flexible ?? false,
-      adults:              Number(initialData.adults)   || 1,
-      children:            Number(initialData.children) || 0,
-      guide_languages:     initialData.guide_languages  || [],
-      requirements:        initialData.requirements     || '',
-      holiday_types:       initialData.holiday_types    || [],
-      additional_services: initialData.additional_services || [],
-      tour_type:
-        initialData.tour_type === 'private' ? 'Private Tour'
-        : initialData.tour_type === 'group' ? 'Group Tour'
-        : initialData.tour_type || '',
-      assistance: [
-        ...(initialData.needs_accommodation ? ['Accommodation'] : []),
-        ...(initialData.needs_transport     ? ['Transportation'] : []),
-      ],
-      accommodation_stars: initialData.accommodation_stars || null,
-    }));
-  }, [initialData, isOpen]);
 
   // Close on Escape
   useEffect(() => {
@@ -922,16 +651,27 @@ export default function TripRequestForm({ isOpen, onClose, onSuccess, initialDat
     return () => window.removeEventListener('keydown', onKey);
   }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const set = (key, value) => setForm(f => ({ ...f, [key]: value }));
+  const set = (key, value) => setForm(f => {
+    // Auto-correct end_date: clamp to start_date when picked date is earlier
+    if (key === 'end_date' && f.start_date && value < f.start_date) {
+      return { ...f, end_date: f.start_date };
+    }
+    // Auto-clear end_date when start_date is pushed past the current end
+    if (key === 'start_date' && f.end_date && value > f.end_date) {
+      return { ...f, start_date: value, end_date: value };
+    }
+    return { ...f, [key]: value };
+  });
 
   const toggle = (key, item) => setForm(f => {
     const arr = f[key];
     return { ...f, [key]: arr.includes(item) ? arr.filter(x => x !== item) : [...arr, item] };
   });
 
+  // FIX 1 — clear accommodation_stars when Accommodation is deselected
   const toggleAssistance = (item) => {
     setForm(f => {
-      const removing      = f.assistance.includes(item);
+      const removing    = f.assistance.includes(item);
       const newAssistance = removing
         ? f.assistance.filter(x => x !== item)
         : [...f.assistance, item];
@@ -943,36 +683,22 @@ export default function TripRequestForm({ isOpen, onClose, onSuccess, initialDat
     });
   };
 
-  const addCustomHolidayType = (label) => {
-    if (customHolidayTypes.includes(label)) return;
-    setCustomHolidayTypes(prev => [...prev, label]);
-    // Auto-select the new custom type
-    setForm(f => ({ ...f, holiday_types: [...f.holiday_types, label] }));
-  };
-
-  const addCustomAdditionalService = (label) => {
-    if (customAdditionalServices.includes(label)) return;
-    setCustomAdditionalServices(prev => [...prev, label]);
-    setForm(f => ({ ...f, additional_services: [...f.additional_services, label] }));
-  };
-
   const handleClose = () => {
     setStep(1);
     setDirection(1);
     setForm(INITIAL_FORM);
     setErrors({});
-    setCustomHolidayTypes([]);
-    setCustomAdditionalServices([]);
     onClose();
   };
 
+  // FIX 4 — full Step 1 validation before advancing
   const goNext = () => {
     const errs = {};
-    if (!form.destinations.length) errs.destinations  = 'Please select at least one destination.';
-    if (!form.start_date)          errs.start_date     = 'Please select a start date.';
-    if (!form.end_date)            errs.end_date       = 'Please select an end date.';
-    if (form.start_date && form.end_date && form.end_date <= form.start_date)
-      errs.end_date = 'End date must be after start date.';
+    if (!form.destination)    errs.destination    = 'Please select a destination.';
+    if (!form.start_date)     errs.start_date     = 'Please select a start date.';
+    if (!form.end_date)       errs.end_date       = 'Please select an end date.';
+    if (form.start_date && form.end_date && form.end_date < form.start_date)
+      errs.end_date = 'End date cannot be before start date.';
     if (!form.guide_languages.length)
       errs.guide_languages = 'Please select at least one language.';
 
@@ -988,6 +714,7 @@ export default function TripRequestForm({ isOpen, onClose, onSuccess, initialDat
     setStep(1);
   };
 
+  // FIX 4 — robust submit with validation, logging, spinner, and error toasts
   const handleSubmit = async () => {
     if (!user?.id) {
       toast.error('Please log in to submit a request.');
@@ -1007,7 +734,7 @@ export default function TripRequestForm({ isOpen, onClose, onSuccess, initialDat
 
       const payload = {
         user_id:             user.id,
-        destination:         form.destinations.join(', '),
+        destination:         form.destination,
         start_date:          form.start_date  || null,
         end_date:            form.end_date    || null,
         arrival_time,
@@ -1026,13 +753,13 @@ export default function TripRequestForm({ isOpen, onClose, onSuccess, initialDat
         created_at:          new Date().toISOString(),
       };
 
+      console.log('[TripRequestForm] submit payload:', payload);
+
       const { error } = await supabase.from('trip_requests').insert(payload);
       if (error) throw error;
 
       queryClient.invalidateQueries({ queryKey: ['trip_requests', user.id] });
       toast.success('Trip request submitted! Local guides will reach out soon.');
-
-      onSuccess?.();
       handleClose();
     } catch (err) {
       toast.error(err?.message || 'Failed to submit. Please try again.');
@@ -1139,20 +866,10 @@ export default function TripRequestForm({ isOpen, onClose, onSuccess, initialDat
                     exit={{ x: direction * -36, opacity: 0 }}
                     transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
                   >
-                    {step === 1 ? (
-                      <Step1
-                        form={form} set={set} toggle={toggle}
-                        toggleAssistance={toggleAssistance} errors={errors}
-                      />
-                    ) : (
-                      <Step2
-                        form={form} set={set} toggle={toggle} errors={errors}
-                        customHolidayTypes={customHolidayTypes}
-                        onAddHolidayType={addCustomHolidayType}
-                        customAdditionalServices={customAdditionalServices}
-                        onAddAdditionalService={addCustomAdditionalService}
-                      />
-                    )}
+                    {step === 1
+                      ? <Step1 form={form} set={set} toggle={toggle} toggleAssistance={toggleAssistance} errors={errors} />
+                      : <Step2 form={form} set={set} toggle={toggle} errors={errors} />
+                    }
                   </motion.div>
                 </AnimatePresence>
               </div>
