@@ -8,7 +8,11 @@
       "mcp__claude_ai_Supabase__apply_migration",
       "Bash(node -e \"const { FileText, FileSignature, Camera, Bell, Briefcase } = require\\('lucide-react'\\); console.log\\('OK', !!FileText, !!FileSignature, !!Camera\\);\")",
       "Bash(node --input-type=module -e \"import pkg from 'lucide-react'; console.log\\('FileText:', 'FileText' in pkg, 'FileSignature:', 'FileSignature' in pkg, 'Camera:', 'Camera' in pkg\\);\")",
-      "Bash(node --input-type=module -e \"import * as L from 'lucide-react'; console.log\\('FileText:', 'FileText' in L, 'FileSignature:', 'FileSignature' in L, 'Camera:', 'Camera' in L, 'FilePen:', 'FilePen' in L, 'IdCard:', 'IdCard' in L\\);\")"
+      "Bash(node --input-type=module -e \"import * as L from 'lucide-react'; console.log\\('FileText:', 'FileText' in L, 'FileSignature:', 'FileSignature' in L, 'Camera:', 'Camera' in L, 'FilePen:', 'FilePen' in L, 'IdCard:', 'IdCard' in L\\);\")",
+      "Bash(git pull *)",
+      "Bash(git config *)",
+      "Bash(git fetch *)",
+      "Bash(git rev-list *)"
     ]
   }
 }
