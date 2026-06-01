@@ -22,45 +22,39 @@ export async function createTripRequest(travelerId, tripData) {
   return data;
 }
 
-// ── Guide: fetch all open requests this guide hasn't accepted yet ─────────────
+// ── Guide: fetch all open trip requests ───────────────────────────────────────
+// Returns every open request the guide could still see, including ones they've
+// already applied to. Each trip carries `my_slot` (the guide's existing slot
+// row, or null) so the UI can swap the Apply button for a "Proposal submitted"
+// pill instead of hiding the card.
 
 export async function getAvailableTripRequests(guideId) {
-  const { data: mySlots } = await supabase
-    .from('trip_slots')
-    .select('trip_request_id')
-    .eq('guide_id', guideId)
-    .neq('status', 'rejected');
-
-  const excludeIds = (mySlots || []).map(s => s.trip_request_id);
-
-  let query = supabase
+  const { data: trips, error } = await supabase
     .from('trip_requests')
     .select('*')
     .in('status', ['pending', 'active'])
     .order('created_at', { ascending: false });
 
-  if (excludeIds.length > 0) {
-    query = query.not('id', 'in', `(${excludeIds.join(',')})`);
-  }
-
-  const { data: trips, error } = await query;
   if (error) throw error;
   if (!trips || trips.length === 0) return [];
 
-  // Compute accepted slot counts from trip_slots (no slot_count column in DB)
   const reqIds = trips.map(t => t.id);
+
+  // Pull active slot rows so we can both count proposals and detect "mine"
   const { data: slots } = await supabase
     .from('trip_slots')
-    .select('trip_request_id')
+    .select('id, trip_request_id, guide_id, status, price, currency, price_type, price_period, message, accepted_at')
     .in('trip_request_id', reqIds)
     .neq('status', 'rejected');
 
   const countMap = {};
+  const mineMap = {};
   (slots || []).forEach(s => {
     countMap[s.trip_request_id] = (countMap[s.trip_request_id] || 0) + 1;
+    if (s.guide_id === guideId) mineMap[s.trip_request_id] = s;
   });
 
-  // Fetch traveler profiles
+  // Traveler profile lookups
   const travelerIds = [...new Set(trips.map(t => t.user_id).filter(Boolean))];
   let profileMap = {};
   if (travelerIds.length > 0) {
@@ -75,9 +69,11 @@ export async function getAvailableTripRequests(guideId) {
     .map(trip => ({
       ...trip,
       accepted_count: countMap[trip.id] || 0,
+      my_slot: mineMap[trip.id] || null,
       traveler: profileMap[trip.user_id] || null,
     }))
-    .filter(trip => trip.accepted_count < 5);
+    // Hide fully-booked requests unless this guide is one of the applicants
+    .filter(trip => trip.accepted_count < 5 || trip.my_slot);
 }
 
 // ── Tourist: fetch my trip requests + their guide slots ──────────────────────
@@ -139,7 +135,7 @@ export async function getMyTripRequests(userId) {
 export async function fetchMyAcceptedRequests(guideId) {
   const { data: slots, error: sErr } = await supabase
     .from('trip_slots')
-    .select('id, status, accepted_at, trip_request_id')
+    .select('id, status, accepted_at, trip_request_id, price, currency, price_type, price_period, itinerary, included, excluded, message, images')
     .eq('guide_id', guideId);
 
   if (sErr) throw sErr;
@@ -157,40 +153,55 @@ export async function fetchMyAcceptedRequests(guideId) {
   return slots.map(slot => ({ ...slot, request: reqMap[slot.trip_request_id] || null }));
 }
 
-// ── Guide: accept a trip request (DB trigger handles proposals_ready + notify) ─
+// ── Guide: submit a full proposal for a trip request ─────────────────────────
+// `proposal` shape: { price, currency, price_type, price_period, itinerary,
+//   included[], excluded[], message, images[] }
+// DB trigger (on_trip_slot_insert) handles proposals_ready + tourist notification.
 
-export async function guideAcceptRequest(guideId, requestId) {
-  // Idempotency check
-  const { data: existing } = await supabase
+export async function guideSubmitProposal(guideId, requestId, proposal) {
+  // 1. Re-check the cap to avoid race conditions
+  const { data: existing, error: countErr } = await supabase
     .from('trip_slots')
-    .select('id')
+    .select('id', { count: 'exact', head: false })
+    .eq('trip_request_id', requestId)
+    .neq('status', 'rejected');
+  if (countErr) throw countErr;
+  if ((existing?.length ?? 0) >= 5) {
+    throw new Error('This request is no longer accepting proposals.');
+  }
+
+  // 2. Check this guide hasn't already applied
+  const { data: mine } = await supabase
+    .from('trip_slots')
+    .select('id, status')
     .eq('trip_request_id', requestId)
     .eq('guide_id', guideId)
     .maybeSingle();
-
-  if (existing) throw new Error('You have already accepted this request.');
-
-  // Check whether request is still open
-  const { count } = await supabase
-    .from('trip_slots')
-    .select('id', { count: 'exact', head: true })
-    .eq('trip_request_id', requestId)
-    .neq('status', 'rejected');
-
-  if ((count || 0) >= 5) {
-    throw new Error('This request already has 5 guides — it is no longer available.');
+  if (mine) {
+    throw new Error('You have already submitted a proposal for this request.');
   }
 
-  const { error } = await supabase
+  // 3. Insert the full proposal
+  const { data, error } = await supabase
     .from('trip_slots')
     .insert({
       trip_request_id: requestId,
       guide_id: guideId,
       status: 'accepted',
-      accepted_at: new Date().toISOString(),
-    });
-
+      ...proposal,
+    })
+    .select()
+    .single();
   if (error) throw error;
+  return data;
+}
+
+/**
+ * @deprecated Use guideSubmitProposal(guideId, requestId, proposal) instead.
+ * Kept as a forwarder so any forgotten caller still works.
+ */
+export async function guideAcceptRequest(guideId, requestId) {
+  return guideSubmitProposal(guideId, requestId, {});
 }
 
 // ── Guide: reject a slot; if all slots are rejected, re-broadcast the request ─

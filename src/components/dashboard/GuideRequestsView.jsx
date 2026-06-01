@@ -1,15 +1,17 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Bell, MapPin, Calendar, Users, Globe, FileText,
-  CheckCircle2, Clock, Loader2, RefreshCw, AlertCircle,
+  Bell, Calendar, Users, Globe, FileText,
+  CheckCircle2, Clock, RefreshCw, AlertCircle,
+  DollarSign, X as XIcon,
 } from 'lucide-react';
-import { toast } from 'sonner';
+import { useI18n } from '@/lib/i18n.jsx';
+import { supabase } from '@/supabaseClient';
 import {
   getAvailableTripRequests,
   fetchMyAcceptedRequests,
-  guideAcceptRequest,
 } from '@/api/tripRequests';
+import SubmitProposalModal from '@/components/dashboard/SubmitProposalModal';
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -18,12 +20,10 @@ function fmt(dateStr) {
   return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-const SLOT_LABEL = {
-  accepted:  { text: 'Waiting for tourist',  color: 'text-yellow-400' },
-  selected:  { text: 'You were chosen! 🎉',  color: 'text-emerald-400' },
-  rejected:  { text: 'Not selected',         color: 'text-white/40'   },
-  chatting:  { text: 'In discussion',        color: 'text-blue-400'   },
-};
+function destDisplay(d) {
+  if (Array.isArray(d)) return d.join(', ');
+  return d || 'Iran';
+}
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
@@ -35,140 +35,187 @@ function Tag({ children }) {
   );
 }
 
-function SlotDots({ count, max = 5 }) {
-  return (
-    <div className="flex items-center gap-1">
-      {Array.from({ length: max }, (_, i) => (
-        <div
-          key={i}
-          className={`w-2 h-2 rounded-full transition-colors ${
-            i < count ? 'bg-[hsl(178,85%,45%)]' : 'bg-white/15'
-          }`}
-        />
-      ))}
-      <span className="text-[10px] text-white/40 ml-1">{count}/{max} accepted</span>
-    </div>
-  );
-}
+function AvailableCard({ req, guideId, commissionRate, onAccepted, onSkip }) {
+  const { t } = useI18n();
+  const [modalOpen, setModalOpen] = useState(false);
+  const alreadyApplied = !!req.my_slot;
+  const isFull = (req.accepted_count || 0) >= 5;
 
-function AvailableCard({ req, guideId, onAccepted }) {
-  const [accepting, setAccepting] = useState(false);
-  const isFull = req.accepted_count >= 5;
-
-  const handleAccept = async () => {
-    setAccepting(true);
-    try {
-      await guideAcceptRequest(guideId, req.id);
-      toast.success('Request accepted! You\'ll be notified when the tourist makes their choice.');
-      onAccepted();
-    } catch (err) {
-      toast.error(err.message || 'Failed to accept request.');
-    } finally {
-      setAccepting(false);
-    }
-  };
+  const handleApplyClick = () => setModalOpen(true);
+  const handleProposalSuccess = () => { onAccepted(); };
 
   const start = fmt(req.start_date);
   const end   = fmt(req.end_date);
 
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.97 }}
-      className="bg-[hsl(222,45%,14%)] border border-white/[0.08] rounded-2xl p-5 hover:border-white/[0.15] transition-colors"
-    >
-      <div className="flex items-start justify-between gap-3 mb-3">
-        <div className="flex-1 min-w-0">
-          <h3 className="text-white font-semibold text-sm leading-snug">
-            Trip to {req.destination || 'Iran'}
-          </h3>
-          <p className="text-white/40 text-[11px] mt-0.5">
-            Submitted {fmt(req.created_at)}
-          </p>
-        </div>
-        <SlotDots count={req.accepted_count} />
-      </div>
-
-      {/* Meta chips */}
-      <div className="flex flex-wrap gap-1.5 mb-3">
-        {(start || end) && (
-          <Tag>
-            <Calendar className="w-3 h-3 mr-1 inline-block" />
-            {start}{start && end ? ' → ' : ''}{end}
-          </Tag>
-        )}
-        {(req.adults || req.adult_count) && (
-          <Tag>
-            <Users className="w-3 h-3 mr-1 inline-block" />
-            {(req.adults || req.adult_count || 1)} adult{((req.adults || req.adult_count) > 1) ? 's' : ''}
-            {(req.children || req.child_count) > 0 ? `, ${req.children || req.child_count} child` : ''}
-          </Tag>
-        )}
-        {req.guide_languages?.length > 0 && (
-          <Tag>
-            <Globe className="w-3 h-3 mr-1 inline-block" />
-            {req.guide_languages.join(', ')}
-          </Tag>
-        )}
-        {req.tour_type && <Tag>{req.tour_type}</Tag>}
-      </div>
-
-      {/* Requirements */}
-      {req.requirements && (
-        <p className="text-white/50 text-xs leading-relaxed mb-4 line-clamp-2">
-          <FileText className="w-3 h-3 inline-block mr-1 text-white/30" />
-          {req.requirements}
-        </p>
-      )}
-
-      <button
-        onClick={handleAccept}
-        disabled={accepting || isFull}
-        className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all ${
-          isFull
-            ? 'bg-white/[0.05] text-white/30 cursor-not-allowed'
-            : 'bg-[hsl(178,85%,32%)] hover:bg-[hsl(178,85%,28%)] text-white shadow-lg shadow-[hsl(178,85%,32%)]/20 disabled:opacity-60'
-        }`}
+    <>
+      <motion.div
+        layout
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.97 }}
+        className="bg-[hsl(222,45%,14%)] border border-white/[0.08] rounded-2xl p-5 hover:border-white/[0.15] transition-colors"
       >
-        {accepting ? (
-          <><Loader2 className="w-4 h-4 animate-spin" /> Accepting…</>
-        ) : isFull ? (
-          <><AlertCircle className="w-4 h-4" /> Request Full</>
-        ) : (
-          <><CheckCircle2 className="w-4 h-4" /> Accept Request</>
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div className="flex-1 min-w-0">
+            <h3 className="text-white font-semibold text-sm leading-snug">
+              Trip to {destDisplay(req.destination)}
+            </h3>
+            <p className="text-white/40 text-[11px] mt-0.5">
+              Submitted {fmt(req.created_at)}
+            </p>
+          </div>
+          <span className="text-xs bg-white/10 px-3 py-1 rounded-full text-white/70 whitespace-nowrap">
+            {req.accepted_count || 0} {t('of')} 5 {t('proposals')}
+          </span>
+        </div>
+
+        {/* Meta chips */}
+        <div className="flex flex-wrap gap-1.5 mb-3">
+          {(start || end) && (
+            <Tag>
+              <Calendar className="w-3 h-3 mr-1 inline-block" />
+              {start}{start && end ? ' → ' : ''}{end}
+            </Tag>
+          )}
+          {(req.adults || req.adult_count) && (
+            <Tag>
+              <Users className="w-3 h-3 mr-1 inline-block" />
+              {(req.adults || req.adult_count || 1)} adult{((req.adults || req.adult_count) > 1) ? 's' : ''}
+              {(req.children || req.child_count) > 0 ? `, ${req.children || req.child_count} child` : ''}
+            </Tag>
+          )}
+          {req.guide_languages?.length > 0 && (
+            <Tag>
+              <Globe className="w-3 h-3 mr-1 inline-block" />
+              {req.guide_languages.join(', ')}
+            </Tag>
+          )}
+          {req.tour_type && <Tag>{req.tour_type}</Tag>}
+        </div>
+
+        {/* Requirements */}
+        {req.requirements && (
+          <p className="text-white/50 text-xs leading-relaxed mb-4 line-clamp-2">
+            <FileText className="w-3 h-3 inline-block mr-1 text-white/30" />
+            {req.requirements}
+          </p>
         )}
-      </button>
-    </motion.div>
+
+        {/* Action area */}
+        {alreadyApplied ? (
+          <div className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold bg-white/[0.05] text-white/50 cursor-not-allowed">
+            <CheckCircle2 className="w-4 h-4 text-[hsl(178,85%,45%)]" />
+            {t('proposal_submitted')} ({req.my_slot.status})
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleApplyClick}
+              disabled={isFull}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                isFull
+                  ? 'bg-white/[0.05] text-white/30 cursor-not-allowed'
+                  : 'bg-[hsl(178,85%,32%)] hover:bg-[hsl(178,85%,28%)] text-white shadow-lg shadow-[hsl(178,85%,32%)]/20'
+              }`}
+            >
+              {isFull ? (
+                <><AlertCircle className="w-4 h-4" /> {t('request_closed_5_5')}</>
+              ) : (
+                <><CheckCircle2 className="w-4 h-4" /> {t('apply')}</>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => onSkip(req.id)}
+              className="px-4 py-2.5 rounded-xl text-sm font-medium text-white/50 hover:text-white hover:bg-white/[0.05] transition-colors flex items-center gap-1.5"
+            >
+              <XIcon className="w-3.5 h-3.5" />
+              {t('skip')}
+            </button>
+          </div>
+        )}
+      </motion.div>
+
+      <SubmitProposalModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        request={req}
+        guideId={guideId}
+        commissionRate={commissionRate}
+        onSuccess={handleProposalSuccess}
+      />
+    </>
   );
 }
 
-function AcceptedCard({ entry }) {
+const SLOT_STATUS_STYLE = {
+  accepted:  'text-yellow-400',
+  selected:  'text-emerald-400',
+  rejected:  'text-white/40',
+  chatting:  'text-blue-400',
+  finalized: 'text-emerald-400',
+  closed:    'text-white/40',
+};
+
+function MyProposalCard({ entry }) {
+  const { t } = useI18n();
   const req = entry.request;
-  const slotInfo = SLOT_LABEL[entry.status] || { text: entry.status, color: 'text-white/40' };
+  const statusColor = SLOT_STATUS_STYLE[entry.status] || 'text-white/60';
   const start = fmt(req?.start_date);
   const end   = fmt(req?.end_date);
+
+  const priceLine = useMemo(() => {
+    if (entry.price == null) return null;
+    const currency = entry.currency || 'USD';
+    const symbol = currency === 'USD' ? '$' : '';
+    const amt = `${symbol}${Number(entry.price).toLocaleString()}`;
+    const pt = entry.price_type   === 'per_person'   ? t('per_person')   : t('entire_group');
+    const pp = entry.price_period === 'per_day'      ? t('per_day')      : t('entire_trip');
+    return `${amt} · ${pt} · ${pp}`;
+  }, [entry, t]);
+
+  const firstItineraryLine = useMemo(() => {
+    if (!entry.itinerary) return null;
+    const line = entry.itinerary.split('\n').map(s => s.trim()).find(Boolean);
+    return line || null;
+  }, [entry]);
+
+  const statusLabel = entry.status === 'accepted'
+    ? t('waiting_for_tourist')
+    : entry.status;
 
   return (
     <div className="bg-[hsl(222,45%,14%)] border border-white/[0.08] rounded-2xl p-5">
       <div className="flex items-start justify-between gap-3 mb-2">
-        <div>
+        <div className="min-w-0">
           <h3 className="text-white font-semibold text-sm">
-            Trip to {req?.destination || 'Iran'}
+            Trip to {destDisplay(req?.destination)}
           </h3>
-          <p className="text-white/40 text-[11px] mt-0.5">
-            Accepted {fmt(entry.accepted_at)}
-          </p>
+          {priceLine && (
+            <p className="text-[hsl(178,85%,55%)] text-xs mt-1 font-medium flex items-center gap-1">
+              <DollarSign className="w-3 h-3" />
+              {priceLine}
+            </p>
+          )}
+          {firstItineraryLine && (
+            <p className="text-white/50 text-xs mt-1.5 line-clamp-1">
+              {firstItineraryLine}
+            </p>
+          )}
         </div>
-        <span className={`text-xs font-medium ${slotInfo.color}`}>{slotInfo.text}</span>
+        <span className={`text-xs font-medium shrink-0 ${statusColor}`}>{statusLabel}</span>
       </div>
-      {(start || end) && (
-        <p className="text-white/40 text-xs flex items-center gap-1">
-          <Calendar className="w-3 h-3" />
-          {start}{start && end ? ' → ' : ''}{end}
-        </p>
-      )}
+      <div className="flex items-center gap-3 mt-3 text-[11px] text-white/40">
+        {(start || end) && (
+          <span className="flex items-center gap-1">
+            <Calendar className="w-3 h-3" />
+            {start}{start && end ? ' → ' : ''}{end}
+          </span>
+        )}
+        <span>{t('submitted_on', { date: fmt(entry.accepted_at) || '' })}</span>
+      </div>
     </div>
   );
 }
@@ -196,11 +243,35 @@ function LoadingState() {
 // ── Main export ───────────────────────────────────────────────────────────────
 
 export default function GuideRequestsView({ userId }) {
+  const { t } = useI18n();
   const [tab, setTab]                 = useState('available');
   const [available, setAvailable]     = useState([]);
   const [accepted, setAccepted]       = useState([]);
+  const [skippedIds, setSkippedIds]   = useState(new Set());
+  const [commissionRate, setCommissionRate] = useState(0.15);
   const [loading, setLoading]         = useState(true);
   const [error, setError]             = useState(null);
+
+  // Fetch commission rate once on mount (falls back to 0.15)
+  useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from('profiles')
+          .select('commission_rate')
+          .eq('id', userId)
+          .maybeSingle();
+        if (!cancelled && data?.commission_rate != null) {
+          setCommissionRate(Number(data.commission_rate));
+        }
+      } catch {
+        // silent — fallback rate already set
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [userId]);
 
   const load = useCallback(async () => {
     if (!userId) return;
@@ -222,9 +293,19 @@ export default function GuideRequestsView({ userId }) {
 
   useEffect(() => { load(); }, [load]);
 
+  const handleSkip = (id) => {
+    setSkippedIds(prev => {
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+  };
+
+  const visibleAvailable = available.filter(r => !skippedIds.has(r.id));
+
   const tabItems = [
-    { id: 'available', label: 'Available', count: available.length },
-    { id: 'accepted',  label: 'My Acceptances', count: accepted.length },
+    { id: 'available', label: 'Available',         count: visibleAvailable.length },
+    { id: 'accepted',  label: t('my_proposals'),   count: accepted.length },
   ];
 
   return (
@@ -249,22 +330,22 @@ export default function GuideRequestsView({ userId }) {
 
       {/* Tabs */}
       <div className="flex bg-white/[0.05] rounded-xl p-1 mb-6 w-fit gap-1">
-        {tabItems.map(t => (
+        {tabItems.map(tabItem => (
           <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
+            key={tabItem.id}
+            onClick={() => setTab(tabItem.id)}
             className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium transition-all ${
-              tab === t.id
+              tab === tabItem.id
                 ? 'bg-[hsl(178,85%,32%)] text-white shadow'
                 : 'text-white/50 hover:text-white'
             }`}
           >
-            {t.label}
-            {t.count > 0 && (
+            {tabItem.label}
+            {tabItem.count > 0 && (
               <span className={`min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold flex items-center justify-center ${
-                tab === t.id ? 'bg-white/20 text-white' : 'bg-white/10 text-white/60'
+                tab === tabItem.id ? 'bg-white/20 text-white' : 'bg-white/10 text-white/60'
               }`}>
-                {t.count}
+                {tabItem.count}
               </span>
             )}
           </button>
@@ -279,7 +360,7 @@ export default function GuideRequestsView({ userId }) {
       ) : loading ? (
         <LoadingState />
       ) : tab === 'available' ? (
-        available.length === 0 ? (
+        visibleAvailable.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <div className="w-14 h-14 rounded-2xl bg-white/[0.05] border border-white/10 flex items-center justify-center mb-4">
               <Bell className="w-7 h-7 text-white/20" />
@@ -292,12 +373,14 @@ export default function GuideRequestsView({ userId }) {
         ) : (
           <AnimatePresence mode="popLayout">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {available.map(req => (
+              {visibleAvailable.map(req => (
                 <AvailableCard
                   key={req.id}
                   req={req}
                   guideId={userId}
+                  commissionRate={commissionRate}
                   onAccepted={load}
+                  onSkip={handleSkip}
                 />
               ))}
             </div>
@@ -309,15 +392,15 @@ export default function GuideRequestsView({ userId }) {
             <div className="w-14 h-14 rounded-2xl bg-white/[0.05] border border-white/10 flex items-center justify-center mb-4">
               <Clock className="w-7 h-7 text-white/20" />
             </div>
-            <p className="text-white/50 font-medium text-sm mb-1">No accepted requests yet</p>
+            <p className="text-white/50 font-medium text-sm mb-1">No proposals submitted yet</p>
             <p className="text-white/30 text-xs max-w-xs">
-              Requests you accept will show up here with their status.
+              Proposals you submit will show up here with their status.
             </p>
           </div>
         ) : (
           <div className="space-y-3">
             {accepted.map(entry => (
-              <AcceptedCard key={entry.id} entry={entry} />
+              <MyProposalCard key={entry.id} entry={entry} />
             ))}
           </div>
         )
