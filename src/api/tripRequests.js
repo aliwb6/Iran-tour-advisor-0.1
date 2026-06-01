@@ -1,10 +1,12 @@
 import { supabase } from '../supabaseClient';
 
+// Legacy dedicated-guide request used by /request-trip/:guideId.
+// Caller still passes the user id positionally as "travelerId".
 export async function createTripRequest(travelerId, tripData) {
   const { data, error } = await supabase
     .from('trip_requests')
     .insert({
-      traveler_id: travelerId,
+      user_id: travelerId,
       destination: tripData.destination,
       start_date: tripData.dates?.start || null,
       end_date: tripData.dates?.end || null,
@@ -20,8 +22,9 @@ export async function createTripRequest(travelerId, tripData) {
   return data;
 }
 
+// ── Guide: fetch all open requests this guide hasn't accepted yet ─────────────
+
 export async function getAvailableTripRequests(guideId) {
-  // Find trip IDs this guide has already responded to (non-rejected)
   const { data: mySlots } = await supabase
     .from('trip_slots')
     .select('trip_request_id')
@@ -58,7 +61,7 @@ export async function getAvailableTripRequests(guideId) {
   });
 
   // Fetch traveler profiles
-  const travelerIds = [...new Set(trips.map(t => t.user_id || t.traveler_id).filter(Boolean))];
+  const travelerIds = [...new Set(trips.map(t => t.user_id).filter(Boolean))];
   let profileMap = {};
   if (travelerIds.length > 0) {
     const { data: profiles } = await supabase
@@ -72,16 +75,18 @@ export async function getAvailableTripRequests(guideId) {
     .map(trip => ({
       ...trip,
       accepted_count: countMap[trip.id] || 0,
-      traveler: profileMap[trip.user_id || trip.traveler_id] || null,
+      traveler: profileMap[trip.user_id] || null,
     }))
-    .filter(trip => trip.accepted_count < 3);
+    .filter(trip => trip.accepted_count < 5);
 }
+
+// ── Tourist: fetch my trip requests + their guide slots ──────────────────────
 
 export async function getMyTripRequests(userId) {
   const { data: trips, error } = await supabase
     .from('trip_requests')
     .select('*')
-    .or(`traveler_id.eq.${userId},user_id.eq.${userId}`)
+    .eq('user_id', userId)
     .order('created_at', { ascending: false });
 
   if (error) throw error;
@@ -93,7 +98,7 @@ export async function getMyTripRequests(userId) {
     travel_dates: t.start_date ? { start: t.start_date, end: t.end_date } : null,
     group_size: (t.adults || t.adult_count || 1) + (t.children || t.child_count || 0),
     status: t.status || 'pending',
-    source: t.traveler_id ? undefined : 'request',
+    source: 'request',
   }));
 
   const tripIds = normalized.map(t => t.id);
@@ -129,32 +134,57 @@ export async function getMyTripRequests(userId) {
   }));
 }
 
-export async function acceptTripRequest(guideId, tripRequestId) {
+// ── Guide: fetch requests this guide already accepted ─────────────────────────
+
+export async function fetchMyAcceptedRequests(guideId) {
+  const { data: slots, error: sErr } = await supabase
+    .from('trip_slots')
+    .select('id, status, accepted_at, trip_request_id')
+    .eq('guide_id', guideId);
+
+  if (sErr) throw sErr;
+  if (!slots?.length) return [];
+
+  const reqIds = slots.map(s => s.trip_request_id);
+  const { data: requests, error: rErr } = await supabase
+    .from('trip_requests')
+    .select('*')
+    .in('id', reqIds);
+
+  if (rErr) throw rErr;
+
+  const reqMap = Object.fromEntries((requests || []).map(r => [r.id, r]));
+  return slots.map(slot => ({ ...slot, request: reqMap[slot.trip_request_id] || null }));
+}
+
+// ── Guide: accept a trip request (DB trigger handles proposals_ready + notify) ─
+
+export async function guideAcceptRequest(guideId, requestId) {
   // Idempotency check
   const { data: existing } = await supabase
     .from('trip_slots')
     .select('id')
-    .eq('trip_request_id', tripRequestId)
+    .eq('trip_request_id', requestId)
     .eq('guide_id', guideId)
     .maybeSingle();
 
   if (existing) throw new Error('You have already accepted this request.');
 
-  // Check slot availability via trip_slots (no slot_count column in DB)
+  // Check whether request is still open
   const { count } = await supabase
     .from('trip_slots')
     .select('id', { count: 'exact', head: true })
-    .eq('trip_request_id', tripRequestId)
+    .eq('trip_request_id', requestId)
     .neq('status', 'rejected');
 
-  if ((count || 0) >= 3) {
-    throw new Error('This request already has 3 guides — it is no longer available.');
+  if ((count || 0) >= 5) {
+    throw new Error('This request already has 5 guides — it is no longer available.');
   }
 
   const { error } = await supabase
     .from('trip_slots')
     .insert({
-      trip_request_id: tripRequestId,
+      trip_request_id: requestId,
       guide_id: guideId,
       status: 'accepted',
       accepted_at: new Date().toISOString(),
@@ -162,6 +192,8 @@ export async function acceptTripRequest(guideId, tripRequestId) {
 
   if (error) throw error;
 }
+
+// ── Guide: reject a slot; if all slots are rejected, re-broadcast the request ─
 
 export async function rejectTripSlot(guideId, tripRequestId) {
   const { error: updateSlotError } = await supabase
@@ -184,6 +216,8 @@ export async function rejectTripSlot(guideId, tripRequestId) {
   }
 }
 
+// ── Guide: finalize a trip slot, mark the parent request completed ───────────
+
 export async function finalizeTripSlot(guideId, tripRequestId) {
   const { error: slotError } = await supabase
     .from('trip_slots')
@@ -201,6 +235,8 @@ export async function finalizeTripSlot(guideId, tripRequestId) {
   if (tripError) throw tripError;
 }
 
+// ── Tourist: re-broadcast an expired or fully-rejected request ───────────────
+
 export async function rebroadcastTripRequest(tripRequestId) {
   await supabase
     .from('trip_slots')
@@ -214,4 +250,37 @@ export async function rebroadcastTripRequest(tripRequestId) {
       updated_at: new Date().toISOString(),
     })
     .eq('id', tripRequestId);
+}
+
+// ── Tourist: select a guide from the 5 proposals ──────────────────────────────
+// DB trigger (on_trip_request_confirmed) handles slot updates + guide notifications
+
+export async function touristSelectGuide(requestId, selectedGuideId) {
+  const { error } = await supabase
+    .from('trip_requests')
+    .update({ status: 'confirmed', selected_guide_id: selectedGuideId })
+    .eq('id', requestId);
+
+  if (error) throw error;
+}
+
+// ── Notifications ─────────────────────────────────────────────────────────────
+
+export async function fetchNotifications(userId) {
+  const { data, error } = await supabase
+    .from('notifications')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(50);
+
+  if (error) throw error;
+  return data || [];
+}
+
+export async function markNotificationRead(notifId) {
+  await supabase
+    .from('notifications')
+    .update({ is_read: true })
+    .eq('id', notifId);
 }

@@ -12,7 +12,8 @@
       "Bash(git pull *)",
       "Bash(git config *)",
       "Bash(git fetch *)",
-      "Bash(git rev-list *)"
+      "Bash(git rev-list *)",
+      "Bash(git rm *)"
     ]
   }
 }

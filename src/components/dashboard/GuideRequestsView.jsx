@@ -6,10 +6,10 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
-  fetchAvailableRequests,
+  getAvailableTripRequests,
   fetchMyAcceptedRequests,
   guideAcceptRequest,
-} from '@/api/tourRequestFlow';
+} from '@/api/tripRequests';
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -35,7 +35,7 @@ function Tag({ children }) {
   );
 }
 
-function SlotDots({ count, max = 3 }) {
+function SlotDots({ count, max = 5 }) {
   return (
     <div className="flex items-center gap-1">
       {Array.from({ length: max }, (_, i) => (
@@ -53,7 +53,7 @@ function SlotDots({ count, max = 3 }) {
 
 function AvailableCard({ req, guideId, onAccepted }) {
   const [accepting, setAccepting] = useState(false);
-  const isFull = req.accepted_count >= 3;
+  const isFull = req.accepted_count >= 5;
 
   const handleAccept = async () => {
     setAccepting(true);
@@ -208,7 +208,7 @@ export default function GuideRequestsView({ userId }) {
     setError(null);
     try {
       const [avail, acc] = await Promise.all([
-        fetchAvailableRequests(userId),
+        getAvailableTripRequests(userId),
         fetchMyAcceptedRequests(userId),
       ]);
       setAvailable(avail);
@@ -234,7 +234,7 @@ export default function GuideRequestsView({ userId }) {
         <div>
           <h2 className="text-white font-bold text-xl">Tour Requests</h2>
           <p className="text-white/40 text-xs mt-0.5">
-            Be one of the first 3 guides to accept a request
+            Be one of the first 5 guides to accept a request
           </p>
         </div>
         <button

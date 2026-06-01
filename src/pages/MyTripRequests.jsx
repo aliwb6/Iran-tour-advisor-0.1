@@ -8,8 +8,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '../lib/AuthContext';
-import { getMyTripRequests, rebroadcastTripRequest } from '../api/tripRequests';
-import { touristSelectGuide } from '../api/tourRequestFlow';
+import { getMyTripRequests, rebroadcastTripRequest, touristSelectGuide } from '../api/tripRequests';
 import TripRequestForm from '@/components/profile/TripRequestForm';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -68,7 +67,7 @@ function SlotBar({ slotCount }) {
   return (
     <div className="flex items-center gap-2">
       <div className="flex gap-1">
-        {[0, 1, 2].map(i => (
+        {[0, 1, 2, 3, 4].map(i => (
           <div
             key={i}
             className={`w-6 h-1.5 rounded-full transition-colors ${
@@ -78,7 +77,7 @@ function SlotBar({ slotCount }) {
         ))}
       </div>
       <span className="font-body text-xs text-muted-foreground">
-        {taken}/3 guide{taken !== 1 ? 's' : ''}
+        {taken}/5 guide{taken !== 1 ? 's' : ''}
       </span>
     </div>
   );
@@ -206,7 +205,7 @@ function TripCard({ trip, onRebroadcast, onRefresh }) {
         <div className="flex items-center gap-2 px-5 py-2.5 bg-violet-500/10 border-b border-violet-500/20">
           <UserCheck className="w-4 h-4 text-violet-600 shrink-0" />
           <span className="font-body text-sm font-medium text-violet-700 dark:text-violet-400">
-            3 guides are ready for your trip! Choose one below.
+            5 guides are ready for your trip! Choose one below.
           </span>
         </div>
       )}
