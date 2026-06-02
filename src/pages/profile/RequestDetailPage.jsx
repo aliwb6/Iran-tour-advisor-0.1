@@ -8,6 +8,8 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
+import { useI18n } from '@/lib/i18n.jsx';
+import ProposalsList from '@/components/profile/ProposalsList';
 
 const STATUS_CONFIG = {
   pending:         { label: 'Pending',           classes: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' },
@@ -57,6 +59,7 @@ export default function RequestDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user, isAuthenticated, isLoadingAuth } = useAuth();
+  const { t } = useI18n();
 
   const [request, setRequest] = useState(null);
   const [loading, setLoading]  = useState(true);
@@ -209,6 +212,21 @@ export default function RequestDetailPage() {
                 </div>
               </Section>
             )}
+
+            {/* Proposals received */}
+            <section className="mt-8">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+                {t('proposals_received')}
+              </h2>
+              <p className="text-gray-500 dark:text-gray-400 mb-6">
+                {t('compare_and_choose')}
+              </p>
+              <ProposalsList
+                requestId={r.id}
+                touristId={user?.id}
+                request={r}
+              />
+            </section>
           </motion.div>
         )}
       </div>

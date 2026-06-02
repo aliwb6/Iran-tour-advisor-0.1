@@ -35,6 +35,8 @@ import RequestsPage from '@/pages/profile/RequestsPage';
 import CityPage from '@/pages/CityPage';
 import MyTripRequests from '@/pages/MyTripRequests';
 import RequestDetailPage from '@/pages/profile/RequestDetailPage';
+import MockPayment from '@/pages/MockPayment';
+import BookingDetails from '@/pages/BookingDetails';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth } = useAuth();
@@ -74,6 +76,8 @@ const AuthenticatedApp = () => {
         <Route path="/profile/bookings" element={<BookingsPage />} />
         <Route path="/profile/requests" element={<RequestsPage />} />
         <Route path="/profile/requests/:id" element={<RequestDetailPage />} />
+        <Route path="/profile/bookings/:bookingId/pay" element={<MockPayment />} />
+        <Route path="/profile/bookings/:bookingId" element={<BookingDetails />} />
         <Route path="/my-trips" element={<MyTripRequests />} />
       </Route>
       <Route path="/ai-assistant" element={<AIAssistant />} />

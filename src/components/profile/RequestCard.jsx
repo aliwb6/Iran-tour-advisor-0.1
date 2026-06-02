@@ -6,30 +6,46 @@ import {
 import { useI18n } from '@/lib/i18n.jsx';
 
 const STATUS_STYLES = {
-  waiting:   'bg-gold/15 text-gold border-gold/30',
-  received:  'bg-accent/15 text-accent border-accent/30',
-  completed: 'bg-emerald-500/15 text-emerald-300 border-emerald-400/30',
-  expired:   'bg-muted/40 text-muted-foreground border-border/40',
+  waiting:         'bg-gold/15 text-gold border-gold/30',
+  received:        'bg-accent/15 text-accent border-accent/30',
+  proposals_ready: 'bg-accent/15 text-accent border-accent/30',
+  booked:          'bg-emerald-500/15 text-emerald-300 border-emerald-400/30',
+  confirmed:       'bg-emerald-500/15 text-emerald-300 border-emerald-400/30',
+  completed:       'bg-emerald-500/15 text-emerald-300 border-emerald-400/30',
+  expired:         'bg-muted/40 text-muted-foreground border-border/40',
+  closed:          'bg-muted/40 text-muted-foreground border-border/40',
 };
 
 const STATUS_LABELS = {
   en: {
-    waiting: 'Waiting For Proposals',
-    received: 'Proposals Received',
-    completed: 'Completed',
-    expired: 'Expired',
+    waiting:         'Waiting For Proposals',
+    received:        'Proposals Received',
+    proposals_ready: 'Proposals Ready!',
+    booked:          'Booked',
+    confirmed:       'Confirmed',
+    completed:       'Completed',
+    expired:         'Expired',
+    closed:          'Closed',
   },
   fa: {
-    waiting: 'در انتظار پیشنهاد',
-    received: 'پیشنهاد دریافت شد',
-    completed: 'انجام شده',
-    expired: 'منقضی',
+    waiting:         'در انتظار پیشنهاد',
+    received:        'پیشنهاد دریافت شد',
+    proposals_ready: 'پیشنهادها آماده‌اند!',
+    booked:          'رزرو شده',
+    confirmed:       'تأیید شده',
+    completed:       'انجام شده',
+    expired:         'منقضی',
+    closed:          'بسته شده',
   },
   ar: {
-    waiting: 'بانتظار العروض',
-    received: 'تم استلام العروض',
-    completed: 'مكتمل',
-    expired: 'منتهي',
+    waiting:         'بانتظار العروض',
+    received:        'تم استلام العروض',
+    proposals_ready: 'العروض جاهزة!',
+    booked:          'محجوز',
+    confirmed:       'مؤكد',
+    completed:       'مكتمل',
+    expired:         'منتهي',
+    closed:          'مغلق',
   },
 };
 
@@ -60,7 +76,9 @@ export default function RequestCard({ request, onOpen }) {
     requirements:   lang === 'fa' ? 'یادداشت‌ها' : lang === 'ar' ? 'الملاحظات' : 'Requirements',
     adults:         lang === 'fa' ? 'بزرگسال' : lang === 'ar' ? 'بالغ' : 'Adults',
     children:       lang === 'fa' ? 'کودک' : lang === 'ar' ? 'طفل' : 'Children',
-    seeDetails:     lang === 'fa' ? 'مشاهده جزئیات' : lang === 'ar' ? 'عرض التفاصيل' : 'See Details',
+    seeDetails:       lang === 'fa' ? 'مشاهده جزئیات' : lang === 'ar' ? 'عرض التفاصيل' : 'See Details',
+    viewProposals:    lang === 'fa' ? 'مشاهده پیشنهادها ←' : lang === 'ar' ? 'عرض العروض ←' : 'View proposals →',
+    proposalsCount:   lang === 'fa' ? 'پیشنهاد' : lang === 'ar' ? 'عروض' : 'proposals',
   };
 
   return (
@@ -144,17 +162,30 @@ export default function RequestCard({ request, onOpen }) {
         </div>
       )}
 
-      {/* Footer: status + CTA */}
-      <footer className="flex items-center justify-between pt-4 border-t border-border/30">
-        <span className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${STATUS_STYLES[status] || STATUS_STYLES.waiting}`}>
-          {statusLabel}
-        </span>
+      {/* Footer: status + proposal count + CTA */}
+      <footer className="flex items-center justify-between pt-4 border-t border-border/30 gap-3 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${STATUS_STYLES[status] || STATUS_STYLES.waiting}`}>
+            {statusLabel}
+          </span>
+          {request.proposals_count != null && (
+            <span className="text-xs text-muted-foreground">
+              {request.proposals_count}/5 {labels.proposalsCount}
+            </span>
+          )}
+        </div>
         <button
           onClick={() => onOpen?.(request)}
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-accent hover:text-accent/80 transition group/btn"
+          className={`inline-flex items-center gap-1.5 text-sm font-medium transition group/btn ${
+            request.proposals_count > 0
+              ? 'text-accent font-semibold'
+              : 'text-accent hover:text-accent/80'
+          }`}
         >
-          {labels.seeDetails}
-          <Arrow className="w-3.5 h-3.5 group-hover/btn:translate-x-0.5 transition-transform" />
+          {request.proposals_count > 0 ? labels.viewProposals : labels.seeDetails}
+          {request.proposals_count === 0 && (
+            <Arrow className="w-3.5 h-3.5 group-hover/btn:translate-x-0.5 transition-transform" />
+          )}
         </button>
       </footer>
     </motion.article>

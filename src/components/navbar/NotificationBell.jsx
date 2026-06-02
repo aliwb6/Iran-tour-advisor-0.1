@@ -88,7 +88,7 @@ export default function NotificationBell({ userId, isLight = false }) {
     setOpen(false);
     if (!notif.related_request_id) return;
     if (notif.type === 'new_request') navigate('/dashboard/requests');
-    else if (notif.type === 'proposals_ready') navigate('/profile/requests');
+    else if (notif.type === 'proposals_ready') navigate(`/profile/requests/${notif.related_request_id}`);
   };
 
   return (
