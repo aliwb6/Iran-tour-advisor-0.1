@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useI18n } from '@/lib/i18n.jsx';
 import { motion, AnimatePresence } from 'framer-motion';
 import TourFilters from '@/components/tours/TourFilters';
 import TourCard from '@/components/tours/TourCard';
 import { useTours, FALLBACK_IMAGE } from '@/hooks/useSupabase';
 
-const DEFAULT_FILTERS = { purpose: 'all', theme: 'all', duration: 'all', price: 'all' };
+const DEFAULT_FILTERS = { purpose: 'all', theme: 'all', duration: 'all', price: 'all', city: 'all' };
 
 // Price tier thresholds (USD). Budget < 100, Mid-range 100–299, Luxury 300+
 const priceMatches = (tour, priceTier) => {
@@ -52,9 +53,36 @@ const pickImage = (tour) => {
 
 export default function Tours() {
   const { dir, lang } = useI18n();
-  const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  const [searchParams] = useSearchParams();
+  const cityFromUrl = searchParams.get('city') || 'all';
+
+  const [filters, setFilters] = useState(() => ({ ...DEFAULT_FILTERS, city: cityFromUrl }));
   const { tours: rawTours, loading, error } = useTours(filters);
-  const tours = rawTours.filter(t => priceMatches(t, filters.price));
+
+  useEffect(() => {
+    setFilters(prev => ({ ...prev, city: cityFromUrl }));
+  }, [cityFromUrl]);
+
+  const tours = useMemo(() => rawTours.filter(tour => {
+    if (filters.city !== 'all') {
+      const cityLower = filters.city.toLowerCase();
+      const inCity = (tour.city || '').toLowerCase().includes(cityLower);
+      const inLocation = typeof tour.location === 'object'
+        ? Object.values(tour.location).some(v => v.toLowerCase().includes(cityLower))
+        : (tour.location || '').toLowerCase().includes(cityLower);
+      const inCities = typeof tour.cities === 'object'
+        ? Object.values(tour.cities).some(v => v.toLowerCase().includes(cityLower))
+        : (tour.cities || '').toLowerCase().includes(cityLower);
+      if (!inCity && !inLocation && !inCities) return false;
+    }
+    if (filters.price && filters.price !== 'all') {
+      const p = tour.priceFrom || tour.price || 0;
+      if (filters.price === 'budget' && p >= 1200) return false;
+      if (filters.price === 'mid' && (p < 1200 || p >= 2500)) return false;
+      if (filters.price === 'luxury' && p < 2500) return false;
+    }
+    return true;
+  }), [rawTours, filters.price, filters.city]);
 
   const loadingText = lang === 'fa' ? 'در حال بارگذاری تورها...' : lang === 'ar' ? 'جار تحميل الرحلات...' : 'Loading tours...';
   const errorTitle = lang === 'fa' ? 'بارگذاری تورها با خطا مواجه شد' : lang === 'ar' ? 'فشل تحميل الرحلات' : 'Failed to load tours';
