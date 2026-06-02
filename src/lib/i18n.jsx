@@ -381,6 +381,7 @@ const translations = {
     active_status: "Active",
     submitted_on_date: "Submitted {date}",
     star_hotel: "{n}★ hotel",
+    view_full_profile: "View full profile",
   },
   fa: {
     nav_home: "خانه",
@@ -762,6 +763,7 @@ const translations = {
     active_status: "فعال",
     submitted_on_date: "ارسال شده در {date}",
     star_hotel: "هتل {n} ستاره",
+    view_full_profile: "مشاهده پروفایل کامل",
   },
   ar: {
     nav_home: "الرئيسية",
@@ -1143,6 +1145,7 @@ const translations = {
     active_status: "نشط",
     submitted_on_date: "أُرسل في {date}",
     star_hotel: "فندق {n} نجوم",
+    view_full_profile: "عرض الملف الشخصي الكامل",
   }
 };
 
