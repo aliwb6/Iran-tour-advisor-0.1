@@ -1,51 +1,37 @@
 import { motion } from 'framer-motion';
 import {
-  MapPin, Users, Baby, ArrowRight, ArrowLeft,
-  Car, Hotel, Sparkles, Clock,
+  MapPin, Users, Baby,
+  Car, Hotel, Sparkles, Clock, Pencil,
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useI18n } from '@/lib/i18n.jsx';
+import { Button } from '@/components/ui/button';
 
 const STATUS_STYLES = {
-  waiting:         'bg-gold/15 text-gold border-gold/30',
-  received:        'bg-accent/15 text-accent border-accent/30',
-  proposals_ready: 'bg-accent/15 text-accent border-accent/30',
-  booked:          'bg-emerald-500/15 text-emerald-300 border-emerald-400/30',
-  confirmed:       'bg-emerald-500/15 text-emerald-300 border-emerald-400/30',
-  completed:       'bg-emerald-500/15 text-emerald-300 border-emerald-400/30',
-  expired:         'bg-muted/40 text-muted-foreground border-border/40',
-  closed:          'bg-muted/40 text-muted-foreground border-border/40',
+  waiting:   'bg-gold/15 text-gold border-gold/30',
+  received:  'bg-accent/15 text-accent border-accent/30',
+  completed: 'bg-emerald-500/15 text-emerald-300 border-emerald-400/30',
+  expired:   'bg-muted/40 text-muted-foreground border-border/40',
 };
 
 const STATUS_LABELS = {
   en: {
-    waiting:         'Waiting For Proposals',
-    received:        'Proposals Received',
-    proposals_ready: 'Proposals Ready!',
-    booked:          'Booked',
-    confirmed:       'Confirmed',
-    completed:       'Completed',
-    expired:         'Expired',
-    closed:          'Closed',
+    waiting: 'Waiting For Proposals',
+    received: 'Proposals Received',
+    completed: 'Completed',
+    expired: 'Expired',
   },
   fa: {
-    waiting:         'در انتظار پیشنهاد',
-    received:        'پیشنهاد دریافت شد',
-    proposals_ready: 'پیشنهادها آماده‌اند!',
-    booked:          'رزرو شده',
-    confirmed:       'تأیید شده',
-    completed:       'انجام شده',
-    expired:         'منقضی',
-    closed:          'بسته شده',
+    waiting: 'در انتظار پیشنهاد',
+    received: 'پیشنهاد دریافت شد',
+    completed: 'انجام شده',
+    expired: 'منقضی',
   },
   ar: {
-    waiting:         'بانتظار العروض',
-    received:        'تم استلام العروض',
-    proposals_ready: 'العروض جاهزة!',
-    booked:          'محجوز',
-    confirmed:       'مؤكد',
-    completed:       'مكتمل',
-    expired:         'منتهي',
-    closed:          'مغلق',
+    waiting: 'بانتظار العروض',
+    received: 'تم استلام العروض',
+    completed: 'مكتمل',
+    expired: 'منتهي',
   },
 };
 
@@ -63,11 +49,13 @@ function PrefCell({ icon: Icon, label, value }) {
   );
 }
 
-export default function RequestCard({ request, onOpen }) {
-  const { lang, dir } = useI18n();
-  const Arrow = dir === 'rtl' ? ArrowLeft : ArrowRight;
+export default function RequestCard({ request }) {
+  const { t, lang, dir } = useI18n();
+  const navigate = useNavigate();
   const status = request.status || 'waiting';
   const statusLabel = (STATUS_LABELS[lang] || STATUS_LABELS.en)[status] || status;
+  const proposalCount = request.proposals_count ?? 0;
+  const canEdit = !['booked', 'closed'].includes(status);
 
   const labels = {
     transportation: lang === 'fa' ? 'حمل‌ونقل' : lang === 'ar' ? 'المواصلات' : 'Transportation',
@@ -76,9 +64,6 @@ export default function RequestCard({ request, onOpen }) {
     requirements:   lang === 'fa' ? 'یادداشت‌ها' : lang === 'ar' ? 'الملاحظات' : 'Requirements',
     adults:         lang === 'fa' ? 'بزرگسال' : lang === 'ar' ? 'بالغ' : 'Adults',
     children:       lang === 'fa' ? 'کودک' : lang === 'ar' ? 'طفل' : 'Children',
-    seeDetails:       lang === 'fa' ? 'مشاهده جزئیات' : lang === 'ar' ? 'عرض التفاصيل' : 'See Details',
-    viewProposals:    lang === 'fa' ? 'مشاهده پیشنهادها ←' : lang === 'ar' ? 'عرض العروض ←' : 'View proposals →',
-    proposalsCount:   lang === 'fa' ? 'پیشنهاد' : lang === 'ar' ? 'عروض' : 'proposals',
   };
 
   return (
@@ -112,7 +97,7 @@ export default function RequestCard({ request, onOpen }) {
           )}
           {request.children != null && request.children > 0 && (
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-background/60 border border-border/40 text-xs text-foreground">
-              <Baby className="w-3 h-3 text-accent" />
+              <Users className="w-3 h-3 text-accent" />
               {request.children} {labels.children}
             </span>
           )}
@@ -162,31 +147,47 @@ export default function RequestCard({ request, onOpen }) {
         </div>
       )}
 
-      {/* Footer: status + proposal count + CTA */}
-      <footer className="flex items-center justify-between pt-4 border-t border-border/30 gap-3 flex-wrap">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${STATUS_STYLES[status] || STATUS_STYLES.waiting}`}>
-            {statusLabel}
-          </span>
-          {request.proposals_count != null && (
-            <span className="text-xs text-muted-foreground">
-              {request.proposals_count}/5 {labels.proposalsCount}
-            </span>
+      {/* Footer: status + three action buttons */}
+      <footer className="flex items-center justify-between gap-3 pt-4 border-t border-border/30 flex-wrap">
+        <span className={`px-3 py-1.5 rounded-full text-xs font-semibold border shrink-0 ${STATUS_STYLES[status] || STATUS_STYLES.waiting}`}>
+          {statusLabel}
+        </span>
+
+        <div className="flex items-center gap-2 flex-wrap justify-end">
+          {/* 1. See Details */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate(`/profile/requests/${request.id}?tab=details`)}
+          >
+            {t('see_details')}
+          </Button>
+
+          {/* 2. Edit — hidden once booked/closed */}
+          {canEdit && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate(`/profile/requests/${request.id}?tab=details&edit=true`)}
+            >
+              <Pencil className="w-3.5 h-3.5" />
+              {t('edit_trip')}
+            </Button>
+          )}
+
+          {/* 3. View Proposals / Awaiting */}
+          {proposalCount > 0 ? (
+            <Button
+              size="sm"
+              className="bg-teal-500 hover:bg-teal-600 text-white"
+              onClick={() => navigate(`/profile/requests/${request.id}?tab=proposals`)}
+            >
+              {t('view_proposals_count', { count: proposalCount })}
+            </Button>
+          ) : (
+            <span className="text-xs text-muted-foreground px-1">{t('awaiting_proposals')}</span>
           )}
         </div>
-        <button
-          onClick={() => onOpen?.(request)}
-          className={`inline-flex items-center gap-1.5 text-sm font-medium transition group/btn ${
-            request.proposals_count > 0
-              ? 'text-accent font-semibold'
-              : 'text-accent hover:text-accent/80'
-          }`}
-        >
-          {request.proposals_count > 0 ? labels.viewProposals : labels.seeDetails}
-          {request.proposals_count === 0 && (
-            <Arrow className="w-3.5 h-3.5 group-hover/btn:translate-x-0.5 transition-transform" />
-          )}
-        </button>
       </footer>
     </motion.article>
   );
