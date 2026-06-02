@@ -427,6 +427,9 @@ const translations = {
     back_to_my_bookings: "Back to my bookings",
     total_for_n_travelers: "Total for {n} travelers: ${total}",
     mock_payment_notice: "In production, this will connect to ZarinPal/IDPay for Iranian cards or Stripe for international payments. Click below to simulate a successful deposit.",
+    chat_safety_title: "Keep your booking safe",
+    chat_safety_body: "For your protection, sharing phone numbers, emails, or social handles is not allowed in chat. Finalize your trip through the platform to stay protected.",
+    message_blocked_contact_info: "Your message was not sent — it appears to contain contact info (phone, email, or social handle). Please keep communication within the platform.",
   },
   fa: {
     nav_home: "خانه",
@@ -854,6 +857,9 @@ const translations = {
     back_to_my_bookings: "بازگشت به رزروهای من",
     total_for_n_travelers: "مجموع برای {n} مسافر: ${total}",
     mock_payment_notice: "در نسخه نهایی، این بخش به درگاه‌های زرین‌پال/آیدی‌پی برای کارت‌های ایرانی یا استرایپ برای پرداخت‌های بین‌المللی متصل می‌شود. برای شبیه‌سازی پرداخت موفق کلیک کنید.",
+    chat_safety_title: "رزرو خود را ایمن نگه دارید",
+    chat_safety_body: "برای حفاظت از شما، اشتراک‌گذاری شماره تلفن، ایمیل یا شناسه شبکه‌های اجتماعی در چت مجاز نیست. معامله خود را از طریق پلتفرم نهایی کنید.",
+    message_blocked_contact_info: "پیام شما ارسال نشد — به نظر می‌رسد حاوی اطلاعات تماس (تلفن، ایمیل یا شناسه) است. لطفاً ارتباطات را در پلتفرم نگه دارید.",
   },
   ar: {
     nav_home: "الرئيسية",
@@ -1281,6 +1287,9 @@ const translations = {
     back_to_my_bookings: "العودة لحجوزاتي",
     total_for_n_travelers: "الإجمالي لـ {n} مسافرين: ${total}",
     mock_payment_notice: "في الإنتاج، سيتصل هذا بزارين‌بال/آيدي‌باي للبطاقات الإيرانية أو Stripe للمدفوعات الدولية. انقر أدناه لمحاكاة إيداع ناجح.",
+    chat_safety_title: "حافظ على سلامة حجزك",
+    chat_safety_body: "لحمايتك، لا يُسمح بمشاركة أرقام الهاتف أو البريد الإلكتروني أو معرّفات التواصل الاجتماعي في المحادثة. أتمم رحلتك عبر المنصة لتبقى محمياً.",
+    message_blocked_contact_info: "لم يُرسَل رسالتك — يبدو أنها تحتوي على معلومات اتصال (هاتف أو بريد إلكتروني أو معرّف). يرجى إبقاء التواصل داخل المنصة.",
   }
 };
 
