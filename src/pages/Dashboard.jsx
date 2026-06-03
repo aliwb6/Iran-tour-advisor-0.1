@@ -771,6 +771,7 @@ function ProfileView({ profile, userId, onSave }) {
     bio:        profile?.bio || '',
     avatar_url: profile?.avatar_url || '',
     languages:  profile?.languages || '',
+    username:   profile?.username || '',
   });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -785,16 +786,43 @@ function ProfileView({ profile, userId, onSave }) {
     setForm(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleUsernameChange = (e) => {
+    const val = e.target.value.toLowerCase().replace(/^@/, '').replace(/[^a-z0-9_]/g, '');
+    setForm(prev => ({ ...prev, username: val }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSaving(true);
     try {
+      const initialUsername = profile?.username || '';
+      if (form.username !== initialUsername) {
+        if (!/^[a-z0-9_]{3,20}$/.test(form.username)) {
+          toast.error(t('username_invalid'));
+          return;
+        }
+        const { data: clash } = await supabase
+          .from('profiles').select('id').eq('username', form.username).neq('id', userId).maybeSingle();
+        if (clash) {
+          toast.error(t('username_taken'));
+          return;
+        }
+      }
       const { error: err } = await supabase
         .from('profiles')
         .update({ ...form })
         .eq('id', userId);
-      if (err) throw err;
+      if (err) {
+        if (err.code === '23505') {
+          toast.error(t('username_taken'));
+          return;
+        }
+        throw err;
+      }
+      if (form.username !== initialUsername) {
+        toast.success(t('username_saved'));
+      }
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
       onSave({ ...profile, ...form });
@@ -950,6 +978,24 @@ function ProfileView({ profile, userId, onSave }) {
             <label className={labelClass}>Languages Spoken</label>
             <input name="languages" value={form.languages} onChange={handleChange} className={inputClass} placeholder="Persian, English, French" />
           </div>
+        </div>
+
+        {/* Username */}
+        <div>
+          <label className={labelClass}>{t('username_label')}</label>
+          <div className="relative">
+            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40 text-sm select-none pointer-events-none">@</span>
+            <input
+              name="username"
+              value={form.username}
+              onChange={handleUsernameChange}
+              className={`${inputClass} pl-7`}
+              placeholder="yourname"
+              dir="ltr"
+              maxLength={20}
+            />
+          </div>
+          <p className="mt-1.5 text-white/35 text-xs">{t('username_help')}</p>
         </div>
 
         {/* Bio */}

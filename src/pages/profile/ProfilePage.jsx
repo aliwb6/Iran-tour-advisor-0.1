@@ -10,6 +10,7 @@ import {
 import { useAuth } from '@/lib/AuthContext';
 import { useI18n } from '@/lib/i18n.jsx';
 import { supabase } from '@/supabaseClient';
+import { toast } from 'sonner';
 import UserAvatar from '@/components/profile/UserAvatar';
 import VerificationBadge from '@/components/profile/VerificationBadge';
 import EditableField from '@/components/profile/EditableField';
@@ -36,7 +37,7 @@ function StatTile({ icon: Icon, value, label }) {
 export default function ProfilePage() {
   const navigate = useNavigate();
   const { user, profile, fetchProfile, isLoadingAuth, isAuthenticated } = useAuth();
-  const { lang, dir } = useI18n();
+  const { t, lang, dir } = useI18n();
   const Arrow = dir === 'rtl' ? ArrowLeft : ArrowRight;
   const [localProfile, setLocalProfile] = useState(profile);
   const [reviewCount, setReviewCount] = useState(0);
@@ -107,6 +108,35 @@ export default function ProfilePage() {
     if (error) throw error;
     setLocalProfile((p) => ({ ...(p || {}), [key]: trimmed || null }));
     fetchProfile?.(user.id);
+  };
+
+  const saveUsername = async (rawValue) => {
+    if (!user?.id) return;
+    const normalized = rawValue.toLowerCase().replace(/^@/, '').replace(/[^a-z0-9_]/g, '');
+    if (!/^[a-z0-9_]{3,20}$/.test(normalized)) {
+      toast.error(t('username_invalid'));
+      throw new Error(t('username_invalid'));
+    }
+    const { data: clash } = await supabase
+      .from('profiles').select('id').eq('username', normalized).neq('id', user.id).maybeSingle();
+    if (clash) {
+      toast.error(t('username_taken'));
+      throw new Error(t('username_taken'));
+    }
+    const { error } = await supabase
+      .from('profiles')
+      .update({ username: normalized })
+      .eq('id', user.id);
+    if (error) {
+      if (error.code === '23505') {
+        toast.error(t('username_taken'));
+        throw new Error(t('username_taken'));
+      }
+      throw error;
+    }
+    setLocalProfile((p) => ({ ...(p || {}), username: normalized }));
+    fetchProfile?.(user.id);
+    toast.success(t('username_saved'));
   };
 
   const tx = {
@@ -232,6 +262,13 @@ export default function ProfilePage() {
               value={localProfile?.city || ''}
               placeholder={tx.cityPh}
               onSave={saveField('city')}
+            />
+            <EditableField
+              label={t('username_label')}
+              value={'@' + (localProfile?.username || '')}
+              placeholder="@yourname"
+              onSave={saveUsername}
+              helperText={t('username_help')}
             />
             <EditableField
               label={tx.aboutMe}

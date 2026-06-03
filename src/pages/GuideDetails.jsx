@@ -4,11 +4,12 @@ import { useI18n } from '@/lib/i18n.jsx';
 import { motion } from 'framer-motion';
 import {
   Star, MapPin, Globe, Calendar, BadgeCheck, ChevronLeft, ChevronRight,
-  ArrowRight, Map, PenLine, Plus, Minus, ChevronDown,
+  ArrowRight, Map, PenLine, Plus, Minus, ChevronDown, Copy,
 } from 'lucide-react';
 import { supabase } from '@/supabaseClient';
 import { avatarFor } from '@/lib/avatar';
 import { useAuth } from '@/lib/AuthContext';
+import { toast } from 'sonner';
 
 const FALLBACK_IMG = 'https://images.unsplash.com/photo-1589562784072-9ede7d082e5e?w=800&h=1000&fit=crop';
 const CITIES_LIST = ['Tehran', 'Isfahan', 'Shiraz', 'Yazd', 'Mashhad', 'Tabriz', 'Kerman', 'Rasht', 'Qom', 'Kashan'];
@@ -328,9 +329,24 @@ export default function GuideDetails() {
 
           {/* Info panel */}
           <div className="flex flex-col justify-center py-4">
-            <h1 className="font-heading text-4xl sm:text-5xl font-bold text-foreground mb-4 leading-tight">
+            <h1 className="font-heading text-4xl sm:text-5xl font-bold text-foreground mb-2 leading-tight">
               {name}
             </h1>
+
+            {guide.username && (
+              <div className="flex items-center gap-1.5 mb-4">
+                <span className="font-body text-sm text-muted-foreground">@{guide.username}</span>
+                <button
+                  onClick={async () => {
+                    await navigator.clipboard.writeText(guide.username);
+                    toast.success(t('username_copied'));
+                  }}
+                  className="p-1 rounded-md hover:bg-gold/10 text-muted-foreground hover:text-gold transition"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
 
             {/* Rating badge */}
             {rating != null && (
