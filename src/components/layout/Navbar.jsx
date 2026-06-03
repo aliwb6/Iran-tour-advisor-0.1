@@ -241,8 +241,10 @@ export default function Navbar() {
               {!isLoadingAuth && (
                 isAuthenticated ? (
                   <div className="flex items-center gap-3 mb-6 p-4 rounded-2xl bg-muted/50 border border-border/30">
-                    <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center flex-shrink-0">
-                      <span className="font-body text-sm font-bold text-white">{initials}</span>
+                    <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0 bg-accent">
+                      {profile?.avatar_url
+                        ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover object-center" />
+                        : <span className="text-xs font-bold text-white leading-none">{initials}</span>}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-body text-sm font-medium text-foreground truncate">{fullName || t('common_user')}</p>

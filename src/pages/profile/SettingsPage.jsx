@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle2, ShieldAlert, AlertTriangle, Loader2 } from 'lucide-react';
+import { CheckCircle2, ShieldAlert, AlertTriangle, Loader2, Camera } from 'lucide-react';
+import { toast } from 'sonner';
 import { useAuth } from '@/lib/AuthContext';
 import { useI18n } from '@/lib/i18n.jsx';
 import { supabase } from '@/supabaseClient';
@@ -53,12 +54,43 @@ export default function SettingsPage() {
   const [notifyTiming, setNotifyTiming] = useState(() => localStorage.getItem('ita-notify-timing') || 'instant');
   const [deactivateOpen, setDeactivateOpen] = useState(false);
   const [deactivating, setDeactivating] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url || '');
+  const avatarInputRef = useRef(null);
 
   useEffect(() => {
     if (!isLoadingAuth && !isAuthenticated) navigate('/login');
   }, [isLoadingAuth, isAuthenticated, navigate]);
 
   useEffect(() => { setLocal(profile); }, [profile]);
+  useEffect(() => { if (profile?.avatar_url) setAvatarUrl(profile.avatar_url); }, [profile]);
+
+  const handleAvatarUpload = async (file) => {
+    if (!file || !user?.id) return;
+    setUploadingAvatar(true);
+    try {
+      const ext = file.name.split('.').pop();
+      const path = `avatars/${user.id}-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from('article-images')
+        .upload(path, file, { upsert: true });
+      if (upErr) throw upErr;
+      const { data } = supabase.storage.from('article-images').getPublicUrl(path);
+      const publicUrl = data.publicUrl;
+      const { error: dbErr } = await supabase
+        .from('profiles')
+        .update({ avatar_url: publicUrl })
+        .eq('id', user.id);
+      if (dbErr) throw dbErr;
+      setAvatarUrl(publicUrl);
+      toast.success('Profile photo updated!');
+    } catch (err) {
+      console.error('Avatar upload failed:', err);
+      toast.error('Upload failed: ' + (err.message || 'unknown error'));
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
 
   const tx = {
     title:       lang === 'fa' ? 'تنظیمات و حریم خصوصی' : lang === 'ar' ? 'الإعدادات والخصوصية' : 'Settings & Privacy',
@@ -176,6 +208,39 @@ export default function SettingsPage() {
               {/* ── General ── */}
               {tab === 'general' && (
                 <div>
+                  {/* Profile Photo */}
+                  <div className="flex items-center gap-4 pb-6 border-b border-border/30 mb-2">
+                    <button
+                      type="button"
+                      onClick={() => avatarInputRef.current?.click()}
+                      className="relative group w-20 h-20 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0 bg-accent"
+                    >
+                      {avatarUrl ? (
+                        <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover object-center" />
+                      ) : (
+                        <span className="text-2xl font-bold text-white leading-none">
+                          {profile?.full_name?.[0]?.toUpperCase() || 'A'}
+                        </span>
+                      )}
+                      <span className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition">
+                        {uploadingAvatar
+                          ? <Loader2 className="w-5 h-5 text-white animate-spin" />
+                          : <Camera className="w-5 h-5 text-white" />}
+                      </span>
+                    </button>
+                    <div>
+                      <p className="text-sm font-medium text-foreground">Profile Photo</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">Click the photo to upload a new one</p>
+                    </div>
+                    <input
+                      ref={avatarInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={e => e.target.files?.[0] && handleAvatarUpload(e.target.files[0])}
+                    />
+                  </div>
+
                   <EditableField
                     label={tx.fullName}
                     value={local?.full_name || ''}
