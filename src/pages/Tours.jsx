@@ -1,20 +1,21 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useI18n } from '@/lib/i18n.jsx';
 import { motion, AnimatePresence } from 'framer-motion';
 import TourFilters from '@/components/tours/TourFilters';
 import TourCard from '@/components/tours/TourCard';
 import { useTours, FALLBACK_IMAGE } from '@/hooks/useSupabase';
 
-const DEFAULT_FILTERS = { purpose: 'all', theme: 'all', duration: 'all', price: 'all' };
+const DEFAULT_FILTERS = { purpose: 'all', theme: 'all', duration: 'all', price: 'all', city: 'all' };
 
-// Price tier thresholds (USD). Budget < 100, Mid-range 100–299, Luxury 300+
+// Price tier thresholds. Budget < 1200, Mid-range 1200–2499, Luxury 2500+
 const priceMatches = (tour, priceTier) => {
-  if (priceTier === 'all') return true;
+  if (!priceTier || priceTier === 'all') return true;
   const p = tour.priceFrom ?? tour.price_from ?? tour.price ?? null;
   if (p == null) return true; // no price data — show in all tiers
-  if (priceTier === 'budget')   return p < 100;
-  if (priceTier === 'midrange') return p >= 100 && p < 300;
-  if (priceTier === 'luxury')   return p >= 300;
+  if (priceTier === 'budget') return p < 1200;
+  if (priceTier === 'mid')    return p >= 1200 && p < 2500;
+  if (priceTier === 'luxury') return p >= 2500;
   return true;
 };
 
@@ -52,9 +53,36 @@ const pickImage = (tour) => {
 
 export default function Tours() {
   const { dir, lang } = useI18n();
-  const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  const [searchParams] = useSearchParams();
+  const cityFromUrl = searchParams.get('city') || 'all';
+
+  const [filters, setFilters] = useState(() => ({
+    ...DEFAULT_FILTERS,
+    city: cityFromUrl,
+  }));
+
+  // Sync city filter when URL param changes (e.g. hero search → back navigation)
+  useEffect(() => {
+    setFilters(prev => ({ ...prev, city: cityFromUrl }));
+  }, [cityFromUrl]);
+
   const { tours: rawTours, loading, error } = useTours(filters);
-  const tours = rawTours.filter(t => priceMatches(t, filters.price));
+
+  const tours = useMemo(() => rawTours.filter(tour => {
+    if (!priceMatches(tour, filters.price)) return false;
+    if (filters.city !== 'all') {
+      const cityLower = filters.city.toLowerCase();
+      const inCity = (tour.city || '').toLowerCase().includes(cityLower);
+      const inLocation = typeof tour.location === 'object'
+        ? Object.values(tour.location).some(v => String(v).toLowerCase().includes(cityLower))
+        : (tour.location || '').toLowerCase().includes(cityLower);
+      const inCities = typeof tour.cities === 'object'
+        ? Object.values(tour.cities).some(v => String(v).toLowerCase().includes(cityLower))
+        : (tour.cities || '').toLowerCase().includes(cityLower);
+      if (!inCity && !inLocation && !inCities) return false;
+    }
+    return true;
+  }), [rawTours, filters]);
 
   const loadingText = lang === 'fa' ? 'در حال بارگذاری تورها...' : lang === 'ar' ? 'جار تحميل الرحلات...' : 'Loading tours...';
   const errorTitle = lang === 'fa' ? 'بارگذاری تورها با خطا مواجه شد' : lang === 'ar' ? 'فشل تحميل الرحلات' : 'Failed to load tours';
