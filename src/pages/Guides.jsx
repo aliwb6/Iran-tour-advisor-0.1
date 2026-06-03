@@ -89,9 +89,9 @@ export default function Guides() {
 
   const filtered = useMemo(() => {
     return allGuides.filter(g => {
-      const cityVal = typeof g.city === 'object' ? (g.city[lang] || g.city.en) : (g.city || '');
+      const cityVal = (g.city != null && typeof g.city === 'object') ? (g.city[lang] || g.city.en || '') : (g.city || '');
       const nameVal = g.full_name || g.name || '';
-      const bioVal = typeof g.bio === 'object' ? (g.bio[lang] || g.bio.en || '') : (g.bio || '');
+      const bioVal = (g.bio != null && typeof g.bio === 'object') ? (g.bio[lang] || g.bio.en || '') : (g.bio || '');
 
       if (search && !nameVal.toLowerCase().includes(search.toLowerCase()) &&
           !cityVal.toLowerCase().includes(search.toLowerCase()) &&
@@ -101,20 +101,24 @@ export default function Guides() {
 
       if (filters.language !== 'all') {
         const guideLanguages = Array.isArray(g.languages)
-          ? (typeof g.languages[0] === 'object' ? (g.languages[0][lang] || []) : g.languages)
+          ? (g.languages[0] != null && typeof g.languages[0] === 'object'
+              ? (g.languages[0][lang] || [])
+              : g.languages.filter(Boolean))
           : [];
         const langMatch = guideLanguages.some(l =>
-          (typeof l === 'string' ? l : (l.en || '')).toLowerCase().includes(filters.language.toLowerCase())
+          (typeof l === 'string' ? l : (l?.en || '')).toLowerCase().includes(filters.language.toLowerCase())
         );
         if (!langMatch) return false;
       }
 
       if (filters.specialty !== 'all') {
         const specs = Array.isArray(g.specialties)
-          ? (typeof g.specialties[0] === 'object' ? (g.specialties[lang] || g.specialties.en || []) : g.specialties)
+          ? (g.specialties[0] != null && typeof g.specialties[0] === 'object'
+              ? (g.specialties[lang] || g.specialties.en || [])
+              : g.specialties.filter(Boolean))
           : (g.specialty ? [g.specialty] : []);
         const specMatch = specs.some(s =>
-          (typeof s === 'string' ? s : '').toLowerCase().includes(filters.specialty.toLowerCase())
+          (typeof s === 'string' ? s : (s?.en || '')).toLowerCase().includes(filters.specialty.toLowerCase())
         );
         if (!specMatch) return false;
       }
@@ -228,11 +232,13 @@ export default function Guides() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filtered.map((guide, i) => {
-              const cityVal = typeof guide.city === 'object' ? (guide.city[lang] || guide.city.en) : (guide.city || '');
+              const cityVal = (guide.city != null && typeof guide.city === 'object') ? (guide.city[lang] || guide.city.en || '') : (guide.city || '');
               const nameVal = guide.full_name || guide.name || '';
-              const bioVal = typeof guide.bio === 'object' ? (guide.bio[lang] || guide.bio.en || '') : (guide.bio || '');
+              const bioVal = (guide.bio != null && typeof guide.bio === 'object') ? (guide.bio[lang] || guide.bio.en || '') : (guide.bio || '');
               const specs = Array.isArray(guide.specialties)
-                ? (typeof guide.specialties[0] === 'object' ? (guide.specialties[lang] || guide.specialties.en || []) : guide.specialties)
+                ? (guide.specialties[0] != null && typeof guide.specialties[0] === 'object'
+                    ? (guide.specialties[lang] || guide.specialties.en || [])
+                    : guide.specialties.filter(Boolean))
                 : (guide.specialty ? [guide.specialty] : []);
 
               return (
