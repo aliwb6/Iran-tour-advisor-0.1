@@ -10,6 +10,11 @@ import { useTourBySlug, FALLBACK_IMAGE } from '@/hooks/useSupabase';
 import { supabase } from '@/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { lookupInclusionLabel, computeNotIncludedLabels } from '@/lib/tourInclusions';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { toast } from 'sonner';
 
 const purposeBadgeConfig = {
   leisure: { en: 'Leisure', fa: 'تفریحی', ar: 'ترفيه', color: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400' },
@@ -74,6 +79,12 @@ export default function TourDetails() {
   const { tour, loading, error } = useTourBySlug(slug);
   const [bookLoading, setBookLoading] = useState(false);
   const [bookError, setBookError] = useState('');
+  const [requestOpen, setRequestOpen] = useState(false);
+  const [reqUsername, setReqUsername] = useState('');
+  const [reqMessage, setReqMessage] = useState('');
+  const [reqDate, setReqDate] = useState('');
+  const [reqGroupSize, setReqGroupSize] = useState('');
+  const [reqSubmitting, setReqSubmitting] = useState(false);
 
   if (loading) {
     return (
@@ -172,6 +183,58 @@ export default function TourDetails() {
       setBookError(err.message || 'Failed to open chat');
     } finally {
       setBookLoading(false);
+    }
+  };
+
+  const handleSubmitRequest = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      toast.error(t('request_login_required'));
+      navigate('/login');
+      return;
+    }
+    const trimmedUsername = reqUsername.trim();
+    if (!trimmedUsername) {
+      toast.error(t('request_username_label'));
+      return;
+    }
+    setReqSubmitting(true);
+    try {
+      const { data: guide } = await supabase
+        .from('profiles')
+        .select('id, role, username')
+        .eq('username', trimmedUsername)
+        .in('role', ['guide', 'agency'])
+        .maybeSingle();
+      if (!guide) {
+        toast.error(t('request_not_found'));
+        return;
+      }
+      if (guide.id === user.id) {
+        toast.error(t('request_self_error'));
+        return;
+      }
+      const { error: insertError } = await supabase.from('tour_requests').insert({
+        tour_id: tour.id,
+        tourist_id: user.id,
+        guide_id: guide.id,
+        message: reqMessage || null,
+        preferred_date: reqDate || null,
+        group_size: reqGroupSize ? Number(reqGroupSize) : null,
+        status: 'pending',
+      });
+      if (insertError) {
+        toast.error(t('request_generic_error'));
+        return;
+      }
+      toast.success(t('request_success'));
+      setRequestOpen(false);
+      setReqUsername('');
+      setReqMessage('');
+      setReqDate('');
+      setReqGroupSize('');
+    } finally {
+      setReqSubmitting(false);
     }
   };
 
@@ -443,6 +506,12 @@ export default function TourDetails() {
                   {bookError && (
                     <p className="font-body text-xs text-red-500">{bookError}</p>
                   )}
+                  <button
+                    onClick={() => setRequestOpen(true)}
+                    className="w-full py-3 rounded-xl border border-accent text-accent font-body font-semibold hover:bg-accent/10 transition-colors"
+                  >
+                    {t('request_cta')}
+                  </button>
                 </div>
 
                 {/* Contact details are intentionally hidden until booking confirmation. */}
@@ -475,6 +544,71 @@ export default function TourDetails() {
           </div>
         </div>
       </div>
+
+      <Dialog open={requestOpen} onOpenChange={setRequestOpen}>
+        <DialogContent dir={dir} className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-heading">{t('request_dialog_title')}</DialogTitle>
+            <DialogDescription className="font-body">{t('request_dialog_desc')}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <div className="space-y-1.5">
+              <Label className="font-body text-sm">{t('request_username_label')}</Label>
+              <Input
+                value={reqUsername}
+                onChange={e => setReqUsername(e.target.value)}
+                placeholder={t('request_username_ph')}
+                className="font-body"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="font-body text-sm">{t('request_message_label')}</Label>
+              <Textarea
+                value={reqMessage}
+                onChange={e => setReqMessage(e.target.value)}
+                placeholder={t('request_message_ph')}
+                rows={3}
+                className="font-body resize-none"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="font-body text-sm">{t('request_date_label')}</Label>
+              <Input
+                type="date"
+                value={reqDate}
+                onChange={e => setReqDate(e.target.value)}
+                className="font-body"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="font-body text-sm">{t('request_group_label')}</Label>
+              <Input
+                type="number"
+                min={1}
+                value={reqGroupSize}
+                onChange={e => setReqGroupSize(e.target.value)}
+                className="font-body"
+              />
+            </div>
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={handleSubmitRequest}
+                disabled={reqSubmitting}
+                className="flex-1 py-2.5 rounded-xl bg-accent text-white font-body font-semibold hover:bg-accent/90 transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {reqSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                {t('request_submit')}
+              </button>
+              <button
+                onClick={() => setRequestOpen(false)}
+                className="flex-1 py-2.5 rounded-xl border border-border font-body font-semibold hover:bg-muted/50 transition-colors"
+              >
+                {t('request_cancel')}
+              </button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
