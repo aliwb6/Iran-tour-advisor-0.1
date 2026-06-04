@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, ChevronLeft, ChevronRight, Check,
-  MapPin, Car, Hotel, ChevronDown, Loader2,
+  MapPin, Car, Hotel, Loader2,
 } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { supabase } from '@/supabaseClient';
@@ -12,6 +12,10 @@ import { toast } from 'sonner';
 const IRANIAN_CITIES = [
   'Tehran', 'Isfahan', 'Shiraz', 'Yazd', 'Mashhad',
   'Tabriz', 'Kerman', 'Kashan', 'Qom', 'Rasht',
+  'Hamadan', 'Kermanshah', 'Ahvaz', 'Bandar Abbas', 'Kish',
+  'Qeshm', 'Ardabil', 'Zanjan', 'Sanandaj', 'Bushehr',
+  'Gorgan', 'Sari', 'Khorramabad', 'Nishapur', 'Bam',
+  'Chabahar', 'Ramsar',
 ];
 
 const GUIDE_LANGUAGES = [
@@ -69,7 +73,7 @@ const HOURS   = Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '
 const MINUTES = ['00', '15', '30', '45'];
 
 const INITIAL_FORM = {
-  destination: '',
+  destination: [],
   start_date: '',
   end_date: '',
   arrival_hour: '09',
@@ -412,22 +416,27 @@ function StepIndicator({ step }) {
 function Step1({ form, set, toggle, toggleAssistance, errors }) {
   return (
     <div className="space-y-5">
-      {/* Destination */}
+      {/* Destination — multi-select chips */}
       <div>
         <FieldLabel>I am travelling to</FieldLabel>
-        <div className="relative">
-          <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-          <select
-            value={form.destination}
-            onChange={e => set('destination', e.target.value)}
-            className="w-full pl-9 pr-8 py-2.5 bg-background/50 border border-border/40 rounded-xl text-sm text-foreground focus:outline-none focus:border-accent appearance-none cursor-pointer transition-colors"
-          >
-            <option value="">Select a city...</option>
-            {IRANIAN_CITIES.map(city => (
-              <option key={city} value={city}>{city}</option>
-            ))}
-          </select>
-          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+        <div className="flex flex-wrap gap-2">
+          {IRANIAN_CITIES.map(city => {
+            const selected = form.destination.includes(city);
+            return (
+              <button
+                key={city}
+                type="button"
+                onClick={() => toggle('destination', city)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium border-2 transition-all ${
+                  selected
+                    ? 'border-accent bg-accent text-white shadow-sm shadow-accent/30'
+                    : 'border-border/40 text-muted-foreground hover:border-accent/40 hover:text-foreground'
+                }`}
+              >
+                {city}
+              </button>
+            );
+          })}
         </div>
         <FieldError msg={errors?.destination} />
       </div>
@@ -694,7 +703,8 @@ export default function TripRequestForm({ isOpen, onClose }) {
   // FIX 4 — full Step 1 validation before advancing
   const goNext = () => {
     const errs = {};
-    if (!form.destination)    errs.destination    = 'Please select a destination.';
+    if (!Array.isArray(form.destination) || form.destination.length < 1)
+      errs.destination = 'Please select at least one destination.';
     if (!form.start_date)     errs.start_date     = 'Please select a start date.';
     if (!form.end_date)       errs.end_date       = 'Please select an end date.';
     if (form.start_date && form.end_date && form.end_date < form.start_date)

@@ -5,7 +5,7 @@ import { Plus, Inbox, ArrowLeft } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/lib/AuthContext';
 import { useI18n } from '@/lib/i18n.jsx';
-import { supabase } from '@/supabaseClient';
+import { fetchMyTripRequests } from '@/api/tripRequests';
 import RequestCard from '@/components/profile/RequestCard';
 import TripRequestForm from '@/components/profile/TripRequestForm';
 
@@ -31,25 +31,7 @@ export default function RequestsPage() {
 
   const { data: requests = [], isLoading } = useQuery({
     queryKey: ['trip_requests', user?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('trip_requests')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        // Gracefully fall back to tour_requests if trip_requests doesn't exist yet
-        const fallback = await supabase
-          .from('tour_requests')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
-        if (fallback.error) return [];
-        return fallback.data ?? [];
-      }
-      return data ?? [];
-    },
+    queryFn: () => fetchMyTripRequests(user.id),
     enabled: !!user?.id,
   });
 
@@ -89,7 +71,8 @@ export default function RequestsPage() {
       accommodation:  hasAccomm    ? (lang === 'fa' ? 'بله' : lang === 'ar' ? 'نعم' : 'Yes') : null,
       tourType:       displayType  || null,
       requirements:  r.requirements || r.notes,
-      status:        (['active', 'waiting'].includes(r.status)) ? 'waiting' : (r.status || 'waiting'),
+      status:          (['active', 'waiting', 'pending'].includes(r.status)) ? 'waiting' : (r.status || 'waiting'),
+      proposals_count: r.proposals_count || 0,
     };
   };
 

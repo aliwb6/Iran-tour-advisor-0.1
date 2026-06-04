@@ -3,7 +3,7 @@ import { Bell, X, CheckCheck, MapPin } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/supabaseClient';
-import { fetchNotifications, markNotificationRead } from '@/api/tourRequestFlow';
+import { fetchNotifications, markNotificationRead } from '@/api/tripRequests';
 
 function timeAgo(dateStr) {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -87,8 +87,8 @@ export default function NotificationBell({ userId, isLight = false }) {
     }
     setOpen(false);
     if (!notif.related_request_id) return;
-    if (notif.type === 'new_request') navigate('/find-jobs');
-    else if (notif.type === 'proposals_ready') navigate('/my-trips');
+    if (notif.type === 'new_request') navigate('/dashboard/requests');
+    else if (notif.type === 'proposals_ready') navigate(`/profile/requests/${notif.related_request_id}`);
   };
 
   return (

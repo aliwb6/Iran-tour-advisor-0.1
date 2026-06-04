@@ -1,9 +1,11 @@
 import { motion } from 'framer-motion';
 import {
-  MapPin, Users, Baby, ArrowRight, ArrowLeft,
-  Car, Hotel, Sparkles, Clock,
+  MapPin, Users, Baby,
+  Car, Hotel, Sparkles, Clock, Pencil,
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useI18n } from '@/lib/i18n.jsx';
+import { Button } from '@/components/ui/button';
 
 const STATUS_STYLES = {
   waiting:   'bg-gold/15 text-gold border-gold/30',
@@ -47,11 +49,13 @@ function PrefCell({ icon: Icon, label, value }) {
   );
 }
 
-export default function RequestCard({ request, onOpen }) {
-  const { lang, dir } = useI18n();
-  const Arrow = dir === 'rtl' ? ArrowLeft : ArrowRight;
+export default function RequestCard({ request }) {
+  const { t, lang, dir } = useI18n();
+  const navigate = useNavigate();
   const status = request.status || 'waiting';
   const statusLabel = (STATUS_LABELS[lang] || STATUS_LABELS.en)[status] || status;
+  const proposalCount = request.proposals_count ?? 0;
+  const canEdit = !['booked', 'closed'].includes(status);
 
   const labels = {
     transportation: lang === 'fa' ? 'حمل‌ونقل' : lang === 'ar' ? 'المواصلات' : 'Transportation',
@@ -60,7 +64,6 @@ export default function RequestCard({ request, onOpen }) {
     requirements:   lang === 'fa' ? 'یادداشت‌ها' : lang === 'ar' ? 'الملاحظات' : 'Requirements',
     adults:         lang === 'fa' ? 'بزرگسال' : lang === 'ar' ? 'بالغ' : 'Adults',
     children:       lang === 'fa' ? 'کودک' : lang === 'ar' ? 'طفل' : 'Children',
-    seeDetails:     lang === 'fa' ? 'مشاهده جزئیات' : lang === 'ar' ? 'عرض التفاصيل' : 'See Details',
   };
 
   return (
@@ -144,18 +147,47 @@ export default function RequestCard({ request, onOpen }) {
         </div>
       )}
 
-      {/* Footer: status + CTA */}
-      <footer className="flex items-center justify-between pt-4 border-t border-border/30">
-        <span className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${STATUS_STYLES[status] || STATUS_STYLES.waiting}`}>
+      {/* Footer: status + three action buttons */}
+      <footer className="flex items-center justify-between gap-3 pt-4 border-t border-border/30 flex-wrap">
+        <span className={`px-3 py-1.5 rounded-full text-xs font-semibold border shrink-0 ${STATUS_STYLES[status] || STATUS_STYLES.waiting}`}>
           {statusLabel}
         </span>
-        <button
-          onClick={() => onOpen?.(request)}
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-accent hover:text-accent/80 transition group/btn"
-        >
-          {labels.seeDetails}
-          <Arrow className="w-3.5 h-3.5 group-hover/btn:translate-x-0.5 transition-transform" />
-        </button>
+
+        <div className="flex items-center gap-2 flex-wrap justify-end">
+          {/* 1. See Details */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate(`/profile/requests/${request.id}?tab=details`)}
+          >
+            {t('see_details')}
+          </Button>
+
+          {/* 2. Edit — hidden once booked/closed */}
+          {canEdit && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate(`/profile/requests/${request.id}?tab=details&edit=true`)}
+            >
+              <Pencil className="w-3.5 h-3.5" />
+              {t('edit_trip')}
+            </Button>
+          )}
+
+          {/* 3. View Proposals / Awaiting */}
+          {proposalCount > 0 ? (
+            <Button
+              size="sm"
+              className="bg-teal-500 hover:bg-teal-600 text-white"
+              onClick={() => navigate(`/profile/requests/${request.id}?tab=proposals`)}
+            >
+              {t('view_proposals_count', { count: proposalCount })}
+            </Button>
+          ) : (
+            <span className="text-xs text-muted-foreground px-1">{t('awaiting_proposals')}</span>
+          )}
+        </div>
       </footer>
     </motion.article>
   );

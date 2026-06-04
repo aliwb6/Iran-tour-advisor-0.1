@@ -1,10 +1,11 @@
-import { useEffect, useState, useRef, useMemo } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { supabase } from '@/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { useI18n } from '@/lib/i18n.jsx';
 import { avatarFor } from '@/lib/avatar';
 import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'sonner';
 import {
   ArrowLeft,
   ArrowRight,
@@ -14,7 +15,21 @@ import {
   Sparkles,
   Globe2,
   ChevronDown,
+  AlertTriangle,
 } from 'lucide-react';
+
+function containsContactInfo(text) {
+  const patterns = [
+    /\b[\w.+-]+@[\w-]+\.[a-z]{2,}\b/i,
+    /(\+?\d[\s\-.]?){7,15}/,
+    /\b(https?:\/\/|www\.)\S+/i,
+    /\b(whatsapp|telegram|instagram|signal|wechat|line|viber|t\.me|wa\.me)\b/i,
+    /\+98\s?\d/,
+    /\b09\d{9}\b/,
+    /@\w{3,}/,
+  ];
+  return patterns.some(p => p.test(text));
+}
 
 // ── Brand tokens ────────────────────────────────────────────────
 const C = {
@@ -255,7 +270,7 @@ export default function Chat() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, isAuthenticated, isLoadingAuth } = useAuth();
-  const { lang, dir } = useI18n();
+  const { t, lang, dir } = useI18n();
   const [chatLang, setChatLang] = useState(lang);
   const isRtl = dir === 'rtl';
   const BackArrow = isRtl ? ArrowRight : ArrowLeft;
@@ -360,6 +375,10 @@ export default function Chat() {
     e.preventDefault();
     const text = input.trim();
     if (!text || !user || !guideId || sending) return;
+    if (containsContactInfo(text)) {
+      toast.error(t('message_blocked_contact_info'));
+      return;
+    }
     setSending(true);
     setInput('');
     try {
@@ -508,6 +527,19 @@ export default function Chat() {
               }}
             />
           </header>
+
+          {/* Safety banner */}
+          <div className="mx-4 mt-3 mb-1 flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+            <div>
+              <p className="text-sm font-semibold text-amber-700">
+                {t('chat_safety_title')}
+              </p>
+              <p className="mt-0.5 text-xs text-amber-600">
+                {t('chat_safety_body')}
+              </p>
+            </div>
+          </div>
 
           {/* Messages */}
           <div

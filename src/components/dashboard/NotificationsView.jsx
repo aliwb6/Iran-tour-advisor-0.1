@@ -3,7 +3,7 @@ import { Bell, CheckCheck, RefreshCw, MapPin } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/supabaseClient';
-import { fetchNotifications, markNotificationRead } from '@/api/tourRequestFlow';
+import { fetchNotifications, markNotificationRead } from '@/api/tripRequests';
 
 function timeAgo(dateStr) {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -37,7 +37,7 @@ function NotifCard({ notif, onMarkRead, onNavigate }) {
         if (!notif.is_read) onMarkRead(notif.id);
         if (notif.related_request_id) {
           // new_request → go accept it; guide_selected / request_filled → see accepted list
-          onNavigate(notif.type === 'new_request' ? '/find-jobs' : '/dashboard');
+          onNavigate(notif.type === 'new_request' ? '/dashboard/requests' : '/dashboard');
         }
       }}
       className={`w-full text-left rounded-2xl border p-4 transition-colors ${

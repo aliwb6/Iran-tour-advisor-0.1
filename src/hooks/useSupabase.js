@@ -500,7 +500,7 @@ export function useSubmitTripRequest() {
       const { error: supabaseError } = await supabase.from('trip_requests').insert([{
         guide_id: payload.guideId || null,
         agency_id: payload.agencyId || null,
-        traveler_id: payload.travelerId || null,
+        user_id: payload.travelerId || null,
         traveler_name: payload.travelerName || null,
         traveler_email: payload.travelerEmail || null,
         traveler_phone: payload.travelerPhone || null,
