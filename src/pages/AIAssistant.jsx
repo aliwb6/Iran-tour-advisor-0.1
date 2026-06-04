@@ -10,6 +10,7 @@ import {
   Leaf, Compass, Loader2, ArrowLeft, ArrowRight, DollarSign,
   Trash2, Plus, MessageSquare, Menu, X,
 } from 'lucide-react';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { sendChatMessage } from '../services/api.js';
 import { toast } from 'sonner';
 import { avatarFor } from '@/lib/avatar';
@@ -106,84 +107,9 @@ const LANGS = [
   { code: 'ar', label: 'العربية',  dir: 'rtl' },
 ];
 
-// ── Available AI models ────────────────────────────────────────────────────────
-const AVAILABLE_MODELS = [
-  { id: 'openrouter/auto',                        name: 'Auto (Best Available)', icon: '⚡', free: false },
-  { id: 'openai/gpt-4-turbo',                     name: 'GPT-4 Turbo',          icon: '✨', free: false },
-  { id: 'openai/gpt-3.5-turbo',                   name: 'GPT-3.5 Turbo',        icon: '⚡', free: false },
-  { id: 'meta-llama/llama-3.1-8b-instruct:free',  name: 'Llama 3.1 8B',         icon: '🦙', free: true  },
-  { id: 'mistralai/mistral-7b-instruct:free',      name: 'Mistral 7B',           icon: '✨', free: true  },
-];
-
+// Locked to "Auto (Best Available)" — user cannot change the model.
+const AUTO_MODEL         = 'openrouter/auto';
 const FREE_FALLBACK_MODEL = 'meta-llama/llama-3.1-8b-instruct:free';
-const MODEL_STORAGE_KEY = 'iran_tour_ai_selected_model';
-
-function ModelBadge({ free }) {
-  return (
-    <span
-      className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide"
-      style={
-        free
-          ? { background: '#dcfce7', color: '#15803d' }
-          : { background: '#fef9c3', color: '#a16207' }
-      }
-    >
-      {free ? 'FREE' : 'PRO'}
-    </span>
-  );
-}
-
-function ModelSelector({ model, onChange, open, setOpen }) {
-  const current = AVAILABLE_MODELS.find((m) => m.id === model) || AVAILABLE_MODELS[0];
-  return (
-    <div className="relative z-[100]">
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-2 rounded-full px-3.5 py-2 text-sm font-medium transition-colors"
-        style={{ background: '#ffffff70', backdropFilter: 'blur(12px)', border: `1px solid ${C.muted}30`, color: C.teal }}
-        title="Select AI Model"
-      >
-        <span>{current.icon}</span>
-        <span>{current.name}</span>
-        <ModelBadge free={current.free} />
-        <ChevronDown
-          className={`h-3.5 w-3.5 transition-transform ${open ? 'rotate-180' : ''}`}
-          style={{ color: C.muted }}
-        />
-      </button>
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, y: -4, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -4, scale: 0.98 }}
-            transition={{ duration: 0.15 }}
-            className="absolute right-0 mt-2 min-w-[220px] overflow-hidden rounded-2xl py-1 z-[9999]"
-            style={{ background: C.white, border: `1px solid ${C.muted}25`, boxShadow: `0 12px 40px ${C.teal}15` }}
-          >
-            {AVAILABLE_MODELS.map((m) => (
-              <button
-                key={m.id}
-                onClick={() => { onChange(m.id); setOpen(false); }}
-                className="flex w-full items-center justify-between gap-2 px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors text-left"
-                style={{ color: C.teal }}
-              >
-                <span className="flex items-center gap-2">
-                  <span>{m.icon}</span>
-                  <span>{m.name}</span>
-                </span>
-                <span className="flex items-center gap-2 shrink-0">
-                  <ModelBadge free={m.free} />
-                  {m.id === model && <span className="h-1.5 w-1.5 rounded-full" style={{ background: C.turq }} />}
-                </span>
-              </button>
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
 
 function LanguageSwitcher({ lang, onChange }) {
   const [open, setOpen] = useState(false);
@@ -192,13 +118,14 @@ function LanguageSwitcher({ lang, onChange }) {
     <div className="relative z-[100]">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-2 rounded-full px-3.5 py-2 text-sm font-medium transition-colors"
+        className="flex items-center gap-1.5 sm:gap-2 rounded-full px-2.5 sm:px-3.5 py-2.5 text-sm font-medium transition-colors min-h-[40px]"
         style={{ background: '#ffffff70', backdropFilter: 'blur(12px)', border: `1px solid ${C.muted}30`, color: C.teal }}
       >
-        <Globe2 className="h-4 w-4" style={{ color: C.turq }} />
-        <span>{current.label}</span>
+        <Globe2 className="h-4 w-4 shrink-0" style={{ color: C.turq }} />
+        <span className="hidden sm:inline">{current.label}</span>
+        <span className="sm:hidden text-xs font-bold uppercase">{current.code}</span>
         <ChevronDown
-          className={`h-3.5 w-3.5 transition-transform ${open ? 'rotate-180' : ''}`}
+          className={`h-3.5 w-3.5 transition-transform shrink-0 ${open ? 'rotate-180' : ''}`}
           style={{ color: C.muted }}
         />
       </button>
@@ -209,7 +136,7 @@ function LanguageSwitcher({ lang, onChange }) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -4, scale: 0.98 }}
             transition={{ duration: 0.15 }}
-            className="absolute right-0 mt-2 min-w-[140px] overflow-hidden rounded-2xl py-1 z-[9999]"
+            className="absolute end-0 mt-2 min-w-[140px] overflow-hidden rounded-2xl py-1 z-[9999]"
             style={{ background: C.white, border: `1px solid ${C.muted}25`, boxShadow: `0 12px 40px ${C.teal}15` }}
           >
             {LANGS.map((l) => (
@@ -325,7 +252,7 @@ function ConversationSidebar({ conversations, activeId, onNew, onSwitch, onDelet
 
   return (
     <>
-      {/* Mobile backdrop */}
+      {/* Mobile backdrop — above header (z-[55]) so the drawer covers it fully */}
       <AnimatePresence>
         {open && (
           <motion.div
@@ -334,15 +261,16 @@ function ConversationSidebar({ conversations, activeId, onNew, onSwitch, onDelet
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 bg-black/40 z-40 lg:hidden"
+            className="fixed inset-0 bg-black/40 z-[55] lg:hidden"
             onClick={onClose}
           />
         )}
       </AnimatePresence>
 
+      {/* Sidebar — z-[60] so it renders above both the backdrop and the header */}
       <aside
         className={[
-          'flex flex-col w-64 shrink-0 z-50',
+          'flex flex-col w-64 shrink-0 z-[60]',
           'fixed inset-y-0 lg:static lg:inset-auto',
           fixedSide,
           'transition-transform duration-300 ease-in-out',
@@ -565,6 +493,80 @@ function buildGreeting(cityHint, lang) {
   return "Salaam! I'm your Iran travel advisor at Iran Tour Advisor. Tell me — what's drawing you to Iran?";
 }
 
+// ── Shared recommendations panel content (desktop sidebar + mobile sheet) ─────
+function RecommendationsPanelContent({ lang, profile, sidebarTours, sidebarGuides, hasRecommendations }) {
+  return (
+    <div>
+      {/* Profile chips */}
+      <div className="px-6 pt-6 pb-6">
+        <SectionHeading
+          eyebrow={lang === 'fa' ? 'حین گفتگو' : lang === 'ar' ? 'أثناء المحادثة' : 'As we talk'}
+          title={lang === 'fa' ? 'پروفایل سفر شما' : lang === 'ar' ? 'ملفك السياحي' : 'Your Travel Profile'}
+          trailing={
+            <span className="text-[11px] font-medium" style={{ color: C.muted }}>
+              {Object.values(profile).filter((v) => typeof v === 'string' && v).length}/4
+            </span>
+          }
+        />
+        <div className="mt-5 grid grid-cols-2 gap-3">
+          <ProfileChip icon={Building2} label={lang === 'fa' ? 'هدف سفر' : lang === 'ar' ? 'هدف الرحلة' : 'Travel Goal'}   value={profile.goal}     filled={!!profile.goal}     accent={C.turq} />
+          <ProfileChip icon={Clock}     label={lang === 'fa' ? 'مدت سفر'  : lang === 'ar' ? 'المدة'          : 'Duration'}     value={profile.duration} filled={!!profile.duration} accent={C.teal} />
+          <ProfileChip icon={Users}     label={lang === 'fa' ? 'نوع گروه' : lang === 'ar' ? 'نوع المجموعة'  : 'Group Type'}   value={profile.group}    filled={!!profile.group}    accent={C.muted} />
+          <ProfileChip icon={Wallet}    label={lang === 'fa' ? 'بودجه'    : lang === 'ar' ? 'الميزانية'     : 'Budget Level'} value={profile.budget}   filled={!!profile.budget}   accent={C.turq} />
+        </div>
+      </div>
+
+      {/* Divider */}
+      <div
+        className="mx-6 h-px"
+        style={{ background: `linear-gradient(90deg, transparent, ${C.muted}40, transparent)` }}
+      />
+
+      {/* Recommendations */}
+      <AnimatePresence>
+        {hasRecommendations && (
+          <motion.div
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 18 }}
+            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            className="px-6 py-6"
+          >
+            <SectionHeading
+              eyebrow="Curated by Aria"
+              title={lang === 'fa' ? 'پیشنهادات برای شما' : lang === 'ar' ? 'موصى به لك' : 'Recommended for You'}
+            />
+            {sidebarTours.length > 0 && (
+              <div className="mt-5 grid grid-cols-1 gap-3">
+                {sidebarTours.map((tour) => <TourCard key={tour.id} tour={tour} />)}
+              </div>
+            )}
+            {sidebarGuides.length > 0 && (
+              <div className="mt-7">
+                <SectionHeading
+                  eyebrow={lang === 'fa' ? 'راهنمایان محلی' : lang === 'ar' ? 'مرشدون محليون' : 'Local hosts'}
+                  title={lang === 'fa' ? 'راهنمایانی که منتظر دیدارتان هستند' : lang === 'ar' ? 'مرشدون يودّون مقابلتك' : "Guides who'd love to meet you"}
+                />
+                <div className="mt-4 flex flex-col gap-2.5">
+                  {sidebarGuides.map((guide) => <GuideCard key={guide.id} guide={guide} />)}
+                </div>
+              </div>
+            )}
+            <Link
+              to="/tours"
+              className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-[13.5px] font-semibold transition-all hover:opacity-90"
+              style={{ background: C.teal, color: C.white, boxShadow: `0 8px 22px ${C.teal}30` }}
+            >
+              <Compass className="h-4 w-4" />
+              {lang === 'fa' ? 'ساخت برنامه سفر اختصاصی' : lang === 'ar' ? 'إنشاء خط سير مخصص' : 'Build a custom itinerary'}
+            </Link>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 export default function AIAssistant() {
   const { t, dir, lang, switchLang } = useI18n();
@@ -592,15 +594,11 @@ export default function AIAssistant() {
     switchConversation,
   } = useChatHistory();
 
-  const [selectedModel, setSelectedModel] = useState(() => {
-    try { return localStorage.getItem(MODEL_STORAGE_KEY) || FREE_FALLBACK_MODEL; }
-    catch { return FREE_FALLBACK_MODEL; }
-  });
-
-  // Calls the API with automatic fallback to the free model on 404 / 402
-  const callWithFallback = async (msgs, sysprompt, model) => {
+  // Calls the API with automatic fallback to the free model on 404 / 402.
+  // Model is always "Auto (Best Available)" — no user-facing picker.
+  const callWithFallback = async (msgs, sysprompt) => {
     try {
-      return await sendChatMessage(msgs, sysprompt, lang, model);
+      return await sendChatMessage(msgs, sysprompt, lang, AUTO_MODEL);
     } catch (err) {
       if (err.status === 401) {
         toast.error(
@@ -610,15 +608,13 @@ export default function AIAssistant() {
         );
         throw err;
       }
-      if ((err.status === 404 || err.status === 402) && model !== FREE_FALLBACK_MODEL) {
+      if (err.status === 404 || err.status === 402) {
         const reason = err.status === 404 ? 'Model not available' : 'No credits';
         toast.warning(
           lang === 'fa' ? `${reason} — درحال تغییر به مدل رایگان`
           : lang === 'ar' ? `${reason} — يتم التبديل إلى النموذج المجاني`
           : `${reason} — switching to free model`
         );
-        setSelectedModel(FREE_FALLBACK_MODEL);
-        try { localStorage.setItem(MODEL_STORAGE_KEY, FREE_FALLBACK_MODEL); } catch {}
         return await sendChatMessage(msgs, sysprompt, lang, FREE_FALLBACK_MODEL);
       }
       throw err;
@@ -629,9 +625,9 @@ export default function AIAssistant() {
   const [loading, setLoading] = useState(false);
   const [catalogue, setCatalogue] = useState({ tours: [], guides: [], ready: false });
   const [profile] = useState({ goal: '', duration: '', group: '', budget: '', vibes: [] });
-  const [showModelPicker, setShowModelPicker] = useState(false);
   const [showTripBuilder, setShowTripBuilder] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [recsSheetOpen, setRecsSheetOpen] = useState(false);
   const [rejectionCount, setRejectionCount]     = useState(0);
   const [tripPlanningMode, setTripPlanningMode] = useState(false);
   const [currentQuestion, setCurrentQuestion]  = useState(0);
@@ -655,12 +651,6 @@ export default function AIAssistant() {
       );
     }
   }, []); // intentionally empty — runs once on mount
-
-  // Save selected model to localStorage
-  useEffect(() => {
-    try { localStorage.setItem(MODEL_STORAGE_KEY, selectedModel); }
-    catch {}
-  }, [selectedModel]);
 
   // Fetch tours + guides once
   useEffect(() => {
@@ -715,7 +705,7 @@ export default function AIAssistant() {
 
     try {
       const systemPromptText = buildSystemPrompt(catalogue.tours, catalogue.guides);
-      const responseText = await callWithFallback(messagesForApi, systemPromptText, selectedModel);
+      const responseText = await callWithFallback(messagesForApi, systemPromptText);
       const { content, tours, guides } = extractRecommendation(responseText, catalogue.tours, catalogue.guides);
       const assistantMsg = { role: 'assistant', content };
       if (tours.length > 0 || guides.length > 0) assistantMsg.cards = { tours, guides };
@@ -841,7 +831,7 @@ export default function AIAssistant() {
 
     try {
       const systemPromptText = buildSystemPrompt(catalogue.tours, catalogue.guides);
-      const responseText = await callWithFallback(messagesForApi, systemPromptText, selectedModel);
+      const responseText = await callWithFallback(messagesForApi, systemPromptText);
       const { content, tours, guides } = extractRecommendation(responseText, catalogue.tours, catalogue.guides);
       const assistantMsg = { role: 'assistant', content };
       if (tours.length > 0 || guides.length > 0) assistantMsg.cards = { tours, guides };
@@ -917,15 +907,16 @@ export default function AIAssistant() {
           style={{ borderColor: `${C.muted}20` }}
         >
           {/* Header */}
-          <header className="relative overflow-visible px-4 pt-6 pb-5 sm:px-8 sm:pt-9 sm:pb-7 shrink-0 z-50">
+          <header className="relative overflow-visible px-4 pt-5 pb-4 sm:px-8 sm:pt-9 sm:pb-7 shrink-0 z-50">
             <PersianPattern opacity={0.055} color={C.turq} size={64} />
             <div
               className="absolute inset-x-0 top-0 h-px"
               style={{ background: `linear-gradient(90deg, transparent, ${C.turq}55, transparent)` }}
             />
 
-            <div className="relative flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
+            {/* Single-row layout — truncates title on small screens, no overflow */}
+            <div className="relative flex items-center justify-between gap-2 sm:gap-3">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
                 {/* Sidebar toggle — all screen sizes */}
                 <button
                   onClick={() => setSidebarOpen(true)}
@@ -947,7 +938,8 @@ export default function AIAssistant() {
                 </button>
 
                 <AriaMark size={40} pulse />
-                <div>
+
+                <div className="min-w-0 flex-1">
                   <div
                     className="text-[10px] font-semibold uppercase tracking-[0.18em]"
                     style={{ color: C.turq }}
@@ -955,7 +947,7 @@ export default function AIAssistant() {
                     Iran Tour Advisor
                   </div>
                   <h1
-                    className="text-[18px] font-bold leading-tight sm:text-[22px]"
+                    className="text-[15px] sm:text-[20px] lg:text-[22px] font-bold leading-tight truncate"
                     style={{ color: C.teal, letterSpacing: '-0.01em' }}
                   >
                     {t('ai_title')}
@@ -963,20 +955,15 @@ export default function AIAssistant() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <ModelSelector
-                  model={selectedModel}
-                  onChange={setSelectedModel}
-                  open={showModelPicker}
-                  setOpen={setShowModelPicker}
-                />
+              {/* Right controls — language switcher only (model locked to Auto) */}
+              <div className="shrink-0">
                 <LanguageSwitcher lang={lang} onChange={switchLang} />
               </div>
             </div>
 
             {/* Carpet hairline */}
             <div
-              className="mt-5 h-[2px] w-full"
+              className="mt-4 sm:mt-5 h-[2px] w-full"
               style={{
                 background: `repeating-linear-gradient(90deg, ${C.turq} 0 6px, transparent 6px 12px, ${C.muted} 12px 14px, transparent 14px 20px)`,
                 opacity: 0.45,
@@ -1099,9 +1086,20 @@ export default function AIAssistant() {
                 : 'Aria can help with itineraries, visas, customs, and local guides.'}
             </p>
           </div>
+
+          {/* Mobile "Recommendations" floating button — hidden on lg+ */}
+          <button
+            onClick={() => setRecsSheetOpen(true)}
+            className="lg:hidden fixed bottom-24 end-4 z-30 flex items-center gap-2 rounded-full px-4 py-3 text-[13px] font-semibold shadow-lg transition-all hover:opacity-90 active:scale-95"
+            style={{ background: C.teal, color: C.white, boxShadow: `0 8px 24px ${C.teal}40` }}
+            aria-label="Open recommendations"
+          >
+            <Sparkles className="h-4 w-4 shrink-0" />
+            <span>{lang === 'fa' ? 'پیشنهادات' : lang === 'ar' ? 'التوصيات' : 'Recommendations'}</span>
+          </button>
         </section>
 
-        {/* ── Profile + Recommendations sidebar ──────────────────────── */}
+        {/* ── Profile + Recommendations sidebar — desktop only ─────────── */}
         <motion.aside
           initial={{ opacity: 0, x: 24 }}
           animate={{ opacity: 1, x: 0 }}
@@ -1109,74 +1107,46 @@ export default function AIAssistant() {
           className="hidden lg:flex flex-col shrink-0 lg:h-full overflow-y-auto"
           style={{ width: 360, background: C.mist }}
         >
-          {/* Profile panel */}
-          <div className="px-6 pt-9 pb-6 sm:px-8 shrink-0">
-            <SectionHeading
-              eyebrow={lang === 'fa' ? 'حین گفتگو' : lang === 'ar' ? 'أثناء المحادثة' : 'As we talk'}
-              title={lang === 'fa' ? 'پروفایل سفر شما' : lang === 'ar' ? 'ملفك السياحي' : 'Your Travel Profile'}
-              trailing={
-                <span className="text-[11px] font-medium" style={{ color: C.muted }}>
-                  {Object.values(profile).filter((v) => typeof v === 'string' && v).length}/4
-                </span>
-              }
+          <div className="pt-3">
+            <RecommendationsPanelContent
+              lang={lang}
+              profile={profile}
+              sidebarTours={sidebarTours}
+              sidebarGuides={sidebarGuides}
+              hasRecommendations={hasRecommendations}
             />
-            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <ProfileChip icon={Building2} label={lang === 'fa' ? 'هدف سفر' : lang === 'ar' ? 'هدف الرحلة' : 'Travel Goal'}   value={profile.goal}     filled={!!profile.goal}     accent={C.turq} />
-              <ProfileChip icon={Clock}     label={lang === 'fa' ? 'مدت سفر'  : lang === 'ar' ? 'المدة'          : 'Duration'}     value={profile.duration} filled={!!profile.duration} accent={C.teal} />
-              <ProfileChip icon={Users}     label={lang === 'fa' ? 'نوع گروه' : lang === 'ar' ? 'نوع المجموعة'  : 'Group Type'}   value={profile.group}    filled={!!profile.group}    accent={C.muted} />
-              <ProfileChip icon={Wallet}    label={lang === 'fa' ? 'بودجه'    : lang === 'ar' ? 'الميزانية'     : 'Budget Level'} value={profile.budget}   filled={!!profile.budget}   accent={C.turq} />
-            </div>
           </div>
-
-          {/* Divider */}
-          <div
-            className="mx-6 h-px shrink-0 sm:mx-8"
-            style={{ background: `linear-gradient(90deg, transparent, ${C.muted}40, transparent)` }}
-          />
-
-          {/* Recommendations */}
-          <AnimatePresence>
-            {hasRecommendations && (
-              <motion.div
-                initial={{ opacity: 0, y: 18 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 18 }}
-                transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-                className="flex-1 px-6 py-6 sm:px-8"
-              >
-                <SectionHeading
-                  eyebrow="Curated by Aria"
-                  title={lang === 'fa' ? 'پیشنهادات برای شما' : lang === 'ar' ? 'موصى به لك' : 'Recommended for You'}
-                />
-                {sidebarTours.length > 0 && (
-                  <div className="mt-5 grid grid-cols-1 gap-3">
-                    {sidebarTours.map((tour) => <TourCard key={tour.id} tour={tour} />)}
-                  </div>
-                )}
-                {sidebarGuides.length > 0 && (
-                  <div className="mt-7">
-                    <SectionHeading
-                      eyebrow={lang === 'fa' ? 'راهنمایان محلی' : lang === 'ar' ? 'مرشدون محليون' : 'Local hosts'}
-                      title={lang === 'fa' ? 'راهنمایانی که منتظر دیدارتان هستند' : lang === 'ar' ? 'مرشدون يودّون مقابلتك' : "Guides who'd love to meet you"}
-                    />
-                    <div className="mt-4 flex flex-col gap-2.5">
-                      {sidebarGuides.map((guide) => <GuideCard key={guide.id} guide={guide} />)}
-                    </div>
-                  </div>
-                )}
-                <Link
-                  to="/tours"
-                  className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-[13.5px] font-semibold transition-all hover:opacity-90"
-                  style={{ background: C.teal, color: C.white, boxShadow: `0 8px 22px ${C.teal}30` }}
-                >
-                  <Compass className="h-4 w-4" />
-                  {lang === 'fa' ? 'ساخت برنامه سفر اختصاصی' : lang === 'ar' ? 'إنشاء خط سير مخصص' : 'Build a custom itinerary'}
-                </Link>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </motion.aside>
       </div>
+
+      {/* ── Mobile recommendations Sheet ────────────────────────────────── */}
+      <Sheet open={recsSheetOpen} onOpenChange={setRecsSheetOpen}>
+        <SheetContent
+          side="bottom"
+          className="rounded-t-3xl p-0 lg:hidden"
+          style={{ background: C.mist, maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}
+        >
+          <div dir={dir} lang={lang} className="flex flex-col" style={{ maxHeight: '85vh' }}>
+            <SheetHeader
+              className="shrink-0 px-6 py-4"
+              style={{ borderBottom: `1px solid ${C.muted}20` }}
+            >
+              <SheetTitle style={{ color: C.teal, fontFamily: 'inherit' }}>
+                {lang === 'fa' ? 'پیشنهادات سفر' : lang === 'ar' ? 'توصيات السفر' : 'Travel Recommendations'}
+              </SheetTitle>
+            </SheetHeader>
+            <div className="overflow-y-auto flex-1">
+              <RecommendationsPanelContent
+                lang={lang}
+                profile={profile}
+                sidebarTours={sidebarTours}
+                sidebarGuides={sidebarGuides}
+                hasRecommendations={hasRecommendations}
+              />
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* Trip Builder Modal */}
       <TripBuilder
