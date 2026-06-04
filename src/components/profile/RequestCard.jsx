@@ -97,7 +97,7 @@ export default function RequestCard({ request }) {
           )}
           {request.children != null && request.children > 0 && (
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-background/60 border border-border/40 text-xs text-foreground">
-              <Users className="w-3 h-3 text-accent" />
+              <Baby className="w-3 h-3 text-accent" />
               {request.children} {labels.children}
             </span>
           )}

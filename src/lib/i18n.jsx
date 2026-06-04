@@ -355,7 +355,7 @@ const translations = {
     apply: "Apply",
     skip: "Skip",
     of: "of",
-    proposals: "proposals",
+    proposals: "Proposals",
     proposal_submitted: "Proposal submitted",
     my_proposals: "My Proposals",
     waiting_for_tourist: "Waiting for tourist to choose",
@@ -436,6 +436,14 @@ const translations = {
     username_taken:   "This username is already taken.",
     username_saved:   "Username updated.",
     username_copied:  "Username copied",
+    // ── Trip request detail page — tabs & edit ──
+    trip_details:          "Trip Details",
+    see_details:           "See Details",
+    edit_trip:             "Edit Trip",
+    view_proposals_count:  "View Proposals ({count})",
+    trip_updated:          "Trip updated successfully",
+    edit_trip_title:       "Edit Your Trip",
+    save_changes:          "Save Changes",
     // ── Tourist: request a tour with a specific guide ──
     request_cta:            "Request this tour with your guide",
     request_dialog_title:   "Request this tour",
