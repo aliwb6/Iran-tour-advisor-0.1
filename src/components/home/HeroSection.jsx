@@ -1,9 +1,17 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useI18n } from '@/lib/i18n.jsx';
 import { motion } from 'framer-motion';
-import { ArrowRight, ArrowLeft, Sparkles, Star } from 'lucide-react';
-import HeroSearchBar from './HeroSearchBar';
+import { ArrowRight, ArrowLeft, Sparkles, Star, MapPin, Search } from 'lucide-react';
+
+const IRAN_CITIES = [
+  "Tehran", "Isfahan", "Shiraz", "Mashhad", "Tabriz", "Yazd", "Kerman",
+  "Ahvaz", "Rasht", "Qom", "Hamadan", "Kashan", "Bandar Abbas", "Urmia",
+  "Zahedan", "Ardabil", "Sari", "Semnan", "Arak", "Zanjan", "Gorgan",
+  "Birjand", "Ilam", "Khorramabad", "Bojnord", "Shahr-e Kord", "Sanandaj",
+  "Yasuj", "Bushehr", "Qazvin", "Dezful", "Abadan", "Borujerd", "Saveh",
+  "Karaj", "Rey", "Varamin", "Pasargadae", "Persepolis", "Natanz",
+];
 
 const HERO_IMAGES = [
   "https://media.base44.com/images/public/69fddcfab0730c36bda3631e/7a7bd2ab5_generated_847e20ff.png",
@@ -19,14 +27,32 @@ const STATS = [
 
 export default function HeroSection() {
   const { t, dir, lang } = useI18n();
+  const navigate = useNavigate();
   const Arrow = dir === 'rtl' ? ArrowLeft : ArrowRight;
   const [activeImg, setActiveImg] = useState(0);
+  const [searchValue, setSearchValue] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const searchRef = useRef(null);
+
+  const filteredCities = searchValue.length >= 1
+    ? IRAN_CITIES.filter(c => c.toLowerCase().includes(searchValue.toLowerCase())).slice(0, 6)
+    : [];
 
   useEffect(() => {
     const interval = setInterval(() => {
       setActiveImg(i => (i + 1) % HERO_IMAGES.length);
     }, 5500);
     return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (searchRef.current && !searchRef.current.contains(e.target)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
   }, []);
 
   return (
@@ -93,21 +119,75 @@ export default function HeroSection() {
           {t('hero_subtitle')}
         </motion.p>
 
-        {/* Search bar */}
+        {/* Search bar with autocomplete */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.7, duration: 0.6 }}
-          className="w-full"
+          className="mb-5 relative"
+          ref={searchRef}
         >
-          <HeroSearchBar />
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (searchValue.trim()) {
+                navigate(`/tours?city=${encodeURIComponent(searchValue.trim())}`);
+              }
+              setShowSuggestions(false);
+            }}
+            className="flex items-center gap-3 bg-black/30 backdrop-blur-md border border-white/20 rounded-2xl px-4 py-3 max-w-lg focus-within:border-gold/50 transition-colors duration-300"
+          >
+            <MapPin className="w-4 h-4 text-gold flex-shrink-0" />
+            <input
+              type="text"
+              value={searchValue}
+              onChange={(e) => {
+                setSearchValue(e.target.value);
+                setShowSuggestions(true);
+              }}
+              onFocus={() => setShowSuggestions(true)}
+              placeholder={
+                lang === 'fa' ? 'کدام شهر را رویا می‌بینید؟'
+                : lang === 'ar' ? 'أي مدينة تحلم بها؟'
+                : 'Which city are you dreaming of?'
+              }
+              className="flex-1 bg-transparent text-white placeholder-white/45 font-body text-sm outline-none min-w-0"
+            />
+            <button
+              type="submit"
+              className="flex-shrink-0 w-8 h-8 rounded-xl bg-white/10 hover:bg-accent/80 flex items-center justify-center transition-colors duration-200"
+            >
+              <Search className="w-3.5 h-3.5 text-white" />
+            </button>
+          </form>
+
+          {/* Suggestions dropdown */}
+          {showSuggestions && filteredCities.length > 0 && (
+            <div className="absolute top-full left-0 mt-2 w-full max-w-lg bg-black/80 backdrop-blur-xl border border-white/15 rounded-2xl overflow-hidden z-50 shadow-2xl">
+              {filteredCities.map((city) => (
+                <button
+                  key={city}
+                  type="button"
+                  onClick={() => {
+                    setSearchValue(city);
+                    setShowSuggestions(false);
+                    navigate(`/tours?city=${encodeURIComponent(city)}`);
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-white/80 hover:bg-white/10 hover:text-white transition-colors text-sm font-body text-left"
+                >
+                  <MapPin className="w-3.5 h-3.5 text-gold flex-shrink-0" />
+                  {city}
+                </button>
+              ))}
+            </div>
+          )}
         </motion.div>
 
         {/* CTA row */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.75, duration: 0.6 }}
+          transition={{ delay: 0.82, duration: 0.6 }}
           className="flex flex-wrap items-center gap-4 mb-14 lg:mb-16"
         >
           <Link
@@ -119,10 +199,22 @@ export default function HeroSection() {
           </Link>
           <Link
             to="/ai-assistant"
-            className="inline-flex items-center gap-2 bg-white/12 hover:bg-white/20 text-white border border-white/25 px-7 py-3.5 rounded-full font-body font-medium text-sm transition-all duration-300 backdrop-blur-sm"
+            className="relative inline-flex items-center gap-2.5 overflow-hidden bg-gold/20 hover:bg-gold/30 text-gold border border-gold/50 hover:border-gold/80 px-7 py-3.5 rounded-full font-body font-semibold text-sm uppercase tracking-wide transition-all duration-300 backdrop-blur-sm hover:shadow-lg hover:shadow-gold/25 hover:-translate-y-0.5"
+            style={{ isolation: 'isolate' }}
           >
-            <Sparkles className="w-4 h-4 text-gold" />
-            {t('hero_cta_ai')}
+            {/* Shimmer sweep — repeating glass-flash every 3 seconds */}
+            <span
+              className="pointer-events-none absolute inset-0 rounded-full"
+              style={{
+                background: 'linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.45) 50%, transparent 65%)',
+                backgroundSize: '250% 100%',
+                animation: 'shimmer-sweep 3s ease-in-out infinite',
+              }}
+            />
+            <Sparkles className="w-4 h-4 text-gold relative z-10" />
+            <span className="relative z-10">
+              {lang === 'fa' ? 'با هوش مصنوعی برنامه‌ریزی کن' : lang === 'ar' ? 'خطط مع الذكاء الاصطناعي' : t('hero_cta_ai')}
+            </span>
           </Link>
         </motion.div>
 

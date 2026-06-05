@@ -1,73 +1,82 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Search, Star, ShieldCheck, Building2, MapPin } from 'lucide-react';
+import { Search, Star, ShieldCheck, Building2, MapPin, Globe, Briefcase } from 'lucide-react';
 import { useI18n } from '@/lib/i18n.jsx';
 import { useAgencies } from '@/hooks/useSupabase';
 import { avatarFor } from '@/lib/avatar';
-import { supabase } from '@/supabaseClient';
-import {
-  FiltersShell, FilterSection, MultiSelectChips, SingleSelectChips,
-  RatingFilter, ActiveChips,
-} from '@/components/filters/FilterPrimitives';
-import CityFilterWithOther from '@/components/filters/CityFilterWithOther';
-import LanguageFilterWithOther from '@/components/filters/LanguageFilterWithOther';
+import FilterDropdown from '@/components/ui/FilterDropdown';
 
-// ── Filter catalog ───────────────────────────────────────────────────────────
-const HQ_CITIES     = ['Tehran', 'Isfahan', 'Shiraz', 'Yazd', 'Mashhad', 'Tabriz'];
-const SUPPORT_LANGS = ['English', 'Arabic', 'French', 'German', 'Spanish'];
+// ── Filter catalogs ────────────────────────────────────────────────────────────
 
-const YEARS_EXP = (lang) => [
-  { value: '1to3', label: lang === 'fa' ? '۱ تا ۳ سال'   : lang === 'ar' ? '1-3 سنوات'  : '1–3 years' },
-  { value: '3to7', label: lang === 'fa' ? '۳ تا ۷ سال'   : lang === 'ar' ? '3-7 سنوات'  : '3–7 years' },
-  { value: 'gt7',  label: lang === 'fa' ? 'بیش از ۷ سال' : lang === 'ar' ? 'أكثر من 7'  : '7+ years' },
+const CITY_OPTIONS = [
+  { key: 'all',          en: 'All Cities',    fa: 'همه شهرها',   ar: 'كل المدن' },
+  { key: 'Tehran',       en: 'Tehran',        fa: 'تهران',        ar: 'طهران' },
+  { key: 'Isfahan',      en: 'Isfahan',       fa: 'اصفهان',       ar: 'أصفهان' },
+  { key: 'Shiraz',       en: 'Shiraz',        fa: 'شیراز',        ar: 'شيراز' },
+  { key: 'Mashhad',      en: 'Mashhad',       fa: 'مشهد',         ar: 'مشهد' },
+  { key: 'Tabriz',       en: 'Tabriz',        fa: 'تبریز',        ar: 'تبريز' },
+  { key: 'Yazd',         en: 'Yazd',          fa: 'یزد',          ar: 'يزد' },
+  { key: 'Kerman',       en: 'Kerman',        fa: 'کرمان',        ar: 'كرمان' },
+  { key: 'Kashan',       en: 'Kashan',        fa: 'کاشان',        ar: 'كاشان' },
+  { key: 'Rasht',        en: 'Rasht',         fa: 'رشت',          ar: 'رشت' },
+  { key: 'Qom',          en: 'Qom',           fa: 'قم',           ar: 'قم' },
 ];
 
-const DEFAULT_FILTERS = {
-  search: '',
-  cities: [],
-  tourTypes: [],
-  languages: [],
-  rating: 0,
-  yearsExp: '',
-};
+const LANGUAGE_OPTIONS = [
+  { key: 'all',     en: 'All Languages', fa: 'همه زبان‌ها',  ar: 'كل اللغات' },
+  { key: 'english', en: 'English',       fa: 'انگلیسی',      ar: 'الإنجليزية' },
+  { key: 'arabic',  en: 'Arabic',        fa: 'عربی',         ar: 'العربية' },
+  { key: 'french',  en: 'French',        fa: 'فرانسوی',      ar: 'الفرنسية' },
+  { key: 'german',  en: 'German',        fa: 'آلمانی',       ar: 'الألمانية' },
+  { key: 'spanish', en: 'Spanish',       fa: 'اسپانیایی',    ar: 'الإسبانية' },
+  { key: 'italian', en: 'Italian',       fa: 'ایتالیایی',    ar: 'الإيطالية' },
+  { key: 'russian', en: 'Russian',       fa: 'روسی',         ar: 'الروسية' },
+  { key: 'chinese', en: 'Chinese',       fa: 'چینی',         ar: 'الصينية' },
+  { key: 'japanese',en: 'Japanese',      fa: 'ژاپنی',        ar: 'اليابانية' },
+];
 
-function rowMatches(a, f) {
-  if (f.search) {
-    const q = f.search.toLowerCase();
-    const hay = `${a.full_name || ''} ${a.city || ''} ${a.bio || ''}`.toLowerCase();
-    if (!hay.includes(q)) return false;
-  }
-  if (f.cities.length > 0) {
-    const city = (a.city || '').toLowerCase();
-    if (!city || !f.cities.some((c) => city.includes(c.toLowerCase()))) return false;
-  }
-  if (f.tourTypes.length > 0) {
-    const types = parseList(a.tour_types ?? a.specialties);
-    if (types.length && !f.tourTypes.some((t) => types.includes(String(t).toLowerCase()))) return false;
-  }
-  if (f.languages.length > 0) {
-    const langs = parseList(a.languages ?? a.support_languages);
-    if (langs.length && !f.languages.some((l) => langs.includes(String(l).toLowerCase()))) return false;
-  }
-  if (f.rating > 0) {
-    if (a.rating != null && Number(a.rating) < f.rating) return false;
-  }
-  if (f.yearsExp) {
-    const yrs = a.years_experience ?? a.experience_years;
-    if (yrs != null) {
-      if (f.yearsExp === '1to3' && !(yrs >= 1 && yrs <= 3)) return false;
-      if (f.yearsExp === '3to7' && !(yrs >= 3 && yrs <= 7)) return false;
-      if (f.yearsExp === 'gt7'  && !(yrs > 7)) return false;
-    }
-  }
-  return true;
-}
+const TOUR_TYPE_OPTIONS = [
+  { key: 'all',         en: 'All Types',       fa: 'همه انواع',        ar: 'كل الأنواع' },
+  { key: 'cultural',    en: 'Cultural',        fa: 'فرهنگی',           ar: 'ثقافية' },
+  { key: 'adventure',   en: 'Adventure',       fa: 'ماجراجویی',        ar: 'مغامرة' },
+  { key: 'luxury',      en: 'Luxury',          fa: 'لوکس',             ar: 'فاخرة' },
+  { key: 'budget',      en: 'Budget-friendly', fa: 'اقتصادی',          ar: 'اقتصادية' },
+  { key: 'photography', en: 'Photography',     fa: 'عکاسی',            ar: 'تصوير' },
+  { key: 'academic',    en: 'Academic',        fa: 'علمی',             ar: 'أكاديمية' },
+  { key: 'religious',   en: 'Religious',       fa: 'مذهبی',            ar: 'دينية' },
+  { key: 'nature',      en: 'Nature',          fa: 'طبیعت‌گردی',       ar: 'طبيعة' },
+];
+
+const DEFAULT_FILTERS = { city: 'all', language: 'all', tourType: 'all' };
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
 
 function parseList(val) {
   if (!val) return [];
   if (Array.isArray(val)) return val.map((s) => String(s).toLowerCase());
   return String(val).split(/[,·;]/).map((s) => s.trim().toLowerCase()).filter(Boolean);
+}
+
+function agencyMatches(a, search, filters) {
+  if (search) {
+    const q = search.toLowerCase();
+    const hay = `${a.full_name || ''} ${a.city || ''} ${a.bio || ''}`.toLowerCase();
+    if (!hay.includes(q)) return false;
+  }
+  if (filters.city !== 'all') {
+    const city = (a.city || '').toLowerCase();
+    if (!city.includes(filters.city.toLowerCase())) return false;
+  }
+  if (filters.language !== 'all') {
+    const langs = parseList(a.languages ?? a.support_languages);
+    if (langs.length > 0 && !langs.some((l) => l.includes(filters.language.toLowerCase()))) return false;
+  }
+  if (filters.tourType !== 'all') {
+    const types = parseList(a.tour_types ?? a.specialties ?? a.specialty);
+    if (types.length > 0 && !types.some((t) => t.includes(filters.tourType.toLowerCase()))) return false;
+  }
+  return true;
 }
 
 // ── Agency Card ────────────────────────────────────────────────────────────────
@@ -187,86 +196,42 @@ export default function Agencies() {
   const navigate = useNavigate();
   const { agencies, loading, error } = useAgencies();
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
-  const [dynamicTourTypes, setDynamicTourTypes] = useState([]);
-
-  // Load unique tour types from Supabase
-  useEffect(() => {
-    (async () => {
-      try {
-        const { data } = await supabase
-          .from('profiles')
-          .select('tour_types, specialties, specialty')
-          .eq('role', 'agency');
-        if (data) {
-          const all = data.flatMap((a) => {
-            if (Array.isArray(a.tour_types)) return a.tour_types;
-            if (Array.isArray(a.specialties)) return a.specialties;
-            if (a.specialty) return [a.specialty];
-            return [];
-          });
-          setDynamicTourTypes([...new Set(all.map((s) => String(s).trim()).filter(Boolean))]);
-        }
-      } catch {
-        // silently fail
-      }
-    })();
-  }, []);
-
-  const tourTypeOptions = (dynamicTourTypes.length > 0 ? dynamicTourTypes : [
-    'Cultural', 'Adventure', 'Luxury', 'Budget-friendly', 'Photography', 'Academic/Research',
-  ]).map((s) => ({ value: s, label: s }));
-
-  const update = (patch) => setFilters((f) => ({ ...f, ...patch }));
-  const clearAll = () => setFilters(DEFAULT_FILTERS);
+  const [search, setSearch] = useState('');
 
   const filtered = useMemo(
-    () => agencies.filter((a) => rowMatches(a, filters)),
-    [agencies, filters]
+    () => agencies.filter((a) => agencyMatches(a, search, filters)),
+    [agencies, search, filters]
   );
+
+  const hasActive = filters.city !== 'all' || filters.language !== 'all' || filters.tourType !== 'all' || search !== '';
 
   const tx = {
     title:    lang === 'fa' ? 'آژانس‌های مسافرتی' : lang === 'ar' ? 'وكالات السفر'         : 'Travel Agencies',
     subtitle: lang === 'fa' ? 'آژانس‌های رسمی و مورد اعتماد ایران برای سفر مرفه و آسوده' : lang === 'ar' ? 'وكالات إيرانية موثوقة ومرخصة لسفر مريح وسلس' : 'Trusted, licensed Iranian agencies for an effortless journey',
-    licensed: lang === 'fa' ? 'دارای مجوز رسمی'      : lang === 'ar' ? 'حاصل على ترخيص'      : 'Officially licensed',
+    search:   lang === 'fa' ? 'جستجو در آژانس‌ها...' : lang === 'ar' ? 'ابحث في الوكالات...' : 'Search agencies by name or city...',
     loading:  lang === 'fa' ? 'در حال بارگذاری آژانس‌ها...' : lang === 'ar' ? 'جار تحميل الوكالات...' : 'Loading agencies...',
     error:    lang === 'fa' ? 'بارگذاری آژانس‌ها با خطا مواجه شد' : lang === 'ar' ? 'فشل تحميل الوكالات' : 'Failed to load agencies',
     empty:    lang === 'fa' ? 'آژانسی با این فیلترها یافت نشد' : lang === 'ar' ? 'لا توجد وكالات بهذه الفلاتر' : 'No agencies match these filters',
     results:  (n) => lang === 'fa' ? `${n} آژانس یافت شد` : lang === 'ar' ? `${n} وكالة` : `${n} agenc${n === 1 ? 'y' : 'ies'} found`,
-    section: {
-      hq:       lang === 'fa' ? 'شهر دفتر مرکزی' : lang === 'ar' ? 'مدينة المقر'    : 'Headquarters city',
-      tourType: lang === 'fa' ? 'نوع تور'         : lang === 'ar' ? 'نوع الجولة'     : 'Tour type',
-      langs:    lang === 'fa' ? 'زبان پشتیبانی'    : lang === 'ar' ? 'لغة الدعم'      : 'Support language',
-      rating:   lang === 'fa' ? 'امتیاز'           : lang === 'ar' ? 'التقييم'        : 'Rating',
-      years:    lang === 'fa' ? 'سال‌های تجربه'    : lang === 'ar' ? 'سنوات الخبرة'   : 'Years of experience',
-      licensed: lang === 'fa' ? 'مجوز رسمی'        : lang === 'ar' ? 'الترخيص'        : 'Official license',
-    },
+    clearAll: lang === 'fa' ? 'پاک کردن فیلترها' : lang === 'ar' ? 'مسح الفلاتر' : 'Clear all filters',
+    cityLabel:    lang === 'fa' ? 'شهر' : lang === 'ar' ? 'المدينة' : 'City',
+    langLabel:    lang === 'fa' ? 'زبان' : lang === 'ar' ? 'اللغة' : 'Language',
+    typeLabel:    lang === 'fa' ? 'نوع تور' : lang === 'ar' ? 'نوع الجولة' : 'Tour Type',
   };
-
-  const activeChips = useMemo(() => {
-    const chips = [];
-    if (filters.search) chips.push({ key: 'search', label: `"${filters.search}"`, onRemove: () => update({ search: '' }) });
-    filters.cities.forEach((c) => chips.push({ key: `city-${c}`, label: c, onRemove: () => update({ cities: filters.cities.filter((x) => x !== c) }) }));
-    filters.tourTypes.forEach((t) => chips.push({ key: `tt-${t}`, label: t, onRemove: () => update({ tourTypes: filters.tourTypes.filter((x) => x !== t) }) }));
-    filters.languages.forEach((l) => chips.push({ key: `lang-${l}`, label: l, onRemove: () => update({ languages: filters.languages.filter((x) => x !== l) }) }));
-    if (filters.rating > 0) chips.push({ key: 'rating', label: `${filters.rating}+ ★`, onRemove: () => update({ rating: 0 }) });
-    if (filters.yearsExp) {
-      const opt = YEARS_EXP(lang).find((x) => x.value === filters.yearsExp);
-      if (opt) chips.push({ key: 'yrs', label: opt.label, onRemove: () => update({ yearsExp: '' }) });
-    }
-    return chips;
-  }, [filters, lang]);
-
-  const activeCount = activeChips.length;
 
   return (
     <div dir={dir} className="pt-24 pb-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="mb-10"
         >
+          <div className="flex items-center gap-3 mb-4">
+            <span className="text-accent/40 text-sm tracking-[0.3em]">✦ ◆ ✦</span>
+          </div>
           <h1 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-light text-foreground mb-4">
             {tx.title}
           </h1>
@@ -275,71 +240,127 @@ export default function Agencies() {
           </p>
         </motion.div>
 
-        {/* Search bar */}
-        <div className="relative mb-8">
-          <Search className="absolute start-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-          <input
-            type="text"
-            value={filters.search}
-            onChange={(e) => update({ search: e.target.value })}
-            placeholder={lang === 'fa' ? 'جستجو در آژانس‌ها...' : lang === 'ar' ? 'ابحث في الوكالات...' : 'Search agencies by name, city, tour type...'}
-            className="w-full ps-11 pe-4 py-3 rounded-2xl border border-border bg-card font-body text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-gold/40 focus:border-gold/40 transition shadow-sm"
-          />
-        </div>
+        {/* Filter bar */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="mb-8"
+        >
+          {/* Persian ornamental top border */}
+          <div className="carpet-border mb-4 opacity-40" />
 
-        <div className="flex flex-col lg:flex-row gap-8">
-          <FiltersShell activeCount={activeCount} onClearAll={clearAll}>
-            <FilterSection label={tx.section.hq}>
-              <CityFilterWithOther
-                selectedCities={filters.cities}
-                citiesInList={HQ_CITIES}
-                onCityChange={(v) => update({ cities: v })}
-                placeholder={lang === 'fa' ? 'شهر دیگری را جستجو کنید...' : lang === 'ar' ? 'ابحث عن مدينة أخرى...' : 'Search other cities...'}
-              />
-            </FilterSection>
-            <FilterSection label={tx.section.tourType}>
-              <MultiSelectChips options={tourTypeOptions} value={filters.tourTypes} onChange={(v) => update({ tourTypes: v })} />
-            </FilterSection>
-            <FilterSection label={tx.section.langs}>
-              <LanguageFilterWithOther
-                selectedLanguages={filters.languages}
-                languagesInList={SUPPORT_LANGS}
-                onLanguageChange={(v) => update({ languages: v })}
-                placeholder={lang === 'fa' ? 'زبان دیگری را جستجو کنید...' : lang === 'ar' ? 'ابحث عن لغة أخرى...' : 'Search other languages...'}
-              />
-            </FilterSection>
-            <FilterSection label={tx.section.rating}>
-              <RatingFilter value={filters.rating} onChange={(v) => update({ rating: v })} />
-            </FilterSection>
-            <FilterSection label={tx.section.years}>
-              <SingleSelectChips options={YEARS_EXP(lang)} value={filters.yearsExp} onChange={(v) => update({ yearsExp: v })} />
-            </FilterSection>
-          </FiltersShell>
+          <div className="bg-card/80 backdrop-blur-sm border border-border/50 rounded-2xl p-4 shadow-sm">
+            {/* Search + dropdowns row */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              {/* Search input */}
+              <div className="relative flex-1 min-w-0">
+                <Search className="absolute start-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/60 pointer-events-none" />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder={tx.search}
+                  className="w-full ps-9 pe-4 py-3 rounded-xl border border-border/50 bg-background/60 font-body text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent/40 transition"
+                />
+              </div>
 
-          <div className="flex-1 min-w-0">
-            <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-              <ActiveChips chips={activeChips} />
-              <p className="font-body text-sm text-muted-foreground ms-auto">{tx.results(filtered.length)}</p>
+              {/* Dropdowns */}
+              <FilterDropdown
+                label={tx.cityLabel}
+                value={filters.city}
+                options={CITY_OPTIONS}
+                onChange={(v) => setFilters((f) => ({ ...f, city: v }))}
+                lang={lang}
+                icon={MapPin}
+              />
+              <FilterDropdown
+                label={tx.langLabel}
+                value={filters.language}
+                options={LANGUAGE_OPTIONS}
+                onChange={(v) => setFilters((f) => ({ ...f, language: v }))}
+                lang={lang}
+                icon={Globe}
+              />
+              <FilterDropdown
+                label={tx.typeLabel}
+                value={filters.tourType}
+                options={TOUR_TYPE_OPTIONS}
+                onChange={(v) => setFilters((f) => ({ ...f, tourType: v }))}
+                lang={lang}
+                icon={Briefcase}
+              />
             </div>
 
-            {loading ? (
-              <p className="font-body text-muted-foreground text-center py-16">{tx.loading}</p>
-            ) : error ? (
-              <div className="text-center py-16">
-                <p className="font-body text-destructive mb-2">{tx.error}</p>
-                <p className="font-body text-xs text-muted-foreground">{error}</p>
-              </div>
-            ) : filtered.length === 0 ? (
-              <p className="font-body text-muted-foreground text-center py-16">{tx.empty}</p>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                {filtered.map((agency) => (
-                  <AgencyCard key={agency.id} agency={agency} lang={lang} onNavigate={navigate} />
-                ))}
-              </div>
-            )}
+            {/* Active filter summary row */}
+            <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/30">
+              <p className="font-body text-xs text-muted-foreground/70">
+                {tx.results(filtered.length)}
+              </p>
+              {hasActive && (
+                <button
+                  onClick={() => { setFilters(DEFAULT_FILTERS); setSearch(''); }}
+                  className="font-body text-xs text-accent hover:underline"
+                >
+                  {tx.clearAll}
+                </button>
+              )}
+            </div>
           </div>
-        </div>
+
+          {/* Persian ornamental bottom border */}
+          <div className="carpet-border mt-4 opacity-40" />
+        </motion.div>
+
+        {/* States */}
+        {loading ? (
+          <div className="text-center py-24">
+            <div className="w-20 h-20 mx-auto mb-6 rounded-full border-2 border-border flex items-center justify-center animate-pulse">
+              <span className="text-3xl text-accent/40">❋</span>
+            </div>
+            <p className="font-heading text-xl text-muted-foreground font-light">{tx.loading}</p>
+          </div>
+        ) : error ? (
+          <div className="text-center py-24">
+            <div className="w-20 h-20 mx-auto mb-6 rounded-full border-2 border-destructive/40 flex items-center justify-center">
+              <span className="text-3xl text-destructive/60">!</span>
+            </div>
+            <p className="font-heading text-2xl text-muted-foreground font-light">{tx.error}</p>
+            <p className="font-body text-sm text-destructive mt-2">{error}</p>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-24">
+            <div className="w-20 h-20 mx-auto mb-6 rounded-full border-2 border-border flex items-center justify-center">
+              <span className="text-3xl text-accent/40">❋</span>
+            </div>
+            <p className="font-heading text-2xl text-muted-foreground font-light">{tx.empty}</p>
+            <button
+              onClick={() => { setFilters(DEFAULT_FILTERS); setSearch(''); }}
+              className="mt-4 text-sm font-body text-accent hover:underline"
+            >
+              {tx.clearAll}
+            </button>
+          </div>
+        ) : (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6"
+          >
+            {filtered.map((agency) => (
+              <AgencyCard key={agency.id} agency={agency} lang={lang} onNavigate={navigate} />
+            ))}
+          </motion.div>
+        )}
+
+        {/* Bottom Persian carpet border */}
+        {!loading && !error && filtered.length > 0 && (
+          <div className="mt-16 flex items-center gap-4">
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+            <span className="text-accent/40 text-2xl">✦ ❋ ✦</span>
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+          </div>
+        )}
       </div>
     </div>
   );
