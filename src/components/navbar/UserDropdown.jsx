@@ -39,7 +39,6 @@ export default function UserDropdown({ isLight = false }) {
 
   const tx = {
     manageProfile: lang === 'fa' ? 'مدیریت پروفایل' : lang === 'ar' ? 'إدارة الملف الشخصي' : 'Manage Profile',
-    myBookings:    lang === 'fa' ? 'رزروهای من' : lang === 'ar' ? 'حجوزاتي' : 'My Bookings',
     myRequests:    lang === 'fa' ? 'درخواست‌های من' : lang === 'ar' ? 'طلباتي' : 'My Requests',
     settings:      lang === 'fa' ? 'تنظیمات و حریم خصوصی' : lang === 'ar' ? 'الإعدادات والخصوصية' : 'Settings and Privacy',
     signOut:       lang === 'fa' ? 'خروج از حساب' : lang === 'ar' ? 'تسجيل الخروج' : 'Sign Out',
@@ -51,7 +50,6 @@ export default function UserDropdown({ isLight = false }) {
 
   const items = [
     { to: '/profile',          icon: User,          label: tx.manageProfile },
-    { to: '/profile/bookings', icon: ClipboardList, label: tx.myBookings },
     { to: '/profile/requests', icon: ClipboardList, label: tx.myRequests },
     { to: '/profile/settings', icon: Settings,     label: tx.settings },
   ];

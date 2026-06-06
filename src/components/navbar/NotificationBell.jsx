@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/supabaseClient';
 import { fetchNotifications, markNotificationRead } from '@/api/tourRequestFlow';
+import { useI18n } from '@/lib/i18n.jsx';
 
 function timeAgo(dateStr) {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -16,6 +17,10 @@ function timeAgo(dateStr) {
 }
 
 const TYPE_DOT = {
+  // actual table types
+  tour_request:    'bg-blue-500',
+  message:         'bg-violet-500',
+  // legacy types kept for backward compat with existing DB rows
   new_request:     'bg-blue-500',
   proposals_ready: 'bg-violet-500',
   guide_selected:  'bg-emerald-500',
@@ -28,6 +33,7 @@ export default function NotificationBell({ userId, isLight = false }) {
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
+  const { t, dir } = useI18n();
 
   const unreadCount = notifications.filter(n => !n.is_read).length;
 
@@ -49,6 +55,12 @@ export default function NotificationBell({ userId, isLight = false }) {
       .channel(`notifs_bell_${userId}`)
       .on('postgres_changes', {
         event: 'INSERT',
+        schema: 'public',
+        table: 'notifications',
+        filter: `user_id=eq.${userId}`,
+      }, load)
+      .on('postgres_changes', {
+        event: 'UPDATE',
         schema: 'public',
         table: 'notifications',
         filter: `user_id=eq.${userId}`,
@@ -82,17 +94,26 @@ export default function NotificationBell({ userId, isLight = false }) {
   };
 
   const handleClickNotif = async (notif) => {
-    if (!notif.is_read) {
-      await handleMarkRead(notif.id);
-    }
+    if (!notif.is_read) await handleMarkRead(notif.id);
     setOpen(false);
-    if (!notif.related_request_id) return;
-    if (notif.type === 'new_request') navigate('/find-jobs');
-    else if (notif.type === 'proposals_ready') navigate('/my-trips');
+
+    const { type, related_request_id } = notif;
+
+    if (type === 'tour_request' || type === 'new_request') {
+      navigate('/dashboard/requests');
+    } else if (type === 'message') {
+      // If related_request_id holds the sender's user id, go to that chat thread;
+      // otherwise fall back to the dashboard chat section.
+      navigate(related_request_id ? `/chat/${related_request_id}` : '/dashboard/chat');
+    } else if (type === 'proposals_ready') {
+      navigate('/my-trips');
+    } else if (related_request_id) {
+      navigate('/my-trips');
+    }
   };
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="relative" ref={dropdownRef} dir={dir}>
       {/* Bell button */}
       <button
         onClick={() => setOpen(o => !o)}
@@ -101,11 +122,11 @@ export default function NotificationBell({ userId, isLight = false }) {
             ? 'text-white/70 hover:text-white hover:bg-white/10'
             : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
         }`}
-        aria-label="Notifications"
+        aria-label={t('notif_title')}
       >
         <Bell className="w-4 h-4" />
         {unreadCount > 0 && (
-          <span className="absolute top-1 right-1 min-w-[16px] h-4 px-0.5 rounded-full bg-accent text-white text-[9px] font-bold flex items-center justify-center leading-none pointer-events-none">
+          <span className="absolute top-1 end-1 min-w-[16px] h-4 px-0.5 rounded-full bg-accent text-white text-[9px] font-bold flex items-center justify-center leading-none pointer-events-none">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
@@ -119,12 +140,12 @@ export default function NotificationBell({ userId, isLight = false }) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.97 }}
             transition={{ duration: 0.15, ease: [0.22, 1, 0.36, 1] }}
-            className="absolute right-0 top-full mt-2 w-80 bg-background border border-border/60 rounded-2xl shadow-xl shadow-black/10 overflow-hidden z-50"
+            className="absolute end-0 top-full mt-2 w-80 bg-background border border-border/60 rounded-2xl shadow-xl shadow-black/10 overflow-hidden z-50"
           >
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-border/30">
               <div className="flex items-center gap-2">
-                <span className="font-body text-sm font-semibold text-foreground">Notifications</span>
+                <span className="font-body text-sm font-semibold text-foreground">{t('notif_title')}</span>
                 {unreadCount > 0 && (
                   <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-accent/15 text-accent text-[10px] font-bold flex items-center justify-center">
                     {unreadCount}
@@ -138,7 +159,7 @@ export default function NotificationBell({ userId, isLight = false }) {
                     className="flex items-center gap-1 font-body text-xs text-accent hover:text-accent/80 transition px-1.5 py-0.5 rounded-lg hover:bg-accent/10"
                   >
                     <CheckCheck className="w-3 h-3" />
-                    All read
+                    {t('notif_mark_all_read')}
                   </button>
                 )}
                 <button
@@ -155,9 +176,9 @@ export default function NotificationBell({ userId, isLight = false }) {
               {notifications.length === 0 ? (
                 <div className="py-10 text-center">
                   <Bell className="w-8 h-8 text-muted-foreground/20 mx-auto mb-2" />
-                  <p className="font-body text-sm text-muted-foreground">No notifications yet</p>
+                  <p className="font-body text-sm text-muted-foreground">{t('notif_empty')}</p>
                   <p className="font-body text-xs text-muted-foreground/60 mt-0.5">
-                    Activity on your trips will show up here
+                    {t('notif_empty_sub')}
                   </p>
                 </div>
               ) : (
@@ -165,7 +186,7 @@ export default function NotificationBell({ userId, isLight = false }) {
                   <button
                     key={notif.id}
                     onClick={() => handleClickNotif(notif)}
-                    className={`w-full text-left px-4 py-3 border-b border-border/20 last:border-0 hover:bg-muted/40 transition-colors ${
+                    className={`w-full text-start px-4 py-3 border-b border-border/20 last:border-0 hover:bg-muted/40 transition-colors ${
                       !notif.is_read ? 'bg-accent/[0.04]' : ''
                     }`}
                   >
@@ -185,7 +206,7 @@ export default function NotificationBell({ userId, isLight = false }) {
                             <>
                               <span>·</span>
                               <MapPin className="w-2.5 h-2.5" />
-                              <span>View trip</span>
+                              <span>{t('notif_view_trip')}</span>
                             </>
                           )}
                         </p>

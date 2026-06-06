@@ -6,9 +6,10 @@ import { supabase } from '@/supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sparkles, Send, MapPin, Clock, Users, Wallet,
-  Globe2, ChevronDown, Building2, Mountain, UtensilsCrossed,
+  Building2, Mountain, UtensilsCrossed,
   Leaf, Compass, Loader2, ArrowLeft, ArrowRight, DollarSign,
   Trash2, Plus, MessageSquare, Menu, X,
+  Copy, Check, Paperclip, FileText,
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { sendChatMessage } from '../services/api.js';
@@ -100,62 +101,9 @@ function TypingDots() {
   );
 }
 
-// ── Language switcher ─────────────────────────────────────────────────────────
-const LANGS = [
-  { code: 'en', label: 'English',  dir: 'ltr' },
-  { code: 'fa', label: 'فارسی',    dir: 'rtl' },
-  { code: 'ar', label: 'العربية',  dir: 'rtl' },
-];
-
 // Locked to "Auto (Best Available)" — user cannot change the model.
 const AUTO_MODEL         = 'openrouter/auto';
 const FREE_FALLBACK_MODEL = 'meta-llama/llama-3.1-8b-instruct:free';
-
-function LanguageSwitcher({ lang, onChange }) {
-  const [open, setOpen] = useState(false);
-  const current = LANGS.find((l) => l.code === lang) || LANGS[0];
-  return (
-    <div className="relative z-[100]">
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-1.5 sm:gap-2 rounded-full px-2.5 sm:px-3.5 py-2.5 text-sm font-medium transition-colors min-h-[40px]"
-        style={{ background: '#ffffff70', backdropFilter: 'blur(12px)', border: `1px solid ${C.muted}30`, color: C.teal }}
-      >
-        <Globe2 className="h-4 w-4 shrink-0" style={{ color: C.turq }} />
-        <span className="hidden sm:inline">{current.label}</span>
-        <span className="sm:hidden text-xs font-bold uppercase">{current.code}</span>
-        <ChevronDown
-          className={`h-3.5 w-3.5 transition-transform shrink-0 ${open ? 'rotate-180' : ''}`}
-          style={{ color: C.muted }}
-        />
-      </button>
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, y: -4, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -4, scale: 0.98 }}
-            transition={{ duration: 0.15 }}
-            className="absolute end-0 mt-2 min-w-[140px] overflow-hidden rounded-2xl py-1 z-[9999]"
-            style={{ background: C.white, border: `1px solid ${C.muted}25`, boxShadow: `0 12px 40px ${C.teal}15` }}
-          >
-            {LANGS.map((l) => (
-              <button
-                key={l.code}
-                onClick={() => { onChange(l.code); setOpen(false); }}
-                className="flex w-full items-center justify-between px-4 py-2 text-sm hover:bg-gray-50 transition-colors"
-                style={{ color: C.teal }}
-              >
-                <span style={{ direction: l.dir }}>{l.label}</span>
-                {l.code === lang && <span className="h-1.5 w-1.5 rounded-full" style={{ background: C.turq }} />}
-              </button>
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
 
 // MessageBubble is now the ChatMessage component from src/components/chat/ChatMessage.jsx.
 // Card rendering for assistant messages is handled inline in the message list below.
@@ -213,23 +161,6 @@ function SectionHeading({ eyebrow, title, trailing }) {
 }
 
 // ── Suggested replies ─────────────────────────────────────────────────────────
-function SuggestedReplies({ suggestions, onPick }) {
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      {suggestions.map((s) => (
-        <button
-          key={s}
-          onClick={() => onPick(s)}
-          className="rounded-full px-3 py-1.5 text-[12px] font-medium transition-all hover:-translate-y-0.5"
-          style={{ background: C.white, border: `1px solid ${C.muted}25`, color: C.teal }}
-        >
-          {s}
-        </button>
-      ))}
-    </div>
-  );
-}
-
 // ── Conversation history sidebar ──────────────────────────────────────────────
 function ConversationSidebar({ conversations, activeId, onNew, onSwitch, onDelete, lang, dir, open, onClose, isLoadingConvs, isLoggedIn }) {
   const formatTime = (isoString) => {
@@ -394,7 +325,7 @@ function ConversationSidebar({ conversations, activeId, onNew, onSwitch, onDelet
 }
 
 // ── System prompt ─────────────────────────────────────────────────────────────
-function buildSystemPrompt(tours, guides) {
+function buildSystemPrompt(tours, guides, responseLang = 'English') {
   const toursList = tours.length
     ? tours.map((t) => {
         const cities = Array.isArray(t.cities) ? t.cities.join(', ') : (t.cities || '');
@@ -407,7 +338,9 @@ function buildSystemPrompt(tours, guides) {
         .join('\n')
     : '(no guides available right now)';
 
-  return `You are Aria, a concise Iranian travel advisor. Keep every reply to 2-3 sentences max and use at most 1 emoji. When you recommend, suggest only ONE tour OR one guide — never both, never multiples. Always reply in the same language the traveller uses.
+  return `You are Aria, a concise Iranian travel advisor. Keep every reply to 2-3 sentences max and use at most 1 emoji. When you recommend, suggest only ONE tour OR one guide — never both, never multiples.
+
+CRITICAL LANGUAGE RULE: You MUST reply in ${responseLang} only. Do not switch languages under any circumstances.
 
 When making a recommendation, append this JSON block (no extra text around it):
 \`\`\`json
@@ -569,7 +502,7 @@ function RecommendationsPanelContent({ lang, profile, sidebarTours, sidebarGuide
 
 // ── Main component ────────────────────────────────────────────────────────────
 export default function AIAssistant() {
-  const { t, dir, lang, switchLang } = useI18n();
+  const { t, dir, lang } = useI18n();
   const navigate = useNavigate();
   const location = useLocation();
   const scrollerRef = useRef(null);
@@ -596,9 +529,9 @@ export default function AIAssistant() {
 
   // Calls the API with automatic fallback to the free model on 404 / 402.
   // Model is always "Auto (Best Available)" — no user-facing picker.
-  const callWithFallback = async (msgs, sysprompt) => {
+  const callWithFallback = async (msgs, sysprompt, model = AUTO_MODEL) => {
     try {
-      return await sendChatMessage(msgs, sysprompt, lang, AUTO_MODEL);
+      return await sendChatMessage(msgs, sysprompt, lang, model);
     } catch (err) {
       if (err.status === 401) {
         toast.error(
@@ -634,6 +567,9 @@ export default function AIAssistant() {
   const [tripAnswers, setTripAnswers]           = useState({});
   const [tripFormOpen, setTripFormOpen]         = useState(false);
   const [tripFormData, setTripFormData]         = useState(null);
+  const [copiedId, setCopiedId]                 = useState(null);
+  const [attachedFile, setAttachedFile]         = useState(null);
+  const fileInputRef = useRef(null);
 
   // Create a new conversation on every page visit (mount)
   useEffect(() => {
@@ -723,10 +659,19 @@ export default function AIAssistant() {
     }
   };
 
-  const sendMessage = async () => {
-    const text = input.trim();
-    if (!text || loading) return;
+  const detectLanguage = (text) => {
+    const persianSpecific = /[کگھیپچژ]/;
+    if (persianSpecific.test(text)) return 'Persian/Farsi';
+    const arabicScript = /[؀-ۿ]/;
+    if (arabicScript.test(text)) return 'Arabic';
+    return 'English';
+  };
+
+  const sendMessage = async (textArg) => {
+    const text = (textArg !== undefined ? textArg : input).trim();
+    if ((!text && !attachedFile) || loading) return;
     const lc = text.toLowerCase();
+    const responseLang = detectLanguage(text);
 
     // ── Helper: resolve conversation id ────────────────────────────────────────
     const resolveConvId = async (title) => {
@@ -822,16 +767,40 @@ export default function AIAssistant() {
     const convId = await resolveConvId();
     if (!convId) return;
 
-    const userMsg = { role: 'user', content: text };
-    const messagesForApi = [...messages, userMsg];
+    const currentFile = attachedFile;
+    setAttachedFile(null);
+
+    const userMsg = {
+      role: 'user',
+      content: text || (currentFile ? `[Sent a ${currentFile.type === 'image' ? 'photo' : 'file'}: ${currentFile.name}]` : ''),
+      image: currentFile?.type === 'image' ? currentFile.preview : null,
+      fileName: currentFile?.type === 'file' ? currentFile.name : null,
+    };
+
+    const messagesForApi = [
+      ...messages,
+      {
+        role: 'user',
+        content: currentFile
+          ? [
+              ...(currentFile.type === 'image'
+                ? [{ type: 'image_url', image_url: { url: `data:${currentFile.mimeType};base64,${currentFile.base64}` } }]
+                : [{ type: 'text', text: `[The user has uploaded a file named "${currentFile.name}". Since you cannot read this file directly, acknowledge it and ask them to describe the content or copy-paste the relevant text so you can help them plan their Iran trip based on it.]` }]
+              ),
+              { type: 'text', text: `[Respond in ${responseLang}]\n${text || 'Please analyze this and help me plan an Iran trip.'}` },
+            ]
+          : `[Respond in ${responseLang}]\n${text}`,
+      },
+    ];
 
     appendMessage(convId, userMsg);
     setInput('');
     setLoading(true);
 
     try {
-      const systemPromptText = buildSystemPrompt(catalogue.tours, catalogue.guides);
-      const responseText = await callWithFallback(messagesForApi, systemPromptText);
+      const systemPromptText = buildSystemPrompt(catalogue.tours, catalogue.guides, responseLang);
+      const visionModel = currentFile?.type === 'image' ? 'openai/gpt-4o-mini' : AUTO_MODEL;
+      const responseText = await callWithFallback(messagesForApi, systemPromptText, visionModel);
       const { content, tours, guides } = extractRecommendation(responseText, catalogue.tours, catalogue.guides);
       const assistantMsg = { role: 'assistant', content };
       if (tours.length > 0 || guides.length > 0) assistantMsg.cards = { tours, guides };
@@ -849,8 +818,50 @@ export default function AIAssistant() {
     }
   };
 
+  const copyToClipboard = (text, id) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    });
+  };
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const isImage = file.type.startsWith('image/');
+    const isDoc = file.type === 'application/pdf' ||
+      file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+      file.type === 'application/msword' ||
+      file.type === 'text/plain';
+
+    if (!isImage && !isDoc) {
+      alert('Please upload an image, PDF, Word document, or text file.');
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      alert('File too large. Maximum size is 10MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const base64 = ev.target.result.split(',')[1];
+      setAttachedFile({
+        type: isImage ? 'image' : 'file',
+        base64,
+        name: file.name,
+        mimeType: file.type,
+        preview: isImage ? ev.target.result : null,
+      });
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
   const onKeyDown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(input); }
   };
 
   // Sidebar recommendation data
@@ -869,13 +880,6 @@ export default function AIAssistant() {
   }, [messages, catalogue.guides]);
 
   const hasRecommendations = catalogue.ready && (sidebarTours.length > 0 || sidebarGuides.length > 0);
-
-  const suggestions = [
-    t('ai_chip_architecture'),
-    t('ai_chip_desert'),
-    t('ai_chip_food'),
-    t('ai_chip_history'),
-  ];
 
   return (
     <div
@@ -955,10 +959,6 @@ export default function AIAssistant() {
                 </div>
               </div>
 
-              {/* Right controls — language switcher only (model locked to Auto) */}
-              <div className="shrink-0">
-                <LanguageSwitcher lang={lang} onChange={switchLang} />
-              </div>
             </div>
 
             {/* Carpet hairline */}
@@ -1005,15 +1005,43 @@ export default function AIAssistant() {
                     )
                     : null;
                   return (
-                    <ChatMessage
-                      key={key}
-                      msg={msg}
-                      convId={activeId}
-                      onEdit={handleEditAndResend}
-                      loading={loading}
-                      lang={lang}
-                      renderCards={cards}
-                    />
+                    <div key={key} className="group relative">
+                      {msg.role === 'user' && msg.image && (
+                        <div className="flex justify-end mb-1">
+                          <img src={msg.image} alt="uploaded" className="max-w-xs rounded-xl max-h-48 object-cover" />
+                        </div>
+                      )}
+                      {msg.role === 'user' && msg.fileName && (
+                        <div className="flex justify-end mb-1">
+                          <div className="inline-flex items-center gap-2 px-3 py-2 rounded-lg" style={{ background: `${C.turq}20` }}>
+                            <FileText className="w-4 h-4 shrink-0" style={{ color: C.teal }} />
+                            <span className="text-xs truncate max-w-[180px]" style={{ color: C.teal }}>{msg.fileName}</span>
+                          </div>
+                        </div>
+                      )}
+                      <ChatMessage
+                        msg={msg}
+                        convId={activeId}
+                        onEdit={handleEditAndResend}
+                        loading={loading}
+                        lang={lang}
+                        renderCards={cards}
+                      />
+                      <button
+                        onClick={() => copyToClipboard(msg.content, i)}
+                        className={`absolute opacity-0 group-hover:opacity-100 transition-opacity w-7 h-7 rounded-lg flex items-center justify-center ${
+                          msg.role === 'user' ? 'bottom-1 left-0' : 'bottom-1 right-0'
+                        }`}
+                        style={{ background: `${C.muted}15` }}
+                        title="Copy message"
+                      >
+                        {copiedId === i ? (
+                          <Check className="w-3.5 h-3.5 text-green-500" />
+                        ) : (
+                          <Copy className="w-3.5 h-3.5" style={{ color: C.muted }} />
+                        )}
+                      </button>
+                    </div>
                   );
                 })}
               </AnimatePresence>
@@ -1038,45 +1066,71 @@ export default function AIAssistant() {
 
           {/* Composer */}
           <div className="relative px-4 pb-6 pt-4 sm:px-8 shrink-0" style={{ background: C.white }}>
-            <SuggestedReplies
-              suggestions={suggestions}
-              onPick={(text) => { setInput(text); inputRef.current?.focus(); }}
-            />
-            <div
-              className="mt-3 flex items-center gap-2 rounded-2xl pl-4 pr-2 py-2"
-              style={{
-                background: C.white,
-                border: `1px solid ${C.muted}30`,
-                boxShadow: `0 6px 24px ${C.teal}10`,
-              }}
-            >
-              <input
-                ref={inputRef}
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={onKeyDown}
-                placeholder={t('ai_placeholder')}
-                disabled={loading}
-                autoFocus
-                className="flex-1 bg-transparent text-[14.5px] outline-none placeholder:opacity-60 disabled:opacity-60"
-                style={{ color: C.teal }}
-              />
-              <button
-                onClick={sendMessage}
-                disabled={!input.trim() || loading}
-                className="grid h-10 w-10 shrink-0 place-items-center rounded-xl transition-all disabled:opacity-50"
-                style={{
-                  background: `linear-gradient(135deg, ${C.turq}, ${C.turqDeep})`,
-                  color: '#FFFFFF',
-                  boxShadow: `0 6px 18px ${C.turq}40`,
-                }}
-                aria-label="Send"
-              >
-                {loading
-                  ? <Loader2 className="h-4 w-4 animate-spin" />
-                  : <Send className="h-4 w-4" />}
-              </button>
+            <div className="space-y-2">
+              {/* File/image preview */}
+              {attachedFile && (
+                <div className="flex items-center gap-2 rounded-xl px-3 py-2" style={{ background: `${C.muted}12`, border: `1px solid ${C.muted}25` }}>
+                  {attachedFile.type === 'image' ? (
+                    <img src={attachedFile.preview} alt="preview" className="w-10 h-10 rounded-lg object-cover shrink-0" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ background: `${C.turq}20` }}>
+                      <FileText className="w-5 h-5" style={{ color: C.turq }} />
+                    </div>
+                  )}
+                  <span className="text-xs flex-1 truncate" style={{ color: C.teal }}>{attachedFile.name}</span>
+                  <button
+                    onClick={() => setAttachedFile(null)}
+                    className="w-6 h-6 rounded-full flex items-center justify-center transition-colors"
+                    style={{ background: `${C.muted}20` }}
+                  >
+                    <X className="w-3.5 h-3.5" style={{ color: C.muted }} />
+                  </button>
+                </div>
+              )}
+
+              <div className="flex items-center gap-2 rounded-2xl pl-2 pr-2 py-2" style={{ background: C.white, border: `1px solid ${C.muted}30`, boxShadow: `0 6px 24px ${C.teal}10` }}>
+                {/* Hidden file input */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*,.pdf,.doc,.docx,.txt"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+                {/* Attach button */}
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="grid h-9 w-9 shrink-0 place-items-center rounded-xl transition-all"
+                  style={{ background: `${C.muted}12`, color: C.muted }}
+                  title="Attach image or file"
+                >
+                  <Paperclip className="h-4 w-4" />
+                </button>
+
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={onKeyDown}
+                  placeholder={t('ai_placeholder')}
+                  disabled={loading}
+                  autoFocus
+                  className="flex-1 bg-transparent text-[14.5px] outline-none placeholder:opacity-60 disabled:opacity-60"
+                  style={{ color: C.teal }}
+                />
+                <button
+                  onClick={() => sendMessage(input)}
+                  disabled={(!input.trim() && !attachedFile) || loading}
+                  className="grid h-10 w-10 shrink-0 place-items-center rounded-xl transition-all disabled:opacity-50"
+                  style={{ background: `linear-gradient(135deg, ${C.turq}, ${C.turqDeep})`, color: '#FFFFFF', boxShadow: `0 6px 18px ${C.turq}40` }}
+                  aria-label="Send"
+                >
+                  {loading
+                    ? <Loader2 className="h-4 w-4 animate-spin" />
+                    : <Send className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
             <p className="mt-2.5 text-center text-[11px]" style={{ color: `${C.muted}AA` }}>
               {lang === 'fa'

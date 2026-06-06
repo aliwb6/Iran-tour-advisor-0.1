@@ -91,6 +91,18 @@ export default function Signup() {
 
       if (signInError) throw signInError;
 
+      // For guide/agency: set is_approved=false (pending review) and copy bio from
+      // the signup form into the profiles row that the DB trigger just created.
+      if (formData.role === 'guide' || formData.role === 'agency') {
+        const { data: { user: authedUser } } = await supabase.auth.getUser();
+        if (authedUser) {
+          await supabase.from('profiles').update({
+            is_approved: false,
+            bio: formData.bio || null,
+          }).eq('id', authedUser.id);
+        }
+      }
+
       navigate('/');
       window.location.reload();
 

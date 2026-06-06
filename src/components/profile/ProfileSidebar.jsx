@@ -62,16 +62,7 @@ export default function ProfileSidebar({ tab, onTabChange }) {
             >
               ← {lang === 'fa' ? 'بازگشت به پروفایل' : lang === 'ar' ? 'العودة إلى الملف الشخصي' : 'Back to Profile'}
             </NavLink>
-            <NavLink
-              to="/profile/bookings"
-              className={({ isActive }) =>
-                `block px-3 py-2 rounded-lg text-xs ${
-                  isActive ? 'text-gold' : 'text-muted-foreground hover:text-foreground'
-                }`
-              }
-            >
-              {lang === 'fa' ? 'رزروهای من' : lang === 'ar' ? 'حجوزاتي' : 'My Bookings'}
-            </NavLink>
+
             <NavLink
               to="/profile/requests"
               className={({ isActive }) =>

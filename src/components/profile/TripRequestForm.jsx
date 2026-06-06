@@ -5,16 +5,11 @@ import {
   MapPin, Car, Hotel, ChevronDown, Loader2,
 } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
+import { useI18n } from '@/lib/i18n';
 import { supabase } from '@/supabaseClient';
+import { iranianCities as IRANIAN_CITIES } from '@/data/iranianCities';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-
-const IRANIAN_CITIES = [
-  'Tehran', 'Isfahan', 'Shiraz', 'Yazd', 'Tabriz',
-  'Kashan', 'Mashhad', 'Kerman', 'Qom', 'Rasht',
-  'Ahvaz', 'Hamadan', 'Zanjan', 'Sari', 'Gorgan',
-  'Bandar Abbas', 'Kish', 'Qeshm', 'Urmia', 'Ardabil',
-];
 
 const GUIDE_LANGUAGES = [
   'English', 'Persian', 'Arabic', 'French', 'German', 'Chinese', 'Spanish',
@@ -262,6 +257,7 @@ function CityMultiSelect({ values, onChange }) {
   const [search, setSearch] = useState('');
   const wrapRef  = useRef(null);
   const inputRef = useRef(null);
+  const { t } = useI18n();
 
   useEffect(() => {
     if (!open) return;
@@ -308,7 +304,7 @@ function CityMultiSelect({ values, onChange }) {
           onChange={e => { setSearch(e.target.value); setOpen(true); }}
           onFocus={() => setOpen(true)}
           onKeyDown={e => { if (e.key === 'Escape') setOpen(false); }}
-          placeholder={values.length === 0 ? 'Select one or more cities…' : ''}
+          placeholder={values.length === 0 ? t('trip_city_placeholder') : ''}
           className="flex-1 min-w-[120px] bg-transparent text-sm outline-none text-foreground placeholder:text-muted-foreground/50 py-0.5"
         />
       </div>
@@ -327,7 +323,7 @@ function CityMultiSelect({ values, onChange }) {
                 key={city}
                 type="button"
                 onMouseDown={(e) => { e.preventDefault(); add(city); }}
-                className="flex items-center gap-2 w-full px-3 py-2 text-sm text-foreground hover:bg-accent/10 hover:text-accent transition-colors text-left"
+                className="flex items-center gap-2 w-full px-3 py-2 text-sm text-foreground hover:bg-accent/10 hover:text-accent transition-colors text-start"
               >
                 <MapPin className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                 {city}
@@ -864,6 +860,7 @@ function Step2({
 
 export default function TripRequestForm({ isOpen, onClose, onSuccess, initialData }) {
   const { user }       = useAuth();
+  const { t }          = useI18n();
   const queryClient    = useQueryClient();
   const [step, setStep]           = useState(1);
   const [direction, setDirection] = useState(1);
@@ -968,7 +965,7 @@ export default function TripRequestForm({ isOpen, onClose, onSuccess, initialDat
 
   const goNext = () => {
     const errs = {};
-    if (!form.destinations.length) errs.destinations  = 'Please select at least one destination.';
+    if (!form.destinations.length) errs.destinations = t('trip_city_error');
     if (!form.start_date)          errs.start_date     = 'Please select a start date.';
     if (!form.end_date)            errs.end_date       = 'Please select an end date.';
     if (form.start_date && form.end_date && form.end_date <= form.start_date)
@@ -1007,7 +1004,7 @@ export default function TripRequestForm({ isOpen, onClose, onSuccess, initialDat
 
       const payload = {
         user_id:             user.id,
-        destination:         form.destinations.join(', '),
+        destination:         form.destinations,
         start_date:          form.start_date  || null,
         end_date:            form.end_date    || null,
         arrival_time,

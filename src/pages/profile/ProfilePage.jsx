@@ -3,9 +3,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Phone, Mail, Globe, MapPin, Plane, Star,
-  Calendar, ClipboardList, Settings,
+  ClipboardList, Settings,
   Sparkles, MessageCircle, Map, CheckCircle2, Compass,
-  ArrowRight, ArrowLeft,
+  ArrowRight, ArrowLeft, Clock,
 } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { useI18n } from '@/lib/i18n.jsx';
@@ -36,7 +36,7 @@ function StatTile({ icon: Icon, value, label }) {
 export default function ProfilePage() {
   const navigate = useNavigate();
   const { user, profile, fetchProfile, isLoadingAuth, isAuthenticated } = useAuth();
-  const { lang, dir } = useI18n();
+  const { lang, dir, t } = useI18n();
   const Arrow = dir === 'rtl' ? ArrowLeft : ArrowRight;
   const [localProfile, setLocalProfile] = useState(profile);
   const [reviewCount, setReviewCount] = useState(0);
@@ -124,7 +124,6 @@ export default function ProfilePage() {
     reviews:        lang === 'fa' ? 'نظرات' : lang === 'ar' ? 'المراجعات' : 'Reviews Given',
     editProfile:    lang === 'fa' ? 'ویرایش پروفایل' : lang === 'ar' ? 'تعديل الملف الشخصي' : 'Edit Profile',
     myRequests:    lang === 'fa' ? 'درخواست‌های من' : lang === 'ar' ? 'طلباتي' : 'My Requests',
-    myBookings:    lang === 'fa' ? 'رزروهای من' : lang === 'ar' ? 'حجوزاتي' : 'My Bookings',
     slogan:        lang === 'fa'
       ? 'زیبایی پنهان ایران اصیل را در سفرهای فرهنگی پرمعنا کشف کن.'
       : lang === 'ar'
@@ -216,6 +215,23 @@ export default function ProfilePage() {
           </div>
         </motion.div>
       </section>
+
+      {/* ── Pending approval banner (guide / agency only) ── */}
+      {(localProfile?.role === 'guide' || localProfile?.role === 'agency') && !localProfile?.is_approved && (
+        <div className="max-w-6xl mx-auto px-5 sm:px-8 lg:px-10 mt-6">
+          <div className="flex items-start gap-3 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30">
+            <Clock className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-heading text-sm font-semibold text-amber-700 dark:text-amber-400">
+                {t('profile_pending_title')}
+              </p>
+              <p className="font-body text-sm text-amber-700/80 dark:text-amber-400/80 mt-0.5">
+                {t('profile_pending_desc')}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Main grid ── */}
       <section className="max-w-6xl mx-auto px-5 sm:px-8 lg:px-10 py-10 grid lg:grid-cols-3 gap-6">
@@ -394,13 +410,7 @@ export default function ProfilePage() {
               <ClipboardList className="w-4 h-4" />
               {tx.myRequests}
             </Link>
-            <Link
-              to="/profile/bookings"
-              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-foreground hover:bg-accent/10 hover:text-accent transition"
-            >
-              <Calendar className="w-4 h-4" />
-              {tx.myBookings}
-            </Link>
+
           </div>
         </motion.div>
       </section>

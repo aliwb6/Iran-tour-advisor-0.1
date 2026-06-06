@@ -121,7 +121,7 @@ export async function fetchNotifications(userId) {
     .select('*')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
-    .limit(50);
+    .limit(20);
 
   if (error) throw error;
   return data || [];

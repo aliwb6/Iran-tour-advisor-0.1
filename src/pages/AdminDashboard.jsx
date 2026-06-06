@@ -7,6 +7,7 @@ import {
   Loader2, LogOut, CheckCircle2, XCircle, Edit2, Trash2, X, MapPin,
   DollarSign, Star, AlertTriangle, Send, Image as ImageIcon,
   Search, Sparkles, PlusCircle, BookOpen,
+  Phone, Globe, Calendar, ExternalLink, FileText, CheckCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { avatarFor } from '@/lib/avatar';
@@ -658,10 +659,207 @@ function AllToursView({ tours, loading, onApprove, onReject, onEdit, busyId }) {
   );
 }
 
+// ─── Guide Detail Modal ───────────────────────────────────────────────────────
+
+function GuideDetailModal({ guide, onClose, onApprove, onSuspend, onReject, busy }) {
+  if (!guide) return null;
+
+  const joinDate = guide.created_at
+    ? new Date(guide.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+    : '—';
+
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-[hsl(222,55%,10%)] border border-white/10 rounded-2xl w-full max-w-lg max-h-[88vh] overflow-y-auto"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-white/[0.07]">
+          <h3 className="text-white font-bold text-base">Guide Profile Review</h3>
+          <button
+            onClick={onClose}
+            className="w-7 h-7 rounded-lg bg-white/[0.06] hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white transition"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="px-6 py-5 space-y-5">
+
+          {/* Profile header */}
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 rounded-xl bg-[hsl(178,85%,32%)]/20 border border-[hsl(178,85%,32%)]/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
+              {guide.avatar_url ? (
+                <img src={guide.avatar_url} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-[hsl(178,85%,55%)] font-bold text-xl">
+                  {guide.full_name?.[0]?.toUpperCase() || '?'}
+                </span>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-white font-bold text-base truncate">{guide.full_name || 'Unnamed'}</p>
+              <p className="text-white/40 text-xs truncate mb-2">{guide.email}</p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium border capitalize ${
+                  guide.role === 'agency'
+                    ? 'bg-[hsl(38,62%,58%)]/15 text-[hsl(38,62%,58%)] border-[hsl(38,62%,58%)]/25'
+                    : 'bg-[hsl(178,85%,32%)]/15 text-[hsl(178,85%,55%)] border-[hsl(178,85%,32%)]/25'
+                }`}>
+                  {guide.role || 'guide'}
+                </span>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium border ${
+                  guide.is_approved
+                    ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25'
+                    : guide.is_rejected
+                    ? 'bg-red-500/15 text-red-400 border-red-500/25'
+                    : 'bg-amber-500/15 text-amber-400 border-amber-500/25'
+                }`}>
+                  {guide.is_approved ? 'Approved' : guide.is_rejected ? 'Rejected' : 'Pending'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Info grid */}
+          <div className="grid grid-cols-2 gap-3 border-t border-white/[0.07] pt-5">
+            <div>
+              <p className="text-white/40 text-[10px] uppercase tracking-wider mb-1">City</p>
+              <p className="text-white text-sm flex items-center gap-1.5">
+                <MapPin className="w-3.5 h-3.5 text-white/30 flex-shrink-0" />
+                {guide.city || '—'}
+              </p>
+            </div>
+            <div>
+              <p className="text-white/40 text-[10px] uppercase tracking-wider mb-1">Phone</p>
+              <p className="text-white text-sm flex items-center gap-1.5">
+                <Phone className="w-3.5 h-3.5 text-white/30 flex-shrink-0" />
+                {guide.phone || '—'}
+              </p>
+            </div>
+            <div>
+              <p className="text-white/40 text-[10px] uppercase tracking-wider mb-1">Languages</p>
+              <p className="text-white text-sm flex items-center gap-1.5">
+                <Globe className="w-3.5 h-3.5 text-white/30 flex-shrink-0" />
+                {guide.languages || '—'}
+              </p>
+            </div>
+            <div>
+              <p className="text-white/40 text-[10px] uppercase tracking-wider mb-1">Member Since</p>
+              <p className="text-white text-sm flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5 text-white/30 flex-shrink-0" />
+                {joinDate}
+              </p>
+            </div>
+          </div>
+
+          {/* Specialty */}
+          <div className="border-t border-white/[0.07] pt-4">
+            <p className="text-white/40 text-[10px] uppercase tracking-wider mb-2">Specialty</p>
+            {guide.specialty ? (
+              <span className="px-3 py-1 rounded-full text-xs font-medium bg-[hsl(178,85%,32%)]/15 text-[hsl(178,85%,55%)] border border-[hsl(178,85%,32%)]/25">
+                {guide.specialty}
+              </span>
+            ) : (
+              <p className="text-white/30 text-sm italic">No specialty listed</p>
+            )}
+          </div>
+
+          {/* Bio */}
+          <div className="border-t border-white/[0.07] pt-4">
+            <p className="text-white/40 text-[10px] uppercase tracking-wider mb-2">Bio</p>
+            {guide.bio ? (
+              <p className="text-white/70 text-sm leading-relaxed">{guide.bio}</p>
+            ) : (
+              <p className="text-white/30 text-sm italic">No bio provided</p>
+            )}
+          </div>
+
+          {/* License */}
+          <div className="border-t border-white/[0.07] pt-4">
+            <p className="text-white/40 text-[10px] uppercase tracking-wider mb-2">License Document</p>
+            {guide.license_url ? (
+              <a
+                href={guide.license_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[hsl(178,85%,32%)]/15 text-[hsl(178,85%,55%)] border border-[hsl(178,85%,32%)]/25 text-xs font-medium hover:bg-[hsl(178,85%,32%)]/25 transition"
+              >
+                <FileText className="w-3.5 h-3.5" />
+                View License Document
+                <ExternalLink className="w-3 h-3 opacity-60" />
+              </a>
+            ) : (
+              <p className="text-white/30 text-sm italic">No license uploaded</p>
+            )}
+          </div>
+
+          {/* Action buttons */}
+          <div className="border-t border-white/[0.07] pt-4 space-y-2">
+            {/* Row 1: primary action */}
+            {guide.is_approved ? (
+              <button
+                onClick={() => onSuspend(guide)}
+                disabled={busy}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold bg-red-500/15 text-red-400 border border-red-500/25 hover:bg-red-500/25 transition disabled:opacity-50"
+              >
+                {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
+                Suspend Guide
+              </button>
+            ) : guide.is_rejected ? (
+              <button
+                onClick={() => onApprove(guide)}
+                disabled={busy}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 hover:bg-emerald-500/25 transition disabled:opacity-50"
+              >
+                {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                Approve Guide
+              </button>
+            ) : (
+              /* Pending: show both Approve and Reject */
+              <div className="flex gap-2">
+                <button
+                  onClick={() => onApprove(guide)}
+                  disabled={busy}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 hover:bg-emerald-500/25 transition disabled:opacity-50"
+                >
+                  {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                  Approve
+                </button>
+                <button
+                  onClick={() => onReject(guide)}
+                  disabled={busy}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold bg-red-500/15 text-red-400 border border-red-500/25 hover:bg-red-500/25 transition disabled:opacity-50"
+                >
+                  {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
+                  Reject
+                </button>
+              </div>
+            )}
+            {/* Row 2: close */}
+            <button
+              onClick={onClose}
+              className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-semibold bg-white/[0.04] text-white/50 border border-white/[0.07] hover:bg-white/[0.08] hover:text-white/80 transition"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Guides View ─────────────────────────────────────────────────────────────
 
-function GuidesView({ guides, loading, onToggleApproval, busyId }) {
+function GuidesView({ guides, loading, onToggleApproval, onReject, busyId }) {
   const [query, setQuery] = useState('');
+  const [selectedGuide, setSelectedGuide] = useState(null);
 
   if (loading) return <SectionLoader />;
 
@@ -672,6 +870,25 @@ function GuidesView({ guides, loading, onToggleApproval, busyId }) {
         (g.city || '').toLowerCase().includes(query.toLowerCase())
       )
     : guides;
+
+  const handleApprove = async (guide) => {
+    if (!guide.is_approved) {
+      await onToggleApproval(guide);
+      setSelectedGuide(null);
+    }
+  };
+
+  const handleSuspend = async (guide) => {
+    if (guide.is_approved) {
+      await onToggleApproval(guide);
+      setSelectedGuide(null);
+    }
+  };
+
+  const handleReject = async (guide) => {
+    await onReject(guide);
+    setSelectedGuide(null);
+  };
 
   return (
     <div>
@@ -698,10 +915,20 @@ function GuidesView({ guides, loading, onToggleApproval, busyId }) {
           {filtered.map(guide => {
             const busy = busyId === guide.id;
             return (
-              <div key={guide.id} className={`${CARD} p-4`}>
+              <div
+                key={guide.id}
+                className={`${CARD} p-4 cursor-pointer hover:border-[hsl(178,85%,32%)]/40 transition-colors`}
+                onClick={() => setSelectedGuide(guide)}
+              >
                 <div className="flex items-start gap-3 mb-4">
                   <div className="w-11 h-11 rounded-xl bg-[hsl(178,85%,32%)]/20 border border-[hsl(178,85%,32%)]/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                    <img src={avatarFor(guide)} alt="" className="w-full h-full object-cover" />
+                    {guide.avatar_url ? (
+                      <img src={guide.avatar_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-[hsl(178,85%,55%)] font-bold text-sm">
+                        {guide.full_name?.[0]?.toUpperCase() || '?'}
+                      </span>
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-white font-semibold text-sm truncate">{guide.full_name || 'Unnamed'}</p>
@@ -710,9 +937,11 @@ function GuidesView({ guides, loading, onToggleApproval, busyId }) {
                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium border flex-shrink-0 ${
                     guide.is_approved
                       ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25'
-                      : 'bg-gray-500/15 text-gray-400 border-gray-500/25'
+                      : guide.is_rejected
+                      ? 'bg-red-500/15 text-red-400 border-red-500/25'
+                      : 'bg-amber-500/15 text-amber-400 border-amber-500/25'
                   }`}>
-                    {guide.is_approved ? 'Approved' : 'Pending'}
+                    {guide.is_approved ? 'Approved' : guide.is_rejected ? 'Rejected' : 'Pending'}
                   </span>
                 </div>
 
@@ -731,27 +960,24 @@ function GuidesView({ guides, loading, onToggleApproval, busyId }) {
                   )}
                 </div>
 
-                <button
-                  onClick={() => onToggleApproval(guide)}
-                  disabled={busy}
-                  className={`w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-medium transition border disabled:opacity-50 ${
-                    guide.is_approved
-                      ? 'bg-red-500/10 border-red-500/20 text-red-400 hover:bg-red-500/20'
-                      : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20'
-                  }`}
-                >
-                  {busy
-                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    : guide.is_approved
-                      ? <XCircle className="w-3.5 h-3.5" />
-                      : <CheckCircle2 className="w-3.5 h-3.5" />
-                  }
-                  {guide.is_approved ? 'Suspend' : 'Approve Guide'}
-                </button>
+                <p className="text-white/30 text-[11px] italic text-center py-1">
+                  Click to view full profile
+                </p>
               </div>
             );
           })}
         </div>
+      )}
+
+      {selectedGuide && (
+        <GuideDetailModal
+          guide={selectedGuide}
+          onClose={() => setSelectedGuide(null)}
+          onApprove={handleApprove}
+          onSuspend={handleSuspend}
+          onReject={handleReject}
+          busy={busyId === selectedGuide.id}
+        />
       )}
     </div>
   );
@@ -1222,6 +1448,23 @@ export default function AdminDashboard() {
     }
   };
 
+  const rejectGuide = async (guide) => {
+    setBusyId(guide.id);
+    setError('');
+    try {
+      const { error: err } = await supabase
+        .from('profiles')
+        .update({ is_approved: false, is_rejected: true })
+        .eq('id', guide.id);
+      if (err) throw err;
+      await fetchGuides();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   const handleReplyUpdate = (id, replyText) => {
     setReviews(prev => prev.map(r => r.id === id ? { ...r, admin_reply: replyText } : r));
   };
@@ -1342,6 +1585,7 @@ export default function AdminDashboard() {
             loading={loadingGuides}
             busyId={busyId}
             onToggleApproval={toggleGuideApproval}
+            onReject={rejectGuide}
           />
         );
       case 'comments':

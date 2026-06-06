@@ -30,7 +30,7 @@ import ArticleDetails from '@/pages/ArticleDetails';
 import Chat from '@/pages/Chat';
 import ProfilePage from '@/pages/profile/ProfilePage';
 import SettingsPage from '@/pages/profile/SettingsPage';
-import BookingsPage from '@/pages/profile/BookingsPage';
+
 import RequestsPage from '@/pages/profile/RequestsPage';
 import CityPage from '@/pages/CityPage';
 import FindJobs from '@/pages/FindJobs';
@@ -72,7 +72,7 @@ const AuthenticatedApp = () => {
         <Route path="/destinations/:citySlug" element={<CityPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/profile/settings" element={<SettingsPage />} />
-        <Route path="/profile/bookings" element={<BookingsPage />} />
+
         <Route path="/profile/requests" element={<RequestsPage />} />
         <Route path="/profile/requests/:id" element={<RequestDetailPage />} />
         <Route path="/find-jobs" element={<FindJobs />} />

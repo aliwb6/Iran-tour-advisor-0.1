@@ -276,6 +276,20 @@ export default function GuideDetails() {
     );
   }
 
+  if (!guide.is_approved) {
+    return (
+      <div className="pt-32 pb-20 min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="font-heading text-3xl text-foreground mb-4">
+            {t('guide_not_available')}
+          </h1>
+          <p className="font-body text-sm text-muted-foreground mb-6">{t('guide_not_available_desc')}</p>
+          <Link to="/guides" className="text-gold hover:underline font-body">← Back to Guides</Link>
+        </div>
+      </div>
+    );
+  }
+
   const name = guide.full_name || '';
   const city = guide.city || '';
   const bio = guide.bio || '';
