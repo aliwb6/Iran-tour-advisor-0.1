@@ -5,7 +5,9 @@
       "mcp__claude_ai_Supabase__list_projects",
       "mcp__claude_ai_Supabase__list_tables",
       "mcp__claude_ai_Supabase__execute_sql",
-      "mcp__claude_ai_Supabase__apply_migration"
+      "mcp__claude_ai_Supabase__apply_migration",
+      "Bash(grep -n \"useI18n\\\\|{ t,\" \"/home/alireza/Desktop/Iran-Tour-Advisor.0.1 base44/src/pages/AgencyProfile.jsx\")",
+      "Bash(git commit -m ' *)"
     ]
   }
 }
