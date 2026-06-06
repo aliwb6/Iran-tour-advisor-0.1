@@ -23,8 +23,6 @@ import Agencies from '@/pages/Agencies';
 import GuideDetails from '@/pages/GuideDetails';
 import AgencyProfile from '@/pages/AgencyProfile';
 import TripRequest from '@/pages/TripRequest';
-import AgencyProfile from '@/pages/AgencyProfile';
-import TripRequest from '@/pages/TripRequest';
 import AIAssistant from '@/pages/AIAssistant';
 import About from '@/pages/About';
 import Blog from '@/pages/Blog';
@@ -35,8 +33,6 @@ import SettingsPage from '@/pages/profile/SettingsPage';
 
 import RequestsPage from '@/pages/profile/RequestsPage';
 import CityPage from '@/pages/CityPage';
-import FindJobs from '@/pages/FindJobs';
-import MyTripRequests from '@/pages/MyTripRequests';
 import FindJobs from '@/pages/FindJobs';
 import MyTripRequests from '@/pages/MyTripRequests';
 import RequestDetailPage from '@/pages/profile/RequestDetailPage';

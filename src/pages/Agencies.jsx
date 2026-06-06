@@ -1,73 +1,67 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Search, Star, ShieldCheck, Building2, MapPin } from 'lucide-react';
+import { Search, Star, ShieldCheck, Building2, MapPin, Globe, SlidersHorizontal, X } from 'lucide-react';
 import { useI18n } from '@/lib/i18n.jsx';
 import { useAgencies } from '@/hooks/useSupabase';
 import { avatarFor } from '@/lib/avatar';
-import { supabase } from '@/supabaseClient';
-import {
-  FiltersShell, FilterSection, MultiSelectChips, SingleSelectChips,
-  RatingFilter, ActiveChips,
-} from '@/components/filters/FilterPrimitives';
-import CityFilterWithOther from '@/components/filters/CityFilterWithOther';
-import LanguageFilterWithOther from '@/components/filters/LanguageFilterWithOther';
+import FilterDropdown from '@/components/ui/FilterDropdown';
 
-// ── Filter catalog ───────────────────────────────────────────────────────────
-const HQ_CITIES     = ['Tehran', 'Isfahan', 'Shiraz', 'Yazd', 'Mashhad', 'Tabriz'];
-const SUPPORT_LANGS = ['English', 'Arabic', 'French', 'German', 'Spanish'];
+// ── Filter options ────────────────────────────────────────────────────────────
 
-const YEARS_EXP = (lang) => [
-  { value: '1to3', label: lang === 'fa' ? '۱ تا ۳ سال'   : lang === 'ar' ? '1-3 سنوات'  : '1–3 years' },
-  { value: '3to7', label: lang === 'fa' ? '۳ تا ۷ سال'   : lang === 'ar' ? '3-7 سنوات'  : '3–7 years' },
-  { value: 'gt7',  label: lang === 'fa' ? 'بیش از ۷ سال' : lang === 'ar' ? 'أكثر من 7'  : '7+ years' },
+const CITY_OPTIONS = [
+  { key: 'all', en: 'All Cities', fa: 'همه شهرها', ar: 'كل المدن' },
+  { key: 'Tehran', en: 'Tehran', fa: 'تهران', ar: 'طهران' },
+  { key: 'Isfahan', en: 'Isfahan', fa: 'اصفهان', ar: 'أصفهان' },
+  { key: 'Shiraz', en: 'Shiraz', fa: 'شیراز', ar: 'شيراز' },
+  { key: 'Yazd', en: 'Yazd', fa: 'یزد', ar: 'يزد' },
+  { key: 'Mashhad', en: 'Mashhad', fa: 'مشهد', ar: 'مشهد' },
+  { key: 'Tabriz', en: 'Tabriz', fa: 'تبریز', ar: 'تبريز' },
+  { key: 'Kerman', en: 'Kerman', fa: 'کرمان', ar: 'كرمان' },
+  { key: 'Kashan', en: 'Kashan', fa: 'کاشان', ar: 'كاشان' },
+  { key: 'Rasht', en: 'Rasht', fa: 'رشت', ar: 'رشت' },
+  { key: 'Qom', en: 'Qom', fa: 'قم', ar: 'قم' },
+  { key: 'Hamadan', en: 'Hamadan', fa: 'همدان', ar: 'همدان' },
+  { key: 'Ahvaz', en: 'Ahvaz', fa: 'اهواز', ar: 'الأهواز' },
+  { key: 'Urmia', en: 'Urmia', fa: 'ارومیه', ar: 'أورمية' },
+  { key: 'Ardabil', en: 'Ardabil', fa: 'اردبیل', ar: 'أردبيل' },
+  { key: 'Bandar Abbas', en: 'Bandar Abbas', fa: 'بندرعباس', ar: 'بندر عباس' },
+  { key: 'Sari', en: 'Sari', fa: 'ساری', ar: 'ساري' },
+  { key: 'Qazvin', en: 'Qazvin', fa: 'قزوین', ar: 'قزوين' },
+  { key: 'Zahedan', en: 'Zahedan', fa: 'زاهدان', ar: 'زاهدان' },
+  { key: 'Karaj', en: 'Karaj', fa: 'کرج', ar: 'كرج' },
 ];
 
-const DEFAULT_FILTERS = {
-  search: '',
-  cities: [],
-  tourTypes: [],
-  languages: [],
-  rating: 0,
-  yearsExp: '',
-};
+const LANGUAGE_OPTIONS = [
+  { key: 'all', en: 'All Languages', fa: 'همه زبان‌ها', ar: 'كل اللغات' },
+  { key: 'English', en: 'English', fa: 'انگلیسی', ar: 'الإنجليزية' },
+  { key: 'Arabic', en: 'Arabic', fa: 'عربی', ar: 'العربية' },
+  { key: 'French', en: 'French', fa: 'فرانسوی', ar: 'الفرنسية' },
+  { key: 'German', en: 'German', fa: 'آلمانی', ar: 'الألمانية' },
+  { key: 'Spanish', en: 'Spanish', fa: 'اسپانیایی', ar: 'الإسبانية' },
+  { key: 'Italian', en: 'Italian', fa: 'ایتالیایی', ar: 'الإيطالية' },
+  { key: 'Chinese', en: 'Chinese', fa: 'چینی', ar: 'الصينية' },
+  { key: 'Russian', en: 'Russian', fa: 'روسی', ar: 'الروسية' },
+];
 
-function rowMatches(a, f) {
-  if (f.search) {
-    const q = f.search.toLowerCase();
-    const hay = `${a.full_name || ''} ${a.city || ''} ${a.bio || ''}`.toLowerCase();
-    if (!hay.includes(q)) return false;
-  }
-  if (f.cities.length > 0) {
-    const city = (a.city || '').toLowerCase();
-    if (!city || !f.cities.some((c) => city.includes(c.toLowerCase()))) return false;
-  }
-  if (f.tourTypes.length > 0) {
-    const types = parseList(a.tour_types ?? a.specialties);
-    if (types.length && !f.tourTypes.some((t) => types.includes(String(t).toLowerCase()))) return false;
-  }
-  if (f.languages.length > 0) {
-    const langs = parseList(a.languages ?? a.support_languages);
-    if (langs.length && !f.languages.some((l) => langs.includes(String(l).toLowerCase()))) return false;
-  }
-  if (f.rating > 0) {
-    if (a.rating != null && Number(a.rating) < f.rating) return false;
-  }
-  if (f.yearsExp) {
-    const yrs = a.years_experience ?? a.experience_years;
-    if (yrs != null) {
-      if (f.yearsExp === '1to3' && !(yrs >= 1 && yrs <= 3)) return false;
-      if (f.yearsExp === '3to7' && !(yrs >= 3 && yrs <= 7)) return false;
-      if (f.yearsExp === 'gt7'  && !(yrs > 7)) return false;
-    }
-  }
-  return true;
-}
+const TOUR_TYPE_OPTIONS = [
+  { key: 'all', en: 'All Tour Types', fa: 'همه انواع تور', ar: 'كل أنواع الرحلات' },
+  { key: 'Cultural', en: 'Cultural', fa: 'فرهنگی', ar: 'ثقافي' },
+  { key: 'Adventure', en: 'Adventure', fa: 'ماجراجویی', ar: 'مغامرة' },
+  { key: 'Luxury', en: 'Luxury', fa: 'لاکچری', ar: 'فاخر' },
+  { key: 'Budget-friendly', en: 'Budget-friendly', fa: 'اقتصادی', ar: 'اقتصادي' },
+  { key: 'Photography', en: 'Photography', fa: 'عکاسی', ar: 'تصوير' },
+  { key: 'Academic', en: 'Academic / Research', fa: 'آکادمیک', ar: 'أكاديمي' },
+  { key: 'Religious', en: 'Religious', fa: 'مذهبی', ar: 'ديني' },
+  { key: 'Nature', en: 'Nature & Eco', fa: 'طبیعت', ar: 'الطبيعة' },
+];
+
+const DEFAULT_FILTERS = { city: 'all', language: 'all', tourType: 'all' };
 
 function parseList(val) {
   if (!val) return [];
-  if (Array.isArray(val)) return val.map((s) => String(s).toLowerCase());
-  return String(val).split(/[,·;]/).map((s) => s.trim().toLowerCase()).filter(Boolean);
+  if (Array.isArray(val)) return val.map(s => String(s).toLowerCase());
+  return String(val).split(/[,·;]/).map(s => s.trim().toLowerCase()).filter(Boolean);
 }
 
 // ── Agency Card ────────────────────────────────────────────────────────────────
@@ -185,161 +179,158 @@ function AgencyCard({ agency, lang, onNavigate }) {
 export default function Agencies() {
   const { dir, lang } = useI18n();
   const navigate = useNavigate();
+  // useAgencies() already filters is_approved: true from Supabase.
   const { agencies, loading, error } = useAgencies();
+  const [search, setSearch] = useState('');
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
-  const [dynamicTourTypes, setDynamicTourTypes] = useState([]);
 
-  // Load unique tour types from Supabase
-  useEffect(() => {
-    (async () => {
-      try {
-        const { data } = await supabase
-          .from('profiles')
-          .select('tour_types, specialties, specialty')
-          .eq('role', 'agency');
-        if (data) {
-          const all = data.flatMap((a) => {
-            if (Array.isArray(a.tour_types)) return a.tour_types;
-            if (Array.isArray(a.specialties)) return a.specialties;
-            if (a.specialty) return [a.specialty];
-            return [];
-          });
-          setDynamicTourTypes([...new Set(all.map((s) => String(s).trim()).filter(Boolean))]);
-        }
-      } catch {
-        // silently fail
+  const hasActive = filters.city !== 'all' || filters.language !== 'all' || filters.tourType !== 'all';
+  const reset = () => setFilters(DEFAULT_FILTERS);
+
+  const filtered = useMemo(() => {
+    return agencies.filter(a => {
+      const hay = `${a.full_name || ''} ${a.city || ''} ${a.bio || ''}`.toLowerCase();
+      if (search && !hay.includes(search.toLowerCase())) return false;
+
+      if (filters.city !== 'all') {
+        const city = (a.city || '').toLowerCase();
+        if (!city.includes(filters.city.toLowerCase())) return false;
       }
-    })();
-  }, []);
 
-  const tourTypeOptions = (dynamicTourTypes.length > 0 ? dynamicTourTypes : [
-    'Cultural', 'Adventure', 'Luxury', 'Budget-friendly', 'Photography', 'Academic/Research',
-  ]).map((s) => ({ value: s, label: s }));
+      if (filters.language !== 'all') {
+        const langs = parseList(a.languages ?? a.support_languages);
+        if (langs.length && !langs.some(l => l.includes(filters.language.toLowerCase()))) return false;
+      }
 
-  const update = (patch) => setFilters((f) => ({ ...f, ...patch }));
-  const clearAll = () => setFilters(DEFAULT_FILTERS);
+      if (filters.tourType !== 'all') {
+        const types = parseList(a.tour_types ?? a.specialties);
+        if (types.length && !types.some(t => t.includes(filters.tourType.toLowerCase()))) return false;
+      }
 
-  const filtered = useMemo(
-    () => agencies.filter((a) => rowMatches(a, filters)),
-    [agencies, filters]
-  );
+      return true;
+    });
+  }, [agencies, search, filters]);
 
   const tx = {
     title:    lang === 'fa' ? 'آژانس‌های مسافرتی' : lang === 'ar' ? 'وكالات السفر'         : 'Travel Agencies',
     subtitle: lang === 'fa' ? 'آژانس‌های رسمی و مورد اعتماد ایران برای سفر مرفه و آسوده' : lang === 'ar' ? 'وكالات إيرانية موثوقة ومرخصة لسفر مريح وسلس' : 'Trusted, licensed Iranian agencies for an effortless journey',
-    licensed: lang === 'fa' ? 'دارای مجوز رسمی'      : lang === 'ar' ? 'حاصل على ترخيص'      : 'Officially licensed',
     loading:  lang === 'fa' ? 'در حال بارگذاری آژانس‌ها...' : lang === 'ar' ? 'جار تحميل الوكالات...' : 'Loading agencies...',
     error:    lang === 'fa' ? 'بارگذاری آژانس‌ها با خطا مواجه شد' : lang === 'ar' ? 'فشل تحميل الوكالات' : 'Failed to load agencies',
     empty:    lang === 'fa' ? 'آژانسی با این فیلترها یافت نشد' : lang === 'ar' ? 'لا توجد وكالات بهذه الفلاتر' : 'No agencies match these filters',
-    results:  (n) => lang === 'fa' ? `${n} آژانس یافت شد` : lang === 'ar' ? `${n} وكالة` : `${n} agenc${n === 1 ? 'y' : 'ies'} found`,
-    section: {
-      hq:       lang === 'fa' ? 'شهر دفتر مرکزی' : lang === 'ar' ? 'مدينة المقر'    : 'Headquarters city',
-      tourType: lang === 'fa' ? 'نوع تور'         : lang === 'ar' ? 'نوع الجولة'     : 'Tour type',
-      langs:    lang === 'fa' ? 'زبان پشتیبانی'    : lang === 'ar' ? 'لغة الدعم'      : 'Support language',
-      rating:   lang === 'fa' ? 'امتیاز'           : lang === 'ar' ? 'التقييم'        : 'Rating',
-      years:    lang === 'fa' ? 'سال‌های تجربه'    : lang === 'ar' ? 'سنوات الخبرة'   : 'Years of experience',
-      licensed: lang === 'fa' ? 'مجوز رسمی'        : lang === 'ar' ? 'الترخيص'        : 'Official license',
-    },
   };
-
-  const activeChips = useMemo(() => {
-    const chips = [];
-    if (filters.search) chips.push({ key: 'search', label: `"${filters.search}"`, onRemove: () => update({ search: '' }) });
-    filters.cities.forEach((c) => chips.push({ key: `city-${c}`, label: c, onRemove: () => update({ cities: filters.cities.filter((x) => x !== c) }) }));
-    filters.tourTypes.forEach((t) => chips.push({ key: `tt-${t}`, label: t, onRemove: () => update({ tourTypes: filters.tourTypes.filter((x) => x !== t) }) }));
-    filters.languages.forEach((l) => chips.push({ key: `lang-${l}`, label: l, onRemove: () => update({ languages: filters.languages.filter((x) => x !== l) }) }));
-    if (filters.rating > 0) chips.push({ key: 'rating', label: `${filters.rating}+ ★`, onRemove: () => update({ rating: 0 }) });
-    if (filters.yearsExp) {
-      const opt = YEARS_EXP(lang).find((x) => x.value === filters.yearsExp);
-      if (opt) chips.push({ key: 'yrs', label: opt.label, onRemove: () => update({ yearsExp: '' }) });
-    }
-    return chips;
-  }, [filters, lang]);
-
-  const activeCount = activeChips.length;
 
   return (
     <div dir={dir} className="pt-24 pb-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-10"
-        >
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-10">
           <h1 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-light text-foreground mb-4">
             {tx.title}
           </h1>
-          <p className="font-body text-muted-foreground max-w-xl text-lg">
+          <p className="font-body text-muted-foreground max-w-xl text-lg mb-8">
             {tx.subtitle}
           </p>
+
+          {/* Search bar */}
+          <div className="relative max-w-lg">
+            <Search className="absolute start-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={lang === 'fa' ? 'جستجو در آژانس‌ها...' : lang === 'ar' ? 'ابحث في الوكالات...' : 'Search agencies by name, city, tour type...'}
+              className="w-full ps-11 pe-4 py-3 rounded-2xl border border-border bg-card font-body text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-gold/40 focus:border-gold/40 transition shadow-sm"
+            />
+          </div>
         </motion.div>
 
-        {/* Search bar */}
-        <div className="relative mb-8">
-          <Search className="absolute start-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-          <input
-            type="text"
-            value={filters.search}
-            onChange={(e) => update({ search: e.target.value })}
-            placeholder={lang === 'fa' ? 'جستجو در آژانس‌ها...' : lang === 'ar' ? 'ابحث في الوكالات...' : 'Search agencies by name, city, tour type...'}
-            className="w-full ps-11 pe-4 py-3 rounded-2xl border border-border bg-card font-body text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-gold/40 focus:border-gold/40 transition shadow-sm"
-          />
-        </div>
+        {/* Filter bar */}
+        <div className="mb-10">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+            <span className="text-accent/50 text-sm tracking-widest">✦ ❋ ✦</span>
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+          </div>
 
-        <div className="flex flex-col lg:flex-row gap-8">
-          <FiltersShell activeCount={activeCount} onClearAll={clearAll}>
-            <FilterSection label={tx.section.hq}>
-              <CityFilterWithOther
-                selectedCities={filters.cities}
-                citiesInList={HQ_CITIES}
-                onCityChange={(v) => update({ cities: v })}
-                placeholder={lang === 'fa' ? 'شهر دیگری را جستجو کنید...' : lang === 'ar' ? 'ابحث عن مدينة أخرى...' : 'Search other cities...'}
+          <div className="relative">
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-accent/[0.03] via-card/80 to-gold/[0.03] border border-border/40 backdrop-blur-sm" />
+            <div className="relative flex flex-wrap gap-3 p-4">
+              <FilterDropdown
+                label={lang === 'fa' ? 'شهر' : lang === 'ar' ? 'المدينة' : 'City'}
+                value={filters.city}
+                options={CITY_OPTIONS}
+                onChange={(v) => setFilters(f => ({ ...f, city: v }))}
+                lang={lang}
+                icon={MapPin}
               />
-            </FilterSection>
-            <FilterSection label={tx.section.tourType}>
-              <MultiSelectChips options={tourTypeOptions} value={filters.tourTypes} onChange={(v) => update({ tourTypes: v })} />
-            </FilterSection>
-            <FilterSection label={tx.section.langs}>
-              <LanguageFilterWithOther
-                selectedLanguages={filters.languages}
-                languagesInList={SUPPORT_LANGS}
-                onLanguageChange={(v) => update({ languages: v })}
-                placeholder={lang === 'fa' ? 'زبان دیگری را جستجو کنید...' : lang === 'ar' ? 'ابحث عن لغة أخرى...' : 'Search other languages...'}
+              <FilterDropdown
+                label={lang === 'fa' ? 'زبان' : lang === 'ar' ? 'اللغة' : 'Language'}
+                value={filters.language}
+                options={LANGUAGE_OPTIONS}
+                onChange={(v) => setFilters(f => ({ ...f, language: v }))}
+                lang={lang}
+                icon={Globe}
               />
-            </FilterSection>
-            <FilterSection label={tx.section.rating}>
-              <RatingFilter value={filters.rating} onChange={(v) => update({ rating: v })} />
-            </FilterSection>
-            <FilterSection label={tx.section.years}>
-              <SingleSelectChips options={YEARS_EXP(lang)} value={filters.yearsExp} onChange={(v) => update({ yearsExp: v })} />
-            </FilterSection>
-          </FiltersShell>
-
-          <div className="flex-1 min-w-0">
-            <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-              <ActiveChips chips={activeChips} />
-              <p className="font-body text-sm text-muted-foreground ms-auto">{tx.results(filtered.length)}</p>
+              <FilterDropdown
+                label={lang === 'fa' ? 'نوع تور' : lang === 'ar' ? 'نوع الجولة' : 'Tour Type'}
+                value={filters.tourType}
+                options={TOUR_TYPE_OPTIONS}
+                onChange={(v) => setFilters(f => ({ ...f, tourType: v }))}
+                lang={lang}
+                icon={SlidersHorizontal}
+              />
+              <div className="flex items-center gap-3 ms-auto self-center px-2">
+                <span className="font-body text-sm text-muted-foreground whitespace-nowrap">
+                  <span className="text-foreground font-semibold">{filtered.length}</span>
+                  {lang === 'fa' ? ' آژانس' : lang === 'ar' ? ' وكالة' : ' agencies'}
+                </span>
+                {hasActive && (
+                  <button onClick={reset} className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-body border border-destructive/30 text-destructive hover:bg-destructive/10 transition-all">
+                    <X className="w-3 h-3" />
+                    {lang === 'fa' ? 'پاک کردن' : lang === 'ar' ? 'مسح' : 'Clear'}
+                  </button>
+                )}
+              </div>
             </div>
+          </div>
 
-            {loading ? (
-              <p className="font-body text-muted-foreground text-center py-16">{tx.loading}</p>
-            ) : error ? (
-              <div className="text-center py-16">
-                <p className="font-body text-destructive mb-2">{tx.error}</p>
-                <p className="font-body text-xs text-muted-foreground">{error}</p>
-              </div>
-            ) : filtered.length === 0 ? (
-              <p className="font-body text-muted-foreground text-center py-16">{tx.empty}</p>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                {filtered.map((agency) => (
-                  <AgencyCard key={agency.id} agency={agency} lang={lang} onNavigate={navigate} />
-                ))}
-              </div>
-            )}
+          <div className="flex items-center gap-4 mt-4">
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+            <span className="text-accent/30 text-xs">◆</span>
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
           </div>
         </div>
+
+        {/* Agency Grid */}
+        {loading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+            {[0, 1, 2, 3, 4, 5].map(i => (
+              <div key={i} className="aspect-[4/3] rounded-2xl bg-muted animate-pulse" />
+            ))}
+          </div>
+        ) : error ? (
+          <div className="text-center py-16">
+            <p className="font-body text-destructive mb-2">{tx.error}</p>
+            <p className="font-body text-xs text-muted-foreground">{error}</p>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-24">
+            <div className="w-20 h-20 mx-auto mb-6 rounded-full border-2 border-border flex items-center justify-center">
+              <span className="text-3xl text-accent/40">❋</span>
+            </div>
+            <p className="font-heading text-2xl text-muted-foreground font-light">{tx.empty}</p>
+            <button onClick={reset} className="mt-4 text-sm font-body text-accent hover:underline">
+              {lang === 'fa' ? 'پاک کردن فیلترها' : lang === 'ar' ? 'مسح الفلاتر' : 'Clear all filters'}
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+            {filtered.map((agency) => (
+              <AgencyCard key={agency.id} agency={agency} lang={lang} onNavigate={navigate} />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
