@@ -40,8 +40,6 @@ export default function Navbar() {
 
   const roleLinks = isGuideOrAgency
     ? [{ path: '/find-jobs', label: 'Find Jobs' }]
-    : isTourist
-    ? [{ path: '/my-trips', label: 'My Trips' }]
     : [];
 
   const navLinks = [...baseLinks, ...roleLinks];
