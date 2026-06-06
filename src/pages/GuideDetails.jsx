@@ -8,7 +8,6 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/supabaseClient';
 import { avatarFor } from '@/lib/avatar';
-import { useAuth } from '@/lib/AuthContext';
 
 const FALLBACK_IMG = 'https://images.unsplash.com/photo-1589562784072-9ede7d082e5e?w=800&h=1000&fit=crop';
 const CITIES_LIST = ['Tehran', 'Isfahan', 'Shiraz', 'Yazd', 'Mashhad', 'Tabriz', 'Kerman', 'Rasht', 'Qom', 'Kashan'];
@@ -270,20 +269,6 @@ export default function GuideDetails() {
             {lang === 'fa' ? 'راهنما یافت نشد' : lang === 'ar' ? 'المرشد غير موجود' : 'Guide Not Found'}
           </h1>
           {error && <p className="font-body text-sm text-destructive mb-4">{error}</p>}
-          <Link to="/guides" className="text-gold hover:underline font-body">← Back to Guides</Link>
-        </div>
-      </div>
-    );
-  }
-
-  if (!guide.is_approved) {
-    return (
-      <div className="pt-32 pb-20 min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="font-heading text-3xl text-foreground mb-4">
-            {t('guide_not_available')}
-          </h1>
-          <p className="font-body text-sm text-muted-foreground mb-6">{t('guide_not_available_desc')}</p>
           <Link to="/guides" className="text-gold hover:underline font-body">← Back to Guides</Link>
         </div>
       </div>

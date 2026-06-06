@@ -246,22 +246,6 @@ export default function AgencyProfile() {
     );
   }
 
-  if (!agency.is_approved) {
-    return (
-      <div className="pt-32 pb-20 min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="font-heading text-3xl text-foreground mb-4">
-            {lang === 'fa' ? 'پروفایل در دسترس نیست' : lang === 'ar' ? 'الملف الشخصي غير متاح' : 'Profile Not Available'}
-          </h1>
-          <p className="font-body text-sm text-muted-foreground mb-6">
-            {lang === 'fa' ? 'این پروفایل در حال حاضر برای عموم در دسترس نیست.' : lang === 'ar' ? 'هذا الملف الشخصي غير متاح للعموم حالياً.' : 'This profile is not currently available to the public.'}
-          </p>
-          <Link to="/agencies" className="text-gold hover:underline font-body">← Back to Agencies</Link>
-        </div>
-      </div>
-    );
-  }
-
   const name = agency.full_name || '';
   const city = agency.city || '';
   const bio = agency.bio || '';

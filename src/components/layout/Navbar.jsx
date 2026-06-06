@@ -7,7 +7,6 @@ import ThemeToggle from './ThemeToggle';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, Compass, ArrowRight, LogOut, LayoutDashboard, Shield, User } from 'lucide-react';
 import UserDropdown from '@/components/navbar/UserDropdown';
-import NotificationBell from '@/components/navbar/NotificationBell';
 
 export default function Navbar() {
   const { t, dir } = useI18n();
@@ -40,6 +39,8 @@ export default function Navbar() {
 
   const roleLinks = isGuideOrAgency
     ? [{ path: '/find-jobs', label: 'Find Jobs' }]
+    : isTourist
+    ? [{ path: '/my-trips', label: 'My Trips' }]
     : [];
 
   const navLinks = [...baseLinks, ...roleLinks];
@@ -119,11 +120,6 @@ export default function Navbar() {
                 <ThemeToggle />
                 <LanguageSwitcher />
               </div>
-
-              {/* Notification bell — all authenticated users */}
-              {!isLoadingAuth && isAuthenticated && (
-                <NotificationBell userId={user?.id} isLight={isLight} />
-              )}
 
               {/* Auth buttons — desktop */}
               {!isLoadingAuth && (

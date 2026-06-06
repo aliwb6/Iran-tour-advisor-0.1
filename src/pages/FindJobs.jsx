@@ -2,30 +2,35 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  MapPin, Calendar, Users, Globe, FileText,
-  Briefcase, RefreshCw, Search, X, CheckCircle2,
-  Loader2, Home, Car, Star, Bell,
+  MapPin, Calendar, Users, Wallet, ChevronDown, ChevronUp,
+  Briefcase, RefreshCw, Search, X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../supabaseClient';
-import { getAvailableTripRequests } from '../api/tripRequests';
-import { guideAcceptRequest } from '../api/tourRequestFlow';
+import { getAvailableTripRequests, acceptTripRequest } from '../api/tripRequests';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 
-const TOUR_TYPES = ['City Tour', 'Adventure', 'Cultural', 'Historical', 'Nature', 'Religious', 'Custom'];
+const INTEREST_COLORS = {
+  Architecture: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
+  History:      'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+  Nature:       'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+  Food:         'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300',
+  Photography:  'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
+  Desert:       'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
+  Luxury:       'bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-300',
+  Culture:      'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300',
+  Research:     'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300',
+  Art:          'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300',
+};
 
-// destination is a text[] column; tolerate legacy string values too
-const cityList = (d) => (Array.isArray(d) ? d : d ? [d] : []);
+const ALL_INTERESTS = Object.keys(INTEREST_COLORS);
+const BUDGET_OPTIONS = ['', 'Budget', 'Mid-range', 'Luxury'];
 
-function fmt(dateStr) {
-  if (!dateStr) return null;
-  return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-}
-
-function SlotIndicator({ acceptedCount }) {
-  const taken = acceptedCount || 0;
+function SlotIndicator({ slotCount }) {
+  const taken = slotCount || 0;
   const available = 3 - taken;
   const isYellow = available === 1;
 
@@ -33,11 +38,16 @@ function SlotIndicator({ acceptedCount }) {
     <div className="flex items-center gap-2">
       <div className="flex gap-1">
         {[0, 1, 2].map(i => (
-          <span key={i} className={`text-base leading-none ${
-            i < taken
-              ? isYellow ? 'text-yellow-500' : 'text-emerald-500'
-              : 'text-muted-foreground/30'
-          }`}>
+          <span
+            key={i}
+            className={`text-base leading-none ${
+              i < taken
+                ? isYellow
+                  ? 'text-yellow-500'
+                  : 'text-emerald-500'
+                : 'text-muted-foreground/30'
+            }`}
+          >
             {i < taken ? '●' : '○'}
           </span>
         ))}
@@ -51,187 +61,15 @@ function SlotIndicator({ acceptedCount }) {
   );
 }
 
-function DetailRow({ icon, label, children }) {
-  return (
-    <div>
-      <div className="flex items-center gap-1.5 mb-1">
-        <span className="text-muted-foreground">{icon}</span>
-        <span className="font-body text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">{label}</span>
-      </div>
-      <div className="pl-6 font-body text-sm text-foreground">{children}</div>
-    </div>
-  );
-}
-
-function DetailsModal({ trip, guideId, onClose, onAccepted }) {
+function TripRequestCard({ trip, guideId, onAccepted }) {
+  const [expanded, setExpanded] = useState(false);
   const [accepting, setAccepting] = useState(false);
-  const isFull = trip.accepted_count >= 3;
 
   const handleAccept = async () => {
     setAccepting(true);
     try {
-      await guideAcceptRequest(guideId, trip.id);
-      toast.success("Request accepted! You'll be notified when the tourist makes their choice.");
-      onAccepted();
-      onClose();
-    } catch (err) {
-      toast.error(err.message || 'Failed to accept trip request.');
-    } finally {
-      setAccepting(false);
-    }
-  };
-
-  const start = fmt(trip.start_date);
-  const end = fmt(trip.end_date);
-  const adults = trip.adults || trip.adult_count || 1;
-  const children = trip.children || trip.child_count || 0;
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-      onClick={onClose}
-    >
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 10 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 10 }}
-        transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-        className="bg-card border border-border/60 rounded-2xl shadow-2xl w-full max-w-lg max-h-[88vh] overflow-y-auto"
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Modal header */}
-        <div className="sticky top-0 bg-card border-b border-border/30 px-5 py-4 flex items-start justify-between gap-3 rounded-t-2xl z-10">
-          <div>
-            <h3 className="font-heading text-base font-semibold text-foreground">
-              Trip to {cityList(trip.destination).join(', ') || 'Iran'}
-            </h3>
-            <p className="font-body text-xs text-muted-foreground mt-0.5">
-              Submitted {fmt(trip.created_at)}
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-lg border border-border/50 flex items-center justify-center text-muted-foreground hover:text-foreground transition shrink-0 mt-0.5"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Slot indicator */}
-        <div className="px-5 pt-4">
-          <SlotIndicator acceptedCount={trip.accepted_count} />
-        </div>
-
-        {/* Details */}
-        <div className="p-5 space-y-4">
-          {(start || end) && (
-            <DetailRow icon={<Calendar className="w-4 h-4" />} label="Travel Dates">
-              {start}{start && end ? ' → ' : ''}{end}
-              {trip.timings_flexible && (
-                <span className="ml-2 font-body text-xs text-muted-foreground">(flexible)</span>
-              )}
-            </DetailRow>
-          )}
-
-          <DetailRow icon={<Users className="w-4 h-4" />} label="Group Size">
-            {adults} adult{adults !== 1 ? 's' : ''}
-            {children > 0 ? `, ${children} child${children !== 1 ? 'ren' : ''}` : ''}
-          </DetailRow>
-
-          {trip.tour_type && (
-            <DetailRow icon={<Briefcase className="w-4 h-4" />} label="Tour Type">
-              {trip.tour_type}
-            </DetailRow>
-          )}
-
-          {trip.guide_languages?.length > 0 && (
-            <DetailRow icon={<Globe className="w-4 h-4" />} label="Preferred Languages">
-              {trip.guide_languages.join(', ')}
-            </DetailRow>
-          )}
-
-          {trip.accommodation_stars && (
-            <DetailRow icon={<Home className="w-4 h-4" />} label="Accommodation">
-              {trip.accommodation_stars}★ hotel
-            </DetailRow>
-          )}
-
-          {trip.assistance?.length > 0 && (
-            <DetailRow icon={<CheckCircle2 className="w-4 h-4" />} label="Assistance Needed">
-              <div className="flex flex-wrap gap-1.5 mt-1">
-                {trip.assistance.map(a => (
-                  <span key={a} className="px-2 py-0.5 rounded-full bg-muted/60 text-xs font-body text-muted-foreground border border-border/40">
-                    {a}
-                  </span>
-                ))}
-              </div>
-            </DetailRow>
-          )}
-
-          {trip.holiday_types?.length > 0 && (
-            <DetailRow icon={<Star className="w-4 h-4" />} label="Interests">
-              <div className="flex flex-wrap gap-1.5 mt-1">
-                {trip.holiday_types.map(h => (
-                  <span key={h} className="px-2 py-0.5 rounded-full bg-muted/60 text-xs font-body text-muted-foreground border border-border/40">
-                    {h}
-                  </span>
-                ))}
-              </div>
-            </DetailRow>
-          )}
-
-          {trip.additional_services?.length > 0 && (
-            <DetailRow icon={<Car className="w-4 h-4" />} label="Additional Services">
-              {trip.additional_services.join(', ')}
-            </DetailRow>
-          )}
-
-          {trip.requirements && (
-            <DetailRow icon={<FileText className="w-4 h-4" />} label="Special Requirements">
-              <p className="font-body text-sm text-foreground/80 leading-relaxed mt-0.5">
-                {trip.requirements}
-              </p>
-            </DetailRow>
-          )}
-        </div>
-
-        {/* Footer actions */}
-        <div className="px-5 pb-5 flex gap-2">
-          <Button
-            onClick={handleAccept}
-            disabled={accepting || isFull}
-            className={`flex-1 font-body font-semibold rounded-xl h-10 ${
-              isFull
-                ? 'bg-muted text-muted-foreground cursor-not-allowed'
-                : 'bg-accent hover:bg-accent/90 text-white'
-            }`}
-          >
-            {accepting ? (
-              <><Loader2 className="w-4 h-4 animate-spin mr-2" />Accepting…</>
-            ) : isFull ? (
-              'All Slots Taken'
-            ) : (
-              'Accept Request'
-            )}
-          </Button>
-          <Button variant="outline" onClick={onClose} className="font-body rounded-xl h-10 border-border/60">
-            Close
-          </Button>
-        </div>
-      </motion.div>
-    </div>
-  );
-}
-
-function TripRequestCard({ trip, guideId, onAccepted, onViewDetails }) {
-  const [accepting, setAccepting] = useState(false);
-  const isFull = trip.accepted_count >= 3;
-
-  const handleAccept = async () => {
-    setAccepting(true);
-    try {
-      await guideAcceptRequest(guideId, trip.id);
-      toast.success("Request accepted! You'll be notified when the tourist makes their choice.");
+      await acceptTripRequest(guideId, trip.id);
+      toast.success("You've accepted this trip! Start a conversation with the traveler.");
       onAccepted();
     } catch (err) {
       toast.error(err.message || 'Failed to accept trip request.');
@@ -240,20 +78,22 @@ function TripRequestCard({ trip, guideId, onAccepted, onViewDetails }) {
     }
   };
 
-  const start = fmt(trip.start_date);
-  const end = fmt(trip.end_date);
-  const dateLabel = start && end
-    ? `${start} – ${end}`
-    : start || (trip.timings_flexible ? 'Dates flexible' : null);
-
-  const adults = trip.adults || trip.adult_count || 1;
-  const children = trip.children || trip.child_count || 0;
-  const totalPeople = adults + children;
+  const startDate = trip.travel_dates?.start
+    ? new Date(trip.travel_dates.start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    : null;
+  const endDate = trip.travel_dates?.end
+    ? new Date(trip.travel_dates.end).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : null;
+  const dateLabel = startDate && endDate ? `${startDate} – ${endDate}` : startDate || 'Dates flexible';
 
   const travelerName = trip.traveler?.full_name?.split(' ')[0] || 'Traveler';
   const avatarUrl = trip.traveler?.avatar_url;
   const initials = (trip.traveler?.full_name || 'T')
-    .split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+    .split(' ')
+    .map(n => n[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
 
   return (
     <motion.div
@@ -264,28 +104,19 @@ function TripRequestCard({ trip, guideId, onAccepted, onViewDetails }) {
       className="bg-card border border-border/50 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
     >
       <div className="p-5">
-        {/* Header */}
+        {/* Header row */}
         <div className="flex items-start justify-between gap-3 mb-3">
           <div className="flex-1 min-w-0">
             <h3 className="font-heading text-base font-semibold text-foreground leading-snug truncate">
-              Trip to {cityList(trip.destination).join(', ') || 'Iran'}
+              {trip.title}
             </h3>
-            <div className="flex items-center gap-1.5 mt-1 flex-wrap text-muted-foreground">
+            <div className="flex items-center gap-1.5 mt-1 text-muted-foreground">
               <MapPin className="w-3.5 h-3.5 shrink-0 text-gold" />
-              {cityList(trip.destination).length > 0 ? (
-                cityList(trip.destination).map(city => (
-                  <span
-                    key={city}
-                    className="inline-flex items-center px-2 py-0.5 rounded-full bg-accent/10 text-accent text-xs font-medium border border-accent/20"
-                  >
-                    {city}
-                  </span>
-                ))
-              ) : (
-                <span className="font-body text-sm">—</span>
-              )}
+              <span className="font-body text-sm truncate">{trip.destination}</span>
             </div>
           </div>
+
+          {/* Traveler avatar */}
           <div className="flex items-center gap-2 shrink-0">
             <div className="w-9 h-9 rounded-full overflow-hidden bg-accent/20 border border-border/50 flex items-center justify-center">
               {avatarUrl ? (
@@ -294,13 +125,13 @@ function TripRequestCard({ trip, guideId, onAccepted, onViewDetails }) {
                 <span className="font-body text-xs font-bold text-accent">{initials}</span>
               )}
             </div>
-            <span className="font-body text-sm text-muted-foreground hidden sm:block">{travelerName}</span>
+            <span className="font-body text-sm text-muted-foreground">{travelerName}</span>
           </div>
         </div>
 
-        {/* Meta chips */}
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 mb-3 text-sm font-body text-muted-foreground">
-          {dateLabel && (
+        {/* Meta row */}
+        <div className="flex flex-wrap items-center gap-3 mb-3 text-sm font-body text-muted-foreground">
+          {(startDate || endDate) && (
             <span className="flex items-center gap-1">
               <Calendar className="w-3.5 h-3.5 shrink-0" />
               {dateLabel}
@@ -308,65 +139,92 @@ function TripRequestCard({ trip, guideId, onAccepted, onViewDetails }) {
           )}
           <span className="flex items-center gap-1">
             <Users className="w-3.5 h-3.5 shrink-0" />
-            {totalPeople} {totalPeople === 1 ? 'person' : 'people'}
+            {trip.group_size || 1} {(trip.group_size || 1) === 1 ? 'person' : 'people'}
           </span>
-          {trip.tour_type && (
+          {trip.budget_range && (
             <span className="flex items-center gap-1">
-              <Briefcase className="w-3.5 h-3.5 shrink-0" />
-              {trip.tour_type}
-            </span>
-          )}
-          {trip.guide_languages?.length > 0 && (
-            <span className="flex items-center gap-1">
-              <Globe className="w-3.5 h-3.5 shrink-0" />
-              {trip.guide_languages.join(', ')}
+              <Wallet className="w-3.5 h-3.5 shrink-0" />
+              {trip.budget_range}
             </span>
           )}
         </div>
 
-        {/* Requirements snippet */}
-        {trip.requirements && (
-          <p className="font-body text-xs text-muted-foreground leading-relaxed mb-3 line-clamp-2">
-            <FileText className="w-3 h-3 inline-block mr-1 opacity-60" />
-            {trip.requirements}
-          </p>
+        {/* Interests */}
+        {trip.interests && trip.interests.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-3">
+            {trip.interests.map(interest => (
+              <span
+                key={interest}
+                className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium font-body ${
+                  INTEREST_COLORS[interest] || 'bg-muted text-muted-foreground'
+                }`}
+              >
+                {interest}
+              </span>
+            ))}
+          </div>
         )}
 
         {/* Slot indicator */}
         <div className="mb-4">
-          <SlotIndicator acceptedCount={trip.accepted_count} />
+          <SlotIndicator slotCount={trip.slot_count} />
         </div>
 
         {/* Actions */}
         <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            onClick={handleAccept}
-            disabled={accepting || isFull}
-            className={`flex-1 font-body font-semibold rounded-xl h-9 ${
-              isFull
-                ? 'bg-muted text-muted-foreground cursor-not-allowed pointer-events-none'
-                : 'bg-accent hover:bg-accent/90 text-white'
-            }`}
-          >
-            {accepting ? (
-              <><Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />Accepting…</>
-            ) : isFull ? (
-              'Slots Full'
-            ) : (
-              'Accept Request'
-            )}
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={onViewDetails}
-            className="font-body text-xs rounded-xl h-9 border-border/60 shrink-0"
-          >
-            See Details
-          </Button>
+          {trip.already_accepted ? (
+            <Badge variant="secondary" className="font-body text-xs px-3 py-1">
+              Pending Response
+            </Badge>
+          ) : (
+            <Button
+              size="sm"
+              onClick={handleAccept}
+              disabled={accepting}
+              className="flex-1 bg-accent hover:bg-accent/90 text-white font-body font-semibold rounded-xl h-9"
+            >
+              {accepting ? (
+                <RefreshCw className="w-3.5 h-3.5 animate-spin mr-1.5" />
+              ) : null}
+              {accepting ? 'Accepting…' : 'Accept & Connect'}
+            </Button>
+          )}
+
+          {trip.notes && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setExpanded(e => !e)}
+              className="font-body text-xs rounded-xl h-9 border-border/60"
+            >
+              View Details
+              {expanded ? <ChevronUp className="w-3.5 h-3.5 ml-1" /> : <ChevronDown className="w-3.5 h-3.5 ml-1" />}
+            </Button>
+          )}
         </div>
       </div>
+
+      {/* Accordion: notes */}
+      <AnimatePresence>
+        {expanded && trip.notes && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+            style={{ overflow: 'hidden' }}
+          >
+            <div className="px-5 pb-5 pt-0 border-t border-border/30">
+              <p className="font-body text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 pt-4">
+                Special Requirements
+              </p>
+              <p className="font-body text-sm text-foreground/80 leading-relaxed">
+                {trip.notes}
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
@@ -382,11 +240,12 @@ function LoadingSkeleton() {
             <Skeleton className="h-4 w-24" />
             <Skeleton className="h-4 w-20" />
           </div>
-          <Skeleton className="h-4 w-full" />
-          <div className="flex gap-2">
-            <Skeleton className="h-9 w-full rounded-xl" />
-            <Skeleton className="h-9 w-24 rounded-xl" />
+          <div className="flex gap-1.5">
+            <Skeleton className="h-5 w-16 rounded-full" />
+            <Skeleton className="h-5 w-14 rounded-full" />
+            <Skeleton className="h-5 w-18 rounded-full" />
           </div>
+          <Skeleton className="h-9 w-full rounded-xl" />
         </div>
       ))}
     </div>
@@ -400,14 +259,15 @@ export default function FindJobs() {
   const [trips, setTrips] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedTrip, setSelectedTrip] = useState(null);
 
   // Filters
   const [destFilter, setDestFilter] = useState('');
-  const [tourTypeFilter, setTourTypeFilter] = useState('');
+  const [interestFilter, setInterestFilter] = useState([]);
+  const [budgetFilter, setBudgetFilter] = useState('');
 
   const role = profile?.role || user?.user_metadata?.role;
 
+  // Redirect non-guides
   useEffect(() => {
     if (!isLoadingAuth && isAuthenticated && role && role !== 'guide' && role !== 'agency') {
       navigate('/');
@@ -436,24 +296,37 @@ export default function FindJobs() {
 
     const channel = supabase
       .channel('find_jobs')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'trip_requests' }, loadRequests)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'trip_requests' },
+        loadRequests
+      )
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
   }, [user?.id, loadRequests]);
 
+  // Filtered results
   const filtered = trips.filter(trip => {
-    if (destFilter && !cityList(trip.destination).some(c => c.toLowerCase().includes(destFilter.toLowerCase()))) return false;
-    if (tourTypeFilter && trip.tour_type !== tourTypeFilter) return false;
+    if (destFilter && !trip.destination.toLowerCase().includes(destFilter.toLowerCase())) return false;
+    if (interestFilter.length > 0 && !interestFilter.every(i => trip.interests?.includes(i))) return false;
+    if (budgetFilter && trip.budget_range !== budgetFilter) return false;
     return true;
   });
 
-  const clearFilters = () => {
-    setDestFilter('');
-    setTourTypeFilter('');
+  const toggleInterestFilter = (interest) => {
+    setInterestFilter(prev =>
+      prev.includes(interest) ? prev.filter(i => i !== interest) : [...prev, interest]
+    );
   };
 
-  const hasFilters = destFilter || tourTypeFilter;
+  const clearFilters = () => {
+    setDestFilter('');
+    setInterestFilter([]);
+    setBudgetFilter('');
+  };
+
+  const hasFilters = destFilter || interestFilter.length > 0 || budgetFilter;
 
   if (isLoadingAuth || (isAuthenticated && !role)) {
     return (
@@ -482,8 +355,9 @@ export default function FindJobs() {
         </div>
 
         {/* Filter bar */}
-        <div className="bg-card border border-border/50 rounded-2xl p-4 mb-6">
+        <div className="bg-card border border-border/50 rounded-2xl p-4 mb-6 space-y-4">
           <div className="flex flex-col sm:flex-row gap-3">
+            {/* Destination search */}
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
               <input
@@ -494,16 +368,18 @@ export default function FindJobs() {
                 className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-border/60 bg-background font-body text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent/50 transition"
               />
             </div>
+
+            {/* Budget filter */}
             <select
-              value={tourTypeFilter}
-              onChange={e => setTourTypeFilter(e.target.value)}
-              className="px-3 py-2.5 rounded-xl border border-border/60 bg-background font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent/50 transition min-w-[150px]"
+              value={budgetFilter}
+              onChange={e => setBudgetFilter(e.target.value)}
+              className="px-3 py-2.5 rounded-xl border border-border/60 bg-background font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent/50 transition min-w-[140px]"
             >
-              <option value="">Any tour type</option>
-              {TOUR_TYPES.map(t => (
-                <option key={t} value={t}>{t}</option>
+              {BUDGET_OPTIONS.map(opt => (
+                <option key={opt} value={opt}>{opt || 'Any budget'}</option>
               ))}
             </select>
+
             {hasFilters && (
               <button
                 onClick={clearFilters}
@@ -513,6 +389,23 @@ export default function FindJobs() {
                 Clear
               </button>
             )}
+          </div>
+
+          {/* Interest tag filters */}
+          <div className="flex flex-wrap gap-1.5">
+            {ALL_INTERESTS.map(interest => (
+              <button
+                key={interest}
+                onClick={() => toggleInterestFilter(interest)}
+                className={`px-3 py-1 rounded-full text-xs font-medium font-body border transition-all ${
+                  interestFilter.includes(interest)
+                    ? 'border-accent bg-accent/10 text-accent'
+                    : 'border-border/50 text-muted-foreground hover:border-accent/40 hover:text-foreground'
+                }`}
+              >
+                {interest}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -540,7 +433,7 @@ export default function FindJobs() {
         ) : filtered.length === 0 ? (
           <div className="text-center py-20">
             <div className="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-4">
-              <Bell className="w-8 h-8 text-muted-foreground/40" />
+              <Briefcase className="w-8 h-8 text-muted-foreground/40" />
             </div>
             <h3 className="font-heading text-lg font-semibold text-foreground mb-1">
               {hasFilters ? 'No matches found' : 'No open requests right now'}
@@ -551,13 +444,19 @@ export default function FindJobs() {
                 : 'New trip requests from travelers will appear here. Check back soon!'}
             </p>
             {hasFilters && (
-              <button onClick={clearFilters} className="mt-4 font-body text-sm text-accent hover:text-accent/80 transition">
+              <button
+                onClick={clearFilters}
+                className="mt-4 font-body text-sm text-accent hover:text-accent/80 transition"
+              >
                 Clear all filters
               </button>
             )}
           </div>
         ) : (
-          <motion.div layout className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          <motion.div
+            layout
+            className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"
+          >
             <AnimatePresence>
               {filtered.map(trip => (
                 <TripRequestCard
@@ -565,25 +464,12 @@ export default function FindJobs() {
                   trip={trip}
                   guideId={user.id}
                   onAccepted={loadRequests}
-                  onViewDetails={() => setSelectedTrip(trip)}
                 />
               ))}
             </AnimatePresence>
           </motion.div>
         )}
       </div>
-
-      {/* See Details modal */}
-      <AnimatePresence>
-        {selectedTrip && (
-          <DetailsModal
-            trip={selectedTrip}
-            guideId={user?.id}
-            onClose={() => setSelectedTrip(null)}
-            onAccepted={loadRequests}
-          />
-        )}
-      </AnimatePresence>
     </div>
   );
 }

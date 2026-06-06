@@ -1,21 +1,20 @@
-import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useState } from 'react';
 import { useI18n } from '@/lib/i18n.jsx';
 import { motion, AnimatePresence } from 'framer-motion';
 import TourFilters from '@/components/tours/TourFilters';
 import TourCard from '@/components/tours/TourCard';
 import { useTours, FALLBACK_IMAGE } from '@/hooks/useSupabase';
 
-const DEFAULT_FILTERS = { purpose: 'all', theme: 'all', duration: 'all', price: 'all', city: 'all' };
+const DEFAULT_FILTERS = { purpose: 'all', theme: 'all', duration: 'all', price: 'all' };
 
-// Price tier thresholds (USD). Budget < 1200, Mid 1200–2499, Luxury 2500+
+// Price tier thresholds (USD). Budget < 100, Mid-range 100–299, Luxury 300+
 const priceMatches = (tour, priceTier) => {
-  if (!priceTier || priceTier === 'all') return true;
+  if (priceTier === 'all') return true;
   const p = tour.priceFrom ?? tour.price_from ?? tour.price ?? null;
   if (p == null) return true; // no price data — show in all tiers
-  if (priceTier === 'budget')  return p < 1200;
-  if (priceTier === 'mid')     return p >= 1200 && p < 2500;
-  if (priceTier === 'luxury')  return p >= 2500;
+  if (priceTier === 'budget')   return p < 100;
+  if (priceTier === 'midrange') return p >= 100 && p < 300;
+  if (priceTier === 'luxury')   return p >= 300;
   return true;
 };
 
@@ -53,32 +52,9 @@ const pickImage = (tour) => {
 
 export default function Tours() {
   const { dir, lang } = useI18n();
-  const [searchParams] = useSearchParams();
-  const cityFromUrl = searchParams.get('city') || 'all';
-
-  const [filters, setFilters] = useState(() => ({ ...DEFAULT_FILTERS, city: cityFromUrl }));
-
-  // Keep city filter in sync when URL changes (e.g. navigating from hero search)
-  useEffect(() => {
-    setFilters(prev => ({ ...prev, city: cityFromUrl }));
-  }, [cityFromUrl]);
-
+  const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const { tours: rawTours, loading, error } = useTours(filters);
-  const tours = rawTours.filter(t => {
-    if (!priceMatches(t, filters.price)) return false;
-    if (filters.city !== 'all') {
-      const cityLower = filters.city.toLowerCase();
-      const inCity = (t.city || '').toLowerCase().includes(cityLower);
-      const inLocation = typeof t.location === 'object'
-        ? Object.values(t.location).some(v => String(v).toLowerCase().includes(cityLower))
-        : (t.location || '').toLowerCase().includes(cityLower);
-      const inCities = typeof t.cities === 'object' && !Array.isArray(t.cities)
-        ? Object.values(t.cities).some(v => String(v).toLowerCase().includes(cityLower))
-        : (Array.isArray(t.cities) ? t.cities : [t.cities]).some(v => String(v || '').toLowerCase().includes(cityLower));
-      if (!inCity && !inLocation && !inCities) return false;
-    }
-    return true;
-  });
+  const tours = rawTours.filter(t => priceMatches(t, filters.price));
 
   const loadingText = lang === 'fa' ? 'در حال بارگذاری تورها...' : lang === 'ar' ? 'جار تحميل الرحلات...' : 'Loading tours...';
   const errorTitle = lang === 'fa' ? 'بارگذاری تورها با خطا مواجه شد' : lang === 'ar' ? 'فشل تحميل الرحلات' : 'Failed to load tours';
@@ -125,7 +101,7 @@ export default function Tours() {
                   {lang === 'fa' ? 'توری با این فیلترها یافت نشد' : lang === 'ar' ? 'لا توجد رحلات بهذه المعايير' : 'No tours match these filters'}
                 </p>
                 <button
-                  onClick={() => setFilters({ ...DEFAULT_FILTERS })}
+                  onClick={() => setFilters(DEFAULT_FILTERS)}
                   className="mt-4 text-sm font-body text-accent hover:underline"
                 >
                   {lang === 'fa' ? 'پاک کردن فیلترها' : lang === 'ar' ? 'مسح الفلاتر' : 'Clear all filters'}
