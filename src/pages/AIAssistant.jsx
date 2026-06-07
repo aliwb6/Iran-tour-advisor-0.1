@@ -19,6 +19,7 @@ import TripBuilder from '@/components/ai/TripBuilder';
 import { useChatHistory } from '@/hooks/useChatHistory';
 import { ChatMessage } from '@/components/chat/ChatMessage';
 import TripRequestForm from '@/components/profile/TripRequestForm';
+import { extractTripDraft, mapDraftToForm } from '@/utils/tripDraft';
 
 // ── Brand tokens ──────────────────────────────────────────────────────────────
 const C = {
@@ -352,7 +353,24 @@ AVAILABLE TOURS:
 ${toursList}
 
 LOCAL GUIDES:
-${guidesList}`;
+${guidesList}
+
+CUSTOM TRIP (when nothing in the catalogue fits):
+- If, after genuinely trying, no tour and no guide above is a good match — OR the traveller explicitly wants a fully custom/tailor-made trip — warmly offer a custom trip request, explaining that local guides will send them personal proposals to choose from.
+- BEFORE offering, make sure through natural conversation you have learned ALL of: destination city in Iran, approximate start and end dates, number of adults and children, which language(s) they want their guide to speak, their budget level, the kind of holiday they want, any extra services (flights / train / attraction tickets / visa / airport transfer), whether they prefer a private or group trip, and a short free-text of their goals/interests. Ask for whatever is still missing, one question at a time. Never show this as a checklist.
+- Only AFTER the traveller confirms they want the custom trip, write your normal friendly confirmation sentence, then on its own lines append EXACTLY one block in this format (and nothing after it):
+[[TRIP_DRAFT]]
+{"destination":"city or region name", "start_date":"YYYY-MM-DD", "end_date":"YYYY-MM-DD", "arrival_time":"HH:MM AM/PM", "departure_time":"HH:MM AM/PM", "timings_flexible":false, "adults":1, "children":0, "guide_languages":[], "assistance":[], "accommodation_stars":null, "requirements":"", "holiday_types":[], "additional_services":[], "tour_type":""}
+[[/TRIP_DRAFT]]
+- Field rules for the block:
+  - guide_languages: subset of English, Persian, Arabic, French, German, Chinese, Spanish.
+  - assistance: subset of Transportation, Accommodation.
+  - accommodation_stars: 1=Budget, 2=Economy, 3=Standard, 4=Premium, 5=Luxury (or null if unknown).
+  - holiday_types: subset of Active, Local Living, Nature, Offbeat, Relaxing.
+  - additional_services: subset of Air Tickets, Train Tickets, Attraction Tickets, Visa, Airport Transfer.
+  - tour_type: "private" or "group" (or "").
+  - requirements: one or two sentences summarising interests, goals, and special needs.
+- Do NOT output the [[TRIP_DRAFT]] block in the same message as the tour_slugs/guide_ids recommendation block. The draft block is ONLY for the custom-trip path, after explicit confirmation. Fill every field as best you can; use the defaults shown for anything unknown.`;
 }
 
 // ── Trip planning questions ───────────────────────────────────────────────────
@@ -567,6 +585,8 @@ export default function AIAssistant() {
   const [tripAnswers, setTripAnswers]           = useState({});
   const [tripFormOpen, setTripFormOpen]         = useState(false);
   const [tripFormData, setTripFormData]         = useState(null);
+  const [draftForModal, setDraftForModal]       = useState(null);
+  const [requestModalOpen, setRequestModalOpen] = useState(false);
   const [copiedId, setCopiedId]                 = useState(null);
   const [attachedFile, setAttachedFile]         = useState(null);
   const fileInputRef = useRef(null);
@@ -642,10 +662,16 @@ export default function AIAssistant() {
     try {
       const systemPromptText = buildSystemPrompt(catalogue.tours, catalogue.guides);
       const responseText = await callWithFallback(messagesForApi, systemPromptText);
-      const { content, tours, guides } = extractRecommendation(responseText, catalogue.tours, catalogue.guides);
-      const assistantMsg = { role: 'assistant', content };
-      if (tours.length > 0 || guides.length > 0) assistantMsg.cards = { tours, guides };
-      appendMessage(convId, assistantMsg);
+      const { content: afterDraft, draft } = extractTripDraft(responseText);
+      if (draft) {
+        const mapped = mapDraftToForm(draft);
+        appendMessage(convId, { role: 'assistant', content: afterDraft, tripDraft: mapped });
+      } else {
+        const { content, tours, guides } = extractRecommendation(afterDraft, catalogue.tours, catalogue.guides);
+        const assistantMsg = { role: 'assistant', content };
+        if (tours.length > 0 || guides.length > 0) assistantMsg.cards = { tours, guides };
+        appendMessage(convId, assistantMsg);
+      }
     } catch (err) {
       const friendly = lang === 'fa'
         ? `متأسفم، مشکلی پیش آمد. (${err.message})`
@@ -801,10 +827,16 @@ export default function AIAssistant() {
       const systemPromptText = buildSystemPrompt(catalogue.tours, catalogue.guides, responseLang);
       const visionModel = currentFile?.type === 'image' ? 'openai/gpt-4o-mini' : AUTO_MODEL;
       const responseText = await callWithFallback(messagesForApi, systemPromptText, visionModel);
-      const { content, tours, guides } = extractRecommendation(responseText, catalogue.tours, catalogue.guides);
-      const assistantMsg = { role: 'assistant', content };
-      if (tours.length > 0 || guides.length > 0) assistantMsg.cards = { tours, guides };
-      appendMessage(convId, assistantMsg);
+      const { content: afterDraft, draft } = extractTripDraft(responseText);
+      if (draft) {
+        const mapped = mapDraftToForm(draft);
+        appendMessage(convId, { role: 'assistant', content: afterDraft, tripDraft: mapped });
+      } else {
+        const { content, tours, guides } = extractRecommendation(afterDraft, catalogue.tours, catalogue.guides);
+        const assistantMsg = { role: 'assistant', content };
+        if (tours.length > 0 || guides.length > 0) assistantMsg.cards = { tours, guides };
+        appendMessage(convId, assistantMsg);
+      }
     } catch (err) {
       const friendly = lang === 'fa'
         ? `متأسفم، در ارتباط با دستیار مشکلی پیش آمد. (${err.message})`
@@ -1027,6 +1059,22 @@ export default function AIAssistant() {
                         lang={lang}
                         renderCards={cards}
                       />
+                      {msg.role === 'assistant' && msg.tripDraft && (
+                        <div className="mt-3 ms-10">
+                          <button
+                            onClick={() => { setDraftForModal(msg.tripDraft); setRequestModalOpen(true); }}
+                            className="inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold transition-all hover:opacity-90 hover:-translate-y-0.5 active:scale-95"
+                            style={{
+                              background: `linear-gradient(135deg, ${C.turq}, ${C.turqDeep})`,
+                              color: C.white,
+                              boxShadow: `0 6px 18px ${C.turq}30`,
+                            }}
+                          >
+                            <Sparkles className="h-4 w-4 shrink-0" />
+                            {t('ai_trip_draft_cta')}
+                          </button>
+                        </div>
+                      )}
                       <button
                         onClick={() => copyToClipboard(msg.content, i)}
                         className={`absolute opacity-0 group-hover:opacity-100 transition-opacity w-7 h-7 rounded-lg flex items-center justify-center ${
@@ -1224,6 +1272,13 @@ export default function AIAssistant() {
             });
           }
         }}
+      />
+
+      {/* Trip Request Form — pre-filled from AI conversational draft */}
+      <TripRequestForm
+        isOpen={requestModalOpen}
+        onClose={() => setRequestModalOpen(false)}
+        prefillData={draftForModal}
       />
     </div>
   );

@@ -352,6 +352,7 @@ const translations = {
     dashboard_tip_title: "Choose an attractive and descriptive title",
     dashboard_tip_image: "Use high-quality images",
     dashboard_tip_summary: "Write a compelling summary to engage readers",
+    ai_trip_draft_cta: "✨ Your trip request is ready — tap to review & submit",
   },
   fa: {
     nav_home: "خانه",
@@ -704,6 +705,7 @@ const translations = {
     dashboard_tip_title: "عنوان جذاب و توصیفی انتخاب کنید",
     dashboard_tip_image: "از تصاویر با کیفیت بالا استفاده کنید",
     dashboard_tip_summary: "خلاصه‌ای گیرا بنویسید که خواننده را ترغیب کند",
+    ai_trip_draft_cta: "✨ درخواست سفرت آماده‌ست — برای بازبینی و ثبت بزن",
   },
   ar: {
     nav_home: "الرئيسية",
@@ -1056,6 +1058,7 @@ const translations = {
     dashboard_tip_title: "اختر عنواناً جذاباً وواصفاً",
     dashboard_tip_image: "استخدم صوراً عالية الجودة",
     dashboard_tip_summary: "اكتب ملخصاً جذاباً يشجع القراء",
+    ai_trip_draft_cta: "✨ طلب رحلتك جاهز — اضغط للمراجعة والإرسال",
   }
 };
 

@@ -858,7 +858,7 @@ function Step2({
 
 // ── Main export ────────────────────────────────────────────────────────────
 
-export default function TripRequestForm({ isOpen, onClose, onSuccess, initialData }) {
+export default function TripRequestForm({ isOpen, onClose, onSuccess, initialData, prefillData = null }) {
   const { user }       = useAuth();
   const { t }          = useI18n();
   const queryClient    = useQueryClient();
@@ -870,6 +870,17 @@ export default function TripRequestForm({ isOpen, onClose, onSuccess, initialDat
 
   const [customHolidayTypes,       setCustomHolidayTypes]       = useState([]);
   const [customAdditionalServices, setCustomAdditionalServices] = useState([]);
+
+  // Pre-populate from prefillData (AI conversational draft) — simple direct merge
+  useEffect(() => {
+    if (!isOpen || !prefillData) return;
+    setForm({ ...INITIAL_FORM, ...prefillData });
+    setStep(1);
+    setDirection(1);
+    setErrors({});
+    setCustomHolidayTypes([]);
+    setCustomAdditionalServices([]);
+  }, [isOpen, prefillData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Pre-populate from initialData when modal opens
   useEffect(() => {
