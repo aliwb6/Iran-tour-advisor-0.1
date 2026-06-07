@@ -4,12 +4,20 @@ import { useI18n } from '@/lib/i18n.jsx';
 import { motion } from 'framer-motion';
 import {
   Clock, MapPin, CheckCircle, XCircle,
-  ArrowRight, ArrowLeft, Star, Lock, Instagram, Loader2,
+  ArrowRight, ArrowLeft, Star, Lock, Instagram, Loader2, Send,
 } from 'lucide-react';
 import { useTourBySlug, FALLBACK_IMAGE } from '@/hooks/useSupabase';
 import { supabase } from '@/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { lookupInclusionLabel, computeNotIncludedLabels } from '@/lib/tourInclusions';
+import { toast } from 'sonner';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
 
 const purposeBadgeConfig = {
   leisure: { en: 'Leisure', fa: 'تفریحی', ar: 'ترفيه', color: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400' },
@@ -74,6 +82,78 @@ export default function TourDetails() {
   const { tour, loading, error } = useTourBySlug(slug);
   const [bookLoading, setBookLoading] = useState(false);
   const [bookError, setBookError] = useState('');
+
+  const [requestOpen, setRequestOpen] = useState(false);
+  const [reqUsername, setReqUsername] = useState('');
+  const [reqMessage, setReqMessage] = useState('');
+  const [reqDate, setReqDate] = useState('');
+  const [reqGroupSize, setReqGroupSize] = useState('');
+  const [reqLoading, setReqLoading] = useState(false);
+
+  const resetRequestForm = () => {
+    setReqUsername('');
+    setReqMessage('');
+    setReqDate('');
+    setReqGroupSize('');
+  };
+
+  const handleSubmitRequest = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      toast.error(t('request_login_required'));
+      navigate('/login');
+      return;
+    }
+
+    const trimmedUsername = reqUsername.trim();
+    if (!trimmedUsername) {
+      toast.error(t('request_not_found'));
+      return;
+    }
+
+    setReqLoading(true);
+    try {
+      const { data: guide } = await supabase
+        .from('profiles')
+        .select('id, role, username')
+        .eq('username', trimmedUsername)
+        .in('role', ['guide', 'agency'])
+        .maybeSingle();
+
+      if (!guide) {
+        toast.error(t('request_not_found'));
+        return;
+      }
+
+      if (guide.id === user.id) {
+        toast.error(t('request_self_error'));
+        return;
+      }
+
+      const { error: insertErr } = await supabase.from('tour_requests').insert({
+        tour_id: tour.id,
+        tourist_id: user.id,
+        guide_id: guide.id,
+        message: reqMessage || null,
+        preferred_date: reqDate || null,
+        group_size: reqGroupSize ? Number(reqGroupSize) : null,
+        status: 'pending',
+      });
+
+      if (insertErr) {
+        toast.error(t('request_generic_error'));
+        return;
+      }
+
+      toast.success(t('request_success'));
+      setRequestOpen(false);
+      resetRequestForm();
+    } catch {
+      toast.error(t('request_generic_error'));
+    } finally {
+      setReqLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -443,6 +523,13 @@ export default function TourDetails() {
                   {bookError && (
                     <p className="font-body text-xs text-red-500">{bookError}</p>
                   )}
+                  <button
+                    onClick={() => setRequestOpen(true)}
+                    className="w-full py-3 rounded-xl border border-accent text-accent font-body font-semibold hover:bg-accent/10 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Send className="w-4 h-4" />
+                    {t('request_cta')}
+                  </button>
                 </div>
 
                 {/* Contact details are intentionally hidden until booking confirmation. */}
@@ -475,6 +562,84 @@ export default function TourDetails() {
           </div>
         </div>
       </div>
+
+      {/* Tour Request Dialog */}
+      <Dialog open={requestOpen} onOpenChange={(open) => { setRequestOpen(open); if (!open) resetRequestForm(); }}>
+        <DialogContent dir={dir} className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t('request_dialog_title')}</DialogTitle>
+            <DialogDescription>{t('request_dialog_desc')}</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 pt-2">
+            {/* Username */}
+            <div className="space-y-1.5">
+              <Label>{t('request_username_label')}</Label>
+              <div className="flex items-center rounded-md border border-input bg-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 overflow-hidden">
+                <span className="px-3 text-muted-foreground text-sm select-none">@</span>
+                <input
+                  value={reqUsername}
+                  onChange={(e) => setReqUsername(e.target.value)}
+                  placeholder={t('request_username_ph')}
+                  dir="ltr"
+                  className="flex-1 py-2 pe-3 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+                />
+              </div>
+            </div>
+
+            {/* Message */}
+            <div className="space-y-1.5">
+              <Label>{t('request_message_label')}</Label>
+              <Textarea
+                value={reqMessage}
+                onChange={(e) => setReqMessage(e.target.value)}
+                placeholder={t('request_message_ph')}
+                rows={3}
+                className="resize-none"
+              />
+            </div>
+
+            {/* Preferred date */}
+            <div className="space-y-1.5">
+              <Label>{t('request_date_label')}</Label>
+              <Input
+                type="date"
+                value={reqDate}
+                onChange={(e) => setReqDate(e.target.value)}
+                min={new Date().toISOString().split('T')[0]}
+                dir="ltr"
+              />
+            </div>
+
+            {/* Group size */}
+            <div className="space-y-1.5">
+              <Label>{t('request_group_label')}</Label>
+              <Input
+                type="number"
+                min={1}
+                value={reqGroupSize}
+                onChange={(e) => setReqGroupSize(e.target.value)}
+                placeholder="2"
+                dir="ltr"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              variant="outline"
+              onClick={() => { setRequestOpen(false); resetRequestForm(); }}
+              disabled={reqLoading}
+            >
+              {t('request_cancel')}
+            </Button>
+            <Button onClick={handleSubmitRequest} disabled={reqLoading}>
+              {reqLoading && <Loader2 className="w-4 h-4 animate-spin me-2" />}
+              {t('request_submit')}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

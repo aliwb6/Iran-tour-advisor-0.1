@@ -9,11 +9,12 @@ import {
   ChevronDown, ChevronRight, LogOut, Edit2, Trash2, ExternalLink,
   Loader2, Clock, MapPin, DollarSign, Upload, Shield, TrendingUp,
   MessageSquare, Package, CheckCircle2, X, Plus, Globe, AlertTriangle,
-  BookOpen,
+  BookOpen, Copy,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
+import { toast } from 'sonner';
 import { avatarFor } from '@/lib/avatar';
 import TourForm from '@/components/dashboard/TourForm';
 import MyArticlesSection from '../components/dashboard/MyArticlesSection';
@@ -747,6 +748,7 @@ function ProfileView({ profile, userId, onSave }) {
     bio:        profile?.bio || '',
     avatar_url: profile?.avatar_url || '',
     languages:  profile?.languages || '',
+    username:   profile?.username || '',
   });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -761,18 +763,51 @@ function ProfileView({ profile, userId, onSave }) {
     setForm(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleUsernameChange = (e) => {
+    const raw = e.target.value.replace(/^@/, '').trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+    setForm(prev => ({ ...prev, username: raw }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSaving(true);
     try {
+      const originalUsername = profile?.username || '';
+      if (form.username !== originalUsername) {
+        if (!/^[a-z0-9_]{3,20}$/.test(form.username)) {
+          toast.error(t('username_invalid'));
+          setSaving(false);
+          return;
+        }
+        const { data: clash } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('username', form.username)
+          .neq('id', userId)
+          .maybeSingle();
+        if (clash) {
+          toast.error(t('username_taken'));
+          setSaving(false);
+          return;
+        }
+      }
+
       const { error: err } = await supabase
         .from('profiles')
         .update({ ...form })
         .eq('id', userId);
-      if (err) throw err;
+      if (err) {
+        if (err.code === '23505') {
+          toast.error(t('username_taken'));
+          setSaving(false);
+          return;
+        }
+        throw err;
+      }
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
+      if (form.username !== originalUsername) toast.success(t('username_saved'));
       onSave({ ...profile, ...form });
     } catch (err) {
       setError(err.message || 'Failed to save profile');
@@ -853,6 +888,23 @@ function ProfileView({ profile, userId, onSave }) {
             <label className={labelClass}>Languages Spoken</label>
             <input name="languages" value={form.languages} onChange={handleChange} className={inputClass} placeholder="Persian, English, French" />
           </div>
+        </div>
+
+        {/* Username */}
+        <div>
+          <label className={labelClass}>{t('username_label')}</label>
+          <div className="flex items-center rounded-xl border border-white/10 bg-white/[0.05] focus-within:border-[hsl(178,85%,32%)] focus-within:ring-1 focus-within:ring-[hsl(178,85%,32%)]/50 transition overflow-hidden">
+            <span className="px-3 text-white/40 text-sm select-none">@</span>
+            <input
+              value={form.username}
+              onChange={handleUsernameChange}
+              className="flex-1 py-2.5 pe-3.5 bg-transparent text-white text-sm placeholder:text-white/25 focus:outline-none"
+              placeholder="your_username"
+              dir="ltr"
+              maxLength={20}
+            />
+          </div>
+          <p className="mt-1.5 text-white/30 text-[11px]">{t('username_help')}</p>
         </div>
 
         {/* Bio */}
