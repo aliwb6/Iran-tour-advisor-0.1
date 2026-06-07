@@ -1,14 +1,17 @@
 import { supabase } from '../supabaseClient';
 
-// ── Guide: fetch all open requests this guide hasn't accepted yet ─────────────
+// ── Guide: fetch all open requests this guide hasn't applied to yet ───────────
 
 export async function fetchAvailableRequests(guideId) {
+  // Find all slots for this guide (to know which they applied to + their slot data)
   const { data: mySlots } = await supabase
     .from('trip_slots')
-    .select('trip_request_id')
+    .select('trip_request_id, id, status, price, price_type, price_period, accepted_at')
     .eq('guide_id', guideId);
 
-  const excludeIds = (mySlots || []).map(s => s.trip_request_id);
+  const mySlotMap = {};
+  (mySlots || []).forEach(s => { mySlotMap[s.trip_request_id] = s; });
+  const excludeIds = Object.keys(mySlotMap);
 
   let query = supabase
     .from('trip_requests')
@@ -22,10 +25,9 @@ export async function fetchAvailableRequests(guideId) {
 
   const { data, error } = await query;
   if (error) throw error;
-
   if (!data?.length) return [];
 
-  // Attach slot counts so the guide can see how many have accepted
+  // Attach slot counts
   const reqIds = data.map(r => r.id);
   const { data: slots } = await supabase
     .from('trip_slots')
@@ -38,16 +40,23 @@ export async function fetchAvailableRequests(guideId) {
     countMap[s.trip_request_id] = (countMap[s.trip_request_id] || 0) + 1;
   });
 
-  return data.map(r => ({ ...r, accepted_count: countMap[r.id] || 0 }));
+  return data
+    .map(r => ({
+      ...r,
+      accepted_count: countMap[r.id] || 0,
+      my_slot: mySlotMap[r.id] || null,
+    }))
+    .filter(r => r.accepted_count < 5);
 }
 
-// ── Guide: fetch requests this guide already accepted ─────────────────────────
+// ── Guide: fetch requests this guide already submitted proposals for ───────────
 
 export async function fetchMyAcceptedRequests(guideId) {
   const { data: slots, error: sErr } = await supabase
     .from('trip_slots')
-    .select('id, status, accepted_at, trip_request_id')
-    .eq('guide_id', guideId);
+    .select('id, status, accepted_at, finalized_at, trip_request_id, price, currency, price_type, price_period, itinerary, message')
+    .eq('guide_id', guideId)
+    .order('accepted_at', { ascending: false });
 
   if (sErr) throw sErr;
   if (!slots?.length) return [];
@@ -55,7 +64,7 @@ export async function fetchMyAcceptedRequests(guideId) {
   const reqIds = slots.map(s => s.trip_request_id);
   const { data: requests, error: rErr } = await supabase
     .from('trip_requests')
-    .select('*')
+    .select('id, destination, start_date, end_date, adults, children, status')
     .in('id', reqIds);
 
   if (rErr) throw rErr;
@@ -64,44 +73,52 @@ export async function fetchMyAcceptedRequests(guideId) {
   return slots.map(slot => ({ ...slot, request: reqMap[slot.trip_request_id] || null }));
 }
 
-// ── Guide: accept a trip request (DB trigger handles proposals_ready + notify) ─
+// ── Guide: submit a full proposal ────────────────────────────────────────────
 
-export async function guideAcceptRequest(guideId, requestId) {
-  // Idempotency check
-  const { data: existing } = await supabase
+export async function guideSubmitProposal(guideId, requestId, proposal) {
+  // 1. Re-check the cap to avoid race conditions
+  const { data: existing, error: countErr } = await supabase
     .from('trip_slots')
-    .select('id')
+    .select('id', { count: 'exact', head: false })
+    .eq('trip_request_id', requestId)
+    .neq('status', 'rejected');
+  if (countErr) throw countErr;
+  if ((existing?.length ?? 0) >= 5) {
+    throw new Error('This request is no longer accepting proposals.');
+  }
+
+  // 2. Check this guide hasn't already applied
+  const { data: mine } = await supabase
+    .from('trip_slots')
+    .select('id, status')
     .eq('trip_request_id', requestId)
     .eq('guide_id', guideId)
     .maybeSingle();
-
-  if (existing) throw new Error('You have already accepted this request.');
-
-  // Check whether request is still open
-  const { count } = await supabase
-    .from('trip_slots')
-    .select('id', { count: 'exact', head: true })
-    .eq('trip_request_id', requestId)
-    .neq('status', 'rejected');
-
-  if ((count || 0) >= 3) {
-    throw new Error('This request already has 3 guides — it is no longer available.');
+  if (mine) {
+    throw new Error('You have already submitted a proposal for this request.');
   }
 
-  const { error } = await supabase
+  // 3. Insert the full proposal
+  const { data, error } = await supabase
     .from('trip_slots')
     .insert({
       trip_request_id: requestId,
       guide_id: guideId,
       status: 'accepted',
-      accepted_at: new Date().toISOString(),
-    });
-
+      ...proposal,
+    })
+    .select()
+    .single();
   if (error) throw error;
-  // DB trigger (on_trip_slot_insert) handles marking proposals_ready + tourist notification
+  return data;
 }
 
-// ── Tourist: select a guide from the 3 proposals ──────────────────────────────
+// @deprecated — use guideSubmitProposal instead
+export async function guideAcceptRequest(guideId, requestId) {
+  return guideSubmitProposal(guideId, requestId, {});
+}
+
+// ── Tourist: select a guide from the proposals ────────────────────────────────
 // DB trigger (on_trip_request_confirmed) handles slot updates + guide notifications
 
 export async function touristSelectGuide(requestId, selectedGuideId) {

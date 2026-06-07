@@ -8,7 +8,8 @@
       "mcp__claude_ai_Supabase__apply_migration",
       "Bash(grep -n \"useI18n\\\\|{ t,\" \"/home/alireza/Desktop/Iran-Tour-Advisor.0.1 base44/src/pages/AgencyProfile.jsx\")",
       "Bash(git commit -m ' *)",
-      "Bash(echo \"EXIT:$?\")"
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(git pull *)"
     ]
   }
 }
