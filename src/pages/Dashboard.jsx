@@ -20,6 +20,7 @@ import TourForm from '@/components/dashboard/TourForm';
 import MyArticlesSection from '../components/dashboard/MyArticlesSection';
 import GuideRequestsView from '@/components/dashboard/GuideRequestsView';
 import NotificationsView from '@/components/dashboard/NotificationsView';
+import TripRequestForm from '@/components/profile/TripRequestForm';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -30,8 +31,9 @@ const NAV = [
   { id: 'home',       label: 'Dashboard',       Icon: LayoutDashboard },
   { id: 'my-tours',   label: 'My Tours',         Icon: Briefcase },
   { id: 'add-tour',   label: 'Add New Tour',     Icon: PlusCircle },
-  { id: 'requests',       label: 'Requests',         Icon: Send },
-  { id: 'notifications',  label: 'Notifications',    Icon: Bell },
+  { id: 'requests',          label: 'Requests',          Icon: Send },
+  { id: 'my-trip-requests',  label: 'My Trip Requests',  Icon: MapPin },
+  { id: 'notifications',     label: 'Notifications',     Icon: Bell },
   { id: 'chat',           label: 'Chat',             Icon: MessageCircle },
   {
     id: 'profile', label: 'Profile', Icon: User,
@@ -1620,13 +1622,14 @@ function MessagesView({ userId, onOpen }) {
 // ─── EmptySection ─────────────────────────────────────────────────────────────
 
 const SECTION_ICONS = {
-  requests:    Bell,
-  chat:        MessageCircle,
-  gallery:     ImageIcon,
-  bookings:    CalendarDays,
-  payment:     CreditCard,
-  'my-reviews':Star,
-  settings:    Settings,
+  requests:           Bell,
+  'my-trip-requests': MapPin,
+  chat:               MessageCircle,
+  gallery:            ImageIcon,
+  bookings:           CalendarDays,
+  payment:            CreditCard,
+  'my-reviews':       Star,
+  settings:           Settings,
 };
 
 function EmptySection({ section }) {
@@ -1645,6 +1648,129 @@ function EmptySection({ section }) {
         <h2 className="text-white font-bold text-xl mb-2">{t(titleKey)}</h2>
         <p className="text-white/40 text-sm max-w-xs">{t(descKey)}</p>
       </div>
+    </div>
+  );
+}
+
+// ─── MyTripRequestsView ───────────────────────────────────────────────────────
+
+function MyTripRequestsView({ userId }) {
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [editingRequest, setEditingRequest] = useState(null);
+  const [formOpen, setFormOpen] = useState(false);
+
+  useEffect(() => {
+    if (!userId) return;
+    async function load() {
+      setLoading(true);
+      const { data } = await supabase
+        .from('trip_requests')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+      setRequests(data || []);
+      setLoading(false);
+    }
+    load();
+  }, [userId]);
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Delete this trip request?')) return;
+    await supabase.from('trip_requests').delete().eq('id', id);
+    setRequests(prev => prev.filter(r => r.id !== id));
+    toast.success('Trip request deleted.');
+  };
+
+  const statusColor = (s) => {
+    if (s === 'active')   return 'bg-green-500/15 text-green-400';
+    if (s === 'inactive') return 'bg-yellow-500/15 text-yellow-400';
+    return 'bg-white/10 text-white/40';
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-white font-bold text-xl">My Trip Requests</h2>
+        <button
+          onClick={() => { setEditingRequest(null); setFormOpen(true); }}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[hsl(178,85%,32%)] text-white text-sm font-medium hover:bg-[hsl(178,85%,28%)] transition"
+        >
+          <Plus className="w-4 h-4" />
+          New Request
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-16">
+          <Loader2 className="w-6 h-6 text-white/30 animate-spin" />
+        </div>
+      ) : requests.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <div className="w-14 h-14 rounded-2xl bg-white/[0.05] border border-white/10 flex items-center justify-center mb-4">
+            <MapPin className="w-7 h-7 text-white/20" />
+          </div>
+          <p className="text-white/60 font-medium mb-1">No trip requests yet</p>
+          <p className="text-white/30 text-sm">Create your first request and local guides will reach out.</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {requests.map(req => (
+            <div
+              key={req.id}
+              className="bg-white/[0.04] border border-white/10 rounded-2xl p-5 flex items-start justify-between gap-4"
+            >
+              <div className="min-w-0 flex-1 space-y-1.5">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-white font-semibold text-sm truncate">
+                    {Array.isArray(req.destination) ? req.destination.join(', ') : req.destination || 'No destination'}
+                  </span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColor(req.status)}`}>
+                    {req.status || 'active'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 text-white/40 text-xs">
+                  {req.start_date && <span>{req.start_date} → {req.end_date}</span>}
+                  {req.adults != null && <span>{req.adults} adult{req.adults !== 1 ? 's' : ''}</span>}
+                </div>
+                {req.requirements && (
+                  <p className="text-white/40 text-xs line-clamp-2">{req.requirements}</p>
+                )}
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={() => { setEditingRequest(req); setFormOpen(true); }}
+                  className="p-2 rounded-lg bg-white/[0.06] text-white/50 hover:text-white hover:bg-white/10 transition"
+                  title="Edit"
+                >
+                  <Edit2 className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => handleDelete(req.id)}
+                  className="p-2 rounded-lg bg-white/[0.06] text-white/50 hover:text-red-400 hover:bg-red-500/10 transition"
+                  title="Delete"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <TripRequestForm
+        isOpen={formOpen}
+        onClose={() => { setFormOpen(false); setEditingRequest(null); }}
+        onSuccess={async () => {
+          const { data } = await supabase
+            .from('trip_requests')
+            .select('*')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false });
+          setRequests(data || []);
+        }}
+        initialData={editingRequest}
+      />
     </div>
   );
 }
@@ -1743,6 +1869,8 @@ export default function Dashboard() {
         );
       case 'requests':
         return <GuideRequestsView userId={authUser?.id} />;
+      case 'my-trip-requests':
+        return <MyTripRequestsView userId={authUser?.id} />;
       case 'notifications':
         return <NotificationsView userId={authUser?.id} />;
       case 'my-tours':

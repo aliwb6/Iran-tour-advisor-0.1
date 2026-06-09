@@ -76,12 +76,14 @@ const INITIAL_FORM = {
   departure_minute: '00',
   departure_period: 'AM',
   timings_flexible: false,
-  adults: 1,
+  maleAdults: 1,
+  femaleAdults: 0,
   children: 0,
   guide_languages: [],
   assistance: [],
   accommodation_stars: null,
   requirements: '',
+  no_requirements: false,
   holiday_types: [],
   additional_services: [],
   tour_type: '',
@@ -102,6 +104,17 @@ function formatDateDisplay(dateStr) {
   if (!dateStr) return '';
   const [y, m, d] = dateStr.split('-').map(Number);
   return `${d} ${SHORT_MONTHS[m - 1]} ${y}`;
+}
+
+function addDays(dateStr, days) {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + days);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function tripDays(start, end) {
+  if (!start || !end) return 0;
+  return Math.ceil((new Date(end + 'T00:00:00') - new Date(start + 'T00:00:00')) / 86400000);
 }
 
 // ── DatePickerInput ────────────────────────────────────────────────────────
@@ -257,7 +270,7 @@ function CityMultiSelect({ values, onChange }) {
   const [search, setSearch] = useState('');
   const wrapRef  = useRef(null);
   const inputRef = useRef(null);
-  const { t } = useI18n();
+  const { t, lang, dir } = useI18n();
 
   useEffect(() => {
     if (!open) return;
@@ -488,6 +501,31 @@ function StepIndicator({ step }) {
 // ── Step 1: Trip Details ───────────────────────────────────────────────────
 
 function Step1({ form, set, toggle, toggleAssistance, errors }) {
+  const starsRef = useRef(null);
+
+  useEffect(() => {
+    if (form.assistance.includes('Accommodation') && starsRef.current) {
+      setTimeout(() => starsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 80);
+    }
+  }, [form.assistance]);
+
+  const handleStartDate = (v) => {
+    set('start_date', v);
+    if (form.end_date && form.end_date <= v) {
+      set('end_date', addDays(v, 1));
+    }
+  };
+
+  const handleEndDate = (v) => {
+    if (form.start_date && v <= form.start_date) {
+      set('end_date', addDays(form.start_date, 1));
+    } else {
+      set('end_date', v);
+    }
+  };
+
+  const days = tripDays(form.start_date, form.end_date);
+
   return (
     <div className="space-y-5">
       {/* Destination — multi-city select */}
@@ -506,7 +544,7 @@ function Step1({ form, set, toggle, toggleAssistance, errors }) {
           <p className="text-xs font-medium text-muted-foreground mb-2">Start Date</p>
           <DatePickerInput
             value={form.start_date}
-            onChange={v => set('start_date', v)}
+            onChange={handleStartDate}
             otherDate={form.end_date}
           />
           <FieldError msg={errors?.start_date} />
@@ -515,12 +553,17 @@ function Step1({ form, set, toggle, toggleAssistance, errors }) {
           <p className="text-xs font-medium text-muted-foreground mb-2">End Date</p>
           <DatePickerInput
             value={form.end_date}
-            onChange={v => set('end_date', v)}
+            onChange={handleEndDate}
             otherDate={form.start_date}
           />
           <FieldError msg={errors?.end_date} />
         </div>
       </div>
+      {days > 0 && (
+        <p className="text-xs text-accent font-medium -mt-2">
+          Trip duration: {days} day{days !== 1 ? 's' : ''} (minimum 1 day)
+        </p>
+      )}
 
       {/* Times */}
       <div className="grid grid-cols-2 gap-3">
@@ -553,7 +596,12 @@ function Step1({ form, set, toggle, toggleAssistance, errors }) {
 
       {/* Traveller counts */}
       <div className="space-y-2">
-        <Counter label="Adults"   value={form.adults}   onChange={v => set('adults', v)}   min={1} />
+        <Counter label="Male Adults"   value={form.maleAdults}   onChange={v => set('maleAdults', v)}   min={0} />
+        <Counter label="Female Adults" value={form.femaleAdults} onChange={v => set('femaleAdults', v)} min={0} />
+        {(form.maleAdults + form.femaleAdults) === 0 && (
+          <p className="text-xs text-red-400 px-1">At least 1 adult (male or female) required.</p>
+        )}
+        <FieldError msg={errors?.adults} />
         <Counter label="Children" sublabel="2–12 years" value={form.children} onChange={v => set('children', v)} min={0} />
       </div>
 
@@ -595,6 +643,7 @@ function Step1({ form, set, toggle, toggleAssistance, errors }) {
         <AnimatePresence>
           {form.assistance.includes('Accommodation') && (
             <motion.div
+              ref={starsRef}
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
@@ -658,18 +707,6 @@ function Step2({
 
   return (
     <div className="space-y-6">
-      {/* Requirements */}
-      <div>
-        <FieldLabel>Your Requirements</FieldLabel>
-        <textarea
-          value={form.requirements}
-          onChange={e => set('requirements', e.target.value)}
-          placeholder="Describe your travel goals, interests, or any special needs..."
-          rows={4}
-          className="w-full px-4 py-3 bg-background/50 border border-border/40 rounded-xl text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-accent resize-none transition-colors"
-        />
-      </div>
-
       {/* Holiday types */}
       <div>
         <FieldLabel>Type of holiday I am looking for</FieldLabel>
@@ -835,6 +872,48 @@ function Step2({
         </div>
       </div>
 
+      {/* Requirements */}
+      <div>
+        <label className="block text-sm font-bold text-foreground mb-2.5">
+          Your Requirements <span className="text-red-500">*</span>
+        </label>
+        <textarea
+          value={form.no_requirements ? '' : form.requirements}
+          onChange={e => set('requirements', e.target.value)}
+          onInput={(e) => {
+            e.target.style.height = 'auto';
+            e.target.style.height = e.target.scrollHeight + 'px';
+          }}
+          placeholder="Describe your travel goals, interests, or any special needs..."
+          rows={2}
+          disabled={form.no_requirements}
+          style={{ minHeight: '60px', maxHeight: '200px', overflow: 'hidden', resize: 'none' }}
+          className={`w-full px-4 py-3 bg-gray-50 dark:bg-white/[0.08] border border-gray-200 dark:border-white/20 rounded-xl text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-accent transition-colors ${
+            form.no_requirements ? 'opacity-40 cursor-not-allowed' : ''
+          }`}
+        />
+        <FieldError msg={errors?.requirements} />
+        <div
+          onClick={() => {
+            const next = !form.no_requirements;
+            set('no_requirements', next);
+            if (next) set('requirements', '');
+          }}
+          className="flex items-center gap-2 mt-2.5 cursor-pointer select-none group"
+        >
+          <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
+            form.no_requirements
+              ? 'bg-accent border-accent'
+              : 'border-border/60 group-hover:border-accent/50'
+          }`}>
+            {form.no_requirements && <Check className="w-2.5 h-2.5 text-white" />}
+          </div>
+          <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">
+            I have no additional requirements
+          </span>
+        </div>
+      </div>
+
       {/* Tour type */}
       <div>
         <FieldLabel>I prefer:</FieldLabel>
@@ -860,7 +939,7 @@ function Step2({
 
 export default function TripRequestForm({ isOpen, onClose, onSuccess, initialData, prefillData = null }) {
   const { user }       = useAuth();
-  const { t }          = useI18n();
+  const { t, lang, dir } = useI18n();
   const queryClient    = useQueryClient();
   const [step, setStep]           = useState(1);
   const [direction, setDirection] = useState(1);
@@ -904,7 +983,8 @@ export default function TripRequestForm({ isOpen, onClose, onSuccess, initialDat
       start_date:          initialData.start_date  || '',
       end_date:            initialData.end_date    || '',
       timings_flexible:    initialData.timings_flexible ?? false,
-      adults:              Number(initialData.adults)   || 1,
+      maleAdults:          Number(initialData.male_adults)   || Number(initialData.adults) || 1,
+      femaleAdults:        Number(initialData.female_adults) || 0,
       children:            Number(initialData.children) || 0,
       guide_languages:     initialData.guide_languages  || [],
       requirements:        initialData.requirements     || '',
@@ -983,6 +1063,8 @@ export default function TripRequestForm({ isOpen, onClose, onSuccess, initialDat
       errs.end_date = 'End date must be after start date.';
     if (!form.guide_languages.length)
       errs.guide_languages = 'Please select at least one language.';
+    if ((form.maleAdults + form.femaleAdults) < 1)
+      errs.adults = 'At least 1 adult is required.';
 
     if (Object.keys(errs).length) { setErrors(errs); return; }
     setErrors({});
@@ -1005,6 +1087,8 @@ export default function TripRequestForm({ isOpen, onClose, onSuccess, initialDat
     const errs = {};
     if (!form.holiday_types.length)
       errs.holiday_types = 'Please select at least one type of holiday.';
+    if (!form.no_requirements && !form.requirements.trim())
+      errs.requirements = "Please describe your requirements or check 'I have no additional requirements'.";
 
     if (Object.keys(errs).length) { setErrors(errs); return; }
 
@@ -1021,7 +1105,9 @@ export default function TripRequestForm({ isOpen, onClose, onSuccess, initialDat
         arrival_time,
         departure_time,
         timings_flexible:    form.timings_flexible,
-        adults:              form.adults,
+        adults:              form.maleAdults + form.femaleAdults,
+        male_adults:         form.maleAdults,
+        female_adults:       form.femaleAdults,
         children:            form.children,
         guide_languages:     form.guide_languages,
         assistance:          form.assistance,

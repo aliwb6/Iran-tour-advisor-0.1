@@ -234,6 +234,8 @@ export default function Navbar() {
                     {isGuideOrAgency && (
                       <Link
                         to="/dashboard"
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-body font-medium transition-all ${
                           isLight
                             ? 'bg-white/10 text-white hover:bg-white/20'
@@ -410,6 +412,8 @@ export default function Navbar() {
                     {isGuideOrAgency && (
                       <Link
                         to="/dashboard"
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-accent text-white font-body text-xs font-medium"
                       >
                         <LayoutDashboard className="w-3.5 h-3.5" />
