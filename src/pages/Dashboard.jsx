@@ -9,7 +9,7 @@ import {
   ChevronDown, ChevronRight, LogOut, Edit2, Trash2, ExternalLink,
   Loader2, Clock, MapPin, DollarSign, Upload, Shield, TrendingUp,
   MessageSquare, Package, CheckCircle2, X, Plus, Globe, AlertTriangle,
-  BookOpen, Copy,
+  BookOpen, Copy, Send,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -30,7 +30,7 @@ const NAV = [
   { id: 'home',       label: 'Dashboard',       Icon: LayoutDashboard },
   { id: 'my-tours',   label: 'My Tours',         Icon: Briefcase },
   { id: 'add-tour',   label: 'Add New Tour',     Icon: PlusCircle },
-  { id: 'requests',       label: 'Requests',         Icon: Bell },
+  { id: 'requests',       label: 'Requests',         Icon: Send },
   { id: 'notifications',  label: 'Notifications',    Icon: Bell },
   { id: 'chat',           label: 'Chat',             Icon: MessageCircle },
   {
@@ -79,7 +79,7 @@ function StarRating({ rating }) {
 // ─── Sidebar ─────────────────────────────────────────────────────────────────
 
 function Sidebar({ section, onNavigate, profileExpanded, setProfileExpanded, userName, userRole, onLogout, profile }) {
-  const { t } = useI18n();
+  const { t, lang, dir } = useI18n();
   const activeId = section || 'home';
   const canAddTour = !profile || profile.role === 'traveler' || profile.license_status === 'verified';
 
@@ -214,7 +214,7 @@ function Sidebar({ section, onNavigate, profileExpanded, setProfileExpanded, use
 // ─── HomeView ─────────────────────────────────────────────────────────────────
 
 function HomeView({ profile, tours, reviews, userId, lang, onNavigate, onOpenChat }) {
-  const { t } = useI18n();
+  const { t, lang: i18nLang, dir } = useI18n();
   const [reqTab, setReqTab] = useState('new');
   const [latestChats, setLatestChats] = useState([]);
   const [latestChatsLoading, setLatestChatsLoading] = useState(true);
@@ -228,6 +228,12 @@ function HomeView({ profile, tours, reviews, userId, lang, onNavigate, onOpenCha
   const avgRating = totalReviews
     ? (reviews.reduce((s, r) => s + (r.rating || 0), 0) / totalReviews).toFixed(1)
     : '—';
+
+  const missingItems = [];
+  if (!profile?.avatar_url && !profile?.profile_image) missingItems.push('profile photo');
+  if (!profile?.bio && !profile?.description) missingItems.push('bio / description');
+  if (!profile?.license_url && !profile?.license_verified) missingItems.push('license');
+  const isProfileIncomplete = missingItems.length > 0;
 
   // Live: load the 3 most-recent conversations for this user (Latest Chat widget)
   // and any inbound traveller messages that look like a new request (Tour Requests).
@@ -338,6 +344,24 @@ function HomeView({ profile, tours, reviews, userId, lang, onNavigate, onOpenCha
   return (
     <div className="space-y-5">
 
+      {isProfileIncomplete && (
+        <div className="mb-4 flex items-start gap-3 bg-amber-500/10 border border-amber-500/30 rounded-2xl px-4 py-3">
+          <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-amber-300 font-semibold text-sm mb-0.5">Complete your profile to receive tour requests</p>
+            <p className="text-amber-200/60 text-xs">
+              Missing: {missingItems.join(', ')}. Tourists and agencies can only find guides with complete profiles.
+            </p>
+          </div>
+          <button
+            onClick={() => onNavigate('profile')}
+            className="shrink-0 px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-medium transition-colors"
+          >
+            Fix Now
+          </button>
+        </div>
+      )}
+
       {/* ── Row 1: Welcome / Upcoming Tour / License ── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
@@ -425,7 +449,10 @@ function HomeView({ profile, tours, reviews, userId, lang, onNavigate, onOpenCha
         {/* Tour Requests */}
         <div className={`${cardBase} md:col-span-3`}>
           <div className="flex items-center justify-between mb-4">
-            <p className="text-white/70 text-sm font-semibold">{t('dashboard_tour_requests')}</p>
+            <div className="flex items-center gap-2">
+              <Send className="w-4 h-4 text-[hsl(178,85%,50%)]" />
+              <p className="text-white/70 text-sm font-semibold">{t('dashboard_tour_requests')}</p>
+            </div>
             <div className="flex bg-white/[0.06] rounded-lg p-0.5">
               {['new', 'invitations'].map(tab => (
                 <button
@@ -641,7 +668,7 @@ function HomeView({ profile, tours, reviews, userId, lang, onNavigate, onOpenCha
 // ─── MyToursView ──────────────────────────────────────────────────────────────
 
 function MyToursView({ tours, onEdit, onDelete }) {
-  const { t, lang } = useI18n();
+  const { t, lang, dir } = useI18n();
   return (
     <div>
       <div className="flex items-center justify-between mb-5">
@@ -740,7 +767,7 @@ function MyToursView({ tours, onEdit, onDelete }) {
 // ─── ProfileView ──────────────────────────────────────────────────────────────
 
 function ProfileView({ profile, userId, onSave }) {
-  const { t } = useI18n();
+  const { t, lang, dir } = useI18n();
   const [form, setForm] = useState({
     full_name:  profile?.full_name || '',
     phone:      profile?.phone || '',
@@ -970,7 +997,7 @@ function ProfileView({ profile, userId, onSave }) {
 // ─── GalleryView ─────────────────────────────────────────────────────────────
 
 function GalleryView({ profile, userId, onSave }) {
-  const { t } = useI18n();
+  const { t, lang, dir } = useI18n();
   const [gallery, setGallery] = useState(profile?.gallery_images || []);
   const [showModal, setShowModal] = useState(false);
   const [newUrl, setNewUrl] = useState('');
@@ -1152,7 +1179,7 @@ function Toggle({ checked, onChange }) {
 }
 
 function SettingsView({ profile, userId, onSave }) {
-  const { t } = useI18n();
+  const { t, lang, dir } = useI18n();
   const [tab, setTab] = useState('general');
 
   const [acceptBookings, setAcceptBookings] = useState(profile?.accept_bookings ?? true);
@@ -1412,7 +1439,7 @@ function SettingsView({ profile, userId, onSave }) {
 // ─── MessagesView (real-time conversations list) ─────────────────────────────
 
 function MessagesView({ userId, onOpen }) {
-  const { t, lang } = useI18n();
+  const { t, lang, dir } = useI18n();
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -1603,7 +1630,7 @@ const SECTION_ICONS = {
 };
 
 function EmptySection({ section }) {
-  const { t } = useI18n();
+  const { t, lang, dir } = useI18n();
   const Icon = SECTION_ICONS[section] || LayoutDashboard;
 
   const titleKey = `dashboard_nav_${section === 'my-reviews' ? 'reviews' : section}`;
@@ -1627,7 +1654,7 @@ function EmptySection({ section }) {
 export default function Dashboard() {
   const navigate = useNavigate();
   const { section = 'home' } = useParams();
-  const { lang } = useI18n();
+  const { t: _t, lang, dir: _dir } = useI18n();
 
   const [authUser, setAuthUser] = useState(null);
   const [profile, setProfile] = useState(null);

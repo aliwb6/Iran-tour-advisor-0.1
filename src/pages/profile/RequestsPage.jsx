@@ -20,7 +20,7 @@ const HOLIDAY_TYPE_LABELS = {
 export default function RequestsPage() {
   const navigate = useNavigate();
   const { user, isAuthenticated, isLoadingAuth } = useAuth();
-  const { lang } = useI18n();
+  const { t, lang, dir } = useI18n();
 
   const [filter, setFilter]       = useState('active');
   const [formOpen, setFormOpen]   = useState(false);
@@ -161,15 +161,17 @@ export default function RequestsPage() {
               ))}
             </div>
 
-            {/* New request button */}
-            <button
-              onClick={() => setFormOpen(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent text-white text-sm font-semibold hover:bg-accent/90 transition-colors shadow-lg shadow-accent/25 shrink-0"
-            >
-              <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">New Trip Request</span>
-              <span className="sm:hidden">New</span>
-            </button>
+            {/* New request button — only shown when at least one request already exists */}
+            {requests.length > 0 && (
+              <button
+                onClick={() => setFormOpen(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent text-white text-sm font-semibold hover:bg-accent/90 transition-colors shadow-lg shadow-accent/25 shrink-0"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline">New Trip Request</span>
+                <span className="sm:hidden">New</span>
+              </button>
+            )}
           </div>
         </header>
 

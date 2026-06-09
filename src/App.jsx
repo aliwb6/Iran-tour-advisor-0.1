@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster"
 import { Toaster as SonnerToaster } from "@/components/ui/sonner"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import Signup from '@/pages/Signup';
@@ -36,6 +36,22 @@ import CityPage from '@/pages/CityPage';
 import FindJobs from '@/pages/FindJobs';
 import MyTripRequests from '@/pages/MyTripRequests';
 import RequestDetailPage from '@/pages/profile/RequestDetailPage';
+
+function TripRequestsRedirect() {
+  const { isAuthenticated, isLoadingAuth } = useAuth();
+
+  if (isLoadingAuth) return (
+    <div className="fixed inset-0 flex items-center justify-center bg-background">
+      <div className="w-8 h-8 rounded-full border-2 border-accent animate-spin border-t-transparent" />
+    </div>
+  );
+
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+
+  // ALL roles (tourist, guide, agency) go to /profile/requests — the tourist-style trip request page
+  // Guides use this page as travelers when they want to book a tour for themselves
+  return <Navigate to="/profile/requests" replace />;
+}
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth } = useAuth();
@@ -92,6 +108,7 @@ const AuthenticatedApp = () => {
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/dashboard/:section" element={<Dashboard />} />
       <Route path="/chat/:guideId" element={<Chat />} />
+      <Route path="/trip-requests" element={<TripRequestsRedirect />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );

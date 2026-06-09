@@ -15,7 +15,7 @@ const BENEFITS = [
 ];
 
 export default function Login() {
-  const { t, dir } = useI18n();
+  const { t, lang, dir } = useI18n();
   const navigate = useNavigate();
   const isRtl = dir === 'rtl';
   const Arrow = isRtl ? ArrowLeft : ArrowRight;
@@ -38,17 +38,10 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
       if (signInError) throw signInError;
 
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', data.user.id)
-        .single();
-      const role = profileData?.role ?? data.user?.user_metadata?.role;
-      if (role === 'guide' || role === 'agency') navigate('/dashboard');
-      else navigate('/');
+      navigate('/');
     } catch (err) {
       const msg = err.message || '';
       if (msg.includes('Invalid login credentials') || msg.includes('invalid_credentials')) {

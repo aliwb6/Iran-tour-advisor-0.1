@@ -191,10 +191,10 @@ export default function HeroSection() {
           className="flex flex-wrap items-center gap-4 mb-14 lg:mb-16"
         >
           <Link
-            to="/tours"
+            to="/trip-requests"
             className="inline-flex items-center gap-2.5 bg-accent hover:bg-accent/90 text-white px-7 py-3.5 rounded-full font-body font-semibold text-sm uppercase tracking-wide transition-all duration-300 hover:shadow-lg hover:shadow-accent/25 hover:-translate-y-0.5"
           >
-            {t('hero_cta')}
+            {t('hero_cta_request')}
             <Arrow className="w-4 h-4" />
           </Link>
           <Link

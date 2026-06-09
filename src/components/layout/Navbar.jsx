@@ -2,18 +2,21 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useI18n } from '@/lib/i18n.jsx';
 import { useAuth } from '@/lib/AuthContext';
+import { supabase } from '@/supabaseClient';
 import LanguageSwitcher from './LanguageSwitcher';
 import ThemeToggle from './ThemeToggle';
+import NotificationBell from './NotificationBell';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, Compass, ArrowRight, LogOut, LayoutDashboard, Shield, User } from 'lucide-react';
 import UserDropdown from '@/components/navbar/UserDropdown';
 
 export default function Navbar() {
-  const { t, dir } = useI18n();
+  const { t, lang, dir } = useI18n();
   const { isAuthenticated, isLoadingAuth, user, profile, logout } = useAuth();
   const location = useLocation();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [openRequestCount, setOpenRequestCount] = useState(0);
 
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 40);
@@ -29,6 +32,55 @@ export default function Navbar() {
   const isGuideOrAgency = role === 'guide' || role === 'agency';
   const isTourist = role === 'tourist' || role === 'traveler';
 
+  // TEMP DEBUG — remove after confirming
+  useEffect(() => {
+    console.log('[Navbar] openRequestCount:', openRequestCount, 'isGuideOrAgency:', isGuideOrAgency);
+  }, [openRequestCount, isGuideOrAgency]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !isGuideOrAgency) {
+      setOpenRequestCount(0);
+      return;
+    }
+    let cancelled = false;
+
+    async function fetchCount() {
+      try {
+        const { count, error } = await supabase
+          .from('trip_requests')
+          .select('id', { count: 'exact', head: true })
+          .eq('status', 'open');
+        if (error) {
+          // status column may not exist — fallback to total count
+          const { count: totalCount } = await supabase
+            .from('trip_requests')
+            .select('id', { count: 'exact', head: true });
+          if (!cancelled) setOpenRequestCount(totalCount || 0);
+        } else {
+          if (!cancelled) setOpenRequestCount(count || 0);
+        }
+      } catch (e) {
+        // silently fail
+      }
+    }
+
+    fetchCount();
+
+    const channel = supabase
+      .channel('nav-trip-requests')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'trip_requests',
+      }, fetchCount)
+      .subscribe();
+
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(channel);
+    };
+  }, [isAuthenticated, isGuideOrAgency]);
+
   const baseLinks = [
     { path: '/tours', label: t('nav_tours') },
     { path: '/guides', label: t('nav_guides') },
@@ -37,11 +89,7 @@ export default function Navbar() {
     { path: '/blog', label: t('nav_blog') },
   ];
 
-  const roleLinks = isGuideOrAgency
-    ? [{ path: '/find-jobs', label: 'Find Jobs' }]
-    : [];
-
-  const navLinks = [...baseLinks, ...roleLinks];
+  const navLinks = [...baseLinks];
 
   const isActive = (path) => location.pathname === path;
   const isHome = location.pathname === '/';
@@ -110,6 +158,50 @@ export default function Navbar() {
                   )}
                 </Link>
               ))}
+
+              {/* Find Jobs — special highlighted link for guides/agencies */}
+              {isGuideOrAgency && (
+                <div className="relative inline-flex" data-testid="find-jobs-wrapper">
+                  <Link
+                    to="/dashboard/requests"
+                    className={`flex items-center px-3.5 py-2 text-[13px] font-body font-bold rounded-lg transition-all duration-300 ${
+                      isActive('/dashboard/requests')
+                        ? 'bg-accent text-white'
+                        : isLight
+                          ? 'bg-white/15 text-white hover:bg-white/25 border border-white/20'
+                          : 'bg-accent/10 text-accent hover:bg-accent/20 border border-accent/20'
+                    }`}
+                  >
+                    Find Jobs
+                  </Link>
+                  {openRequestCount > 0 && (
+                    <span
+                      style={{
+                        position: 'absolute',
+                        top: '-8px',
+                        right: '-8px',
+                        minWidth: '18px',
+                        height: '18px',
+                        borderRadius: '999px',
+                        backgroundColor: '#ef4444',
+                        color: 'white',
+                        fontSize: '10px',
+                        fontWeight: '700',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '0 4px',
+                        zIndex: 50,
+                        pointerEvents: 'none',
+                        boxShadow: '0 0 0 2px var(--background)',
+                        lineHeight: 1,
+                      }}
+                    >
+                      {openRequestCount > 99 ? '99+' : openRequestCount}
+                    </span>
+                  )}
+                </div>
+              )}
             </nav>
 
             {/* Right controls */}
@@ -117,6 +209,7 @@ export default function Navbar() {
               <div className="hidden sm:flex items-center gap-2">
                 <ThemeToggle />
                 <LanguageSwitcher />
+                <NotificationBell isLight={isLight} />
               </div>
 
               {/* Auth buttons — desktop */}
@@ -243,6 +336,55 @@ export default function Navbar() {
                     </Link>
                   </motion.div>
                 ))}
+
+                {/* Find Jobs — mobile, guides/agencies only */}
+                {isGuideOrAgency && (
+                  <motion.div
+                    className="relative"
+                    initial={{ opacity: 0, x: dir === 'rtl' ? 20 : -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: (navLinks.length + 1) * 0.045 }}
+                  >
+                    <Link
+                      to="/dashboard/requests"
+                      className="flex items-center justify-between py-4 border-b border-border/20 group text-accent"
+                    >
+                      <span className="font-heading text-2xl font-semibold">Find Jobs</span>
+                      <ArrowRight className={`w-4 h-4 opacity-100 text-accent ${dir === 'rtl' ? 'rotate-180' : ''}`} />
+                    </Link>
+                    {openRequestCount > 0 && (
+                      <span
+                        style={{
+                          position: 'absolute',
+                          top: '-10px',
+                          right: '-10px',
+                          minWidth: '22px',
+                          height: '22px',
+                          borderRadius: '999px',
+                          backgroundColor: '#ef4444',
+                          color: 'white',
+                          fontSize: '11px',
+                          fontWeight: '700',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: '0 4px',
+                          zIndex: 50,
+                          pointerEvents: 'none',
+                          boxShadow: '0 0 0 2px var(--background)',
+                          lineHeight: 1,
+                        }}
+                      >
+                        {openRequestCount > 99 ? '99+' : openRequestCount}
+                      </span>
+                    )}
+                  </motion.div>
+                )}
+              </div>
+
+              {/* Notification Bell — mobile */}
+              <div className="flex justify-center mb-4">
+                <NotificationBell isLight={false} />
               </div>
 
               {/* Mobile auth section */}
