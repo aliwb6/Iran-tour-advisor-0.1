@@ -22,8 +22,9 @@ export default function RequestsPage() {
   const { user, isAuthenticated, isLoadingAuth } = useAuth();
   const { t, lang, dir } = useI18n();
 
-  const [filter, setFilter]       = useState('active');
-  const [formOpen, setFormOpen]   = useState(false);
+  const [filter, setFilter]   = useState('active');
+  const [sortBy, setSortBy]   = useState('newest');
+  const [formOpen, setFormOpen] = useState(false);
 
   useEffect(() => {
     if (!isLoadingAuth && !isAuthenticated) navigate('/login');
@@ -56,10 +57,35 @@ export default function RequestsPage() {
   const isActiveRequest = (r) =>
     ['active', 'waiting', 'received'].includes(r.status) || r.status == null;
 
-  const filtered = useMemo(
-    () => requests.filter(r => filter === 'active' ? isActiveRequest(r) : !isActiveRequest(r)),
-    [requests, filter],
-  );
+  const filtered = useMemo(() => {
+    const list = requests.filter(r =>
+      filter === 'active' ? isActiveRequest(r) : !isActiveRequest(r)
+    );
+
+    const sorted = [...list];
+    switch (sortBy) {
+      case 'oldest':
+        sorted.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+        break;
+      case 'most_proposals':
+        sorted.sort((a, b) =>
+          (b.slot_count || b.proposal_count || 0) - (a.slot_count || a.proposal_count || 0)
+        );
+        break;
+      case 'soonest':
+        sorted.sort((a, b) => {
+          if (!a.start_date && !b.start_date) return 0;
+          if (!a.start_date) return 1;
+          if (!b.start_date) return -1;
+          return new Date(a.start_date) - new Date(b.start_date);
+        });
+        break;
+      default: // newest
+        sorted.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        break;
+    }
+    return sorted;
+  }, [requests, filter, sortBy]);
 
   const mapToCard = (r) => {
     // destination is a text[] column; tolerate legacy string values too
@@ -120,6 +146,13 @@ export default function RequestsPage() {
     back: lang === 'fa' ? 'بازگشت' : lang === 'ar' ? 'رجوع' : 'Back',
   };
 
+  const sortOptions = [
+    { value: 'newest',         label: t('requests_sort_newest') },
+    { value: 'oldest',         label: t('requests_sort_oldest') },
+    { value: 'most_proposals', label: t('requests_sort_most_proposals') },
+    { value: 'soonest',        label: t('requests_sort_soonest') },
+  ];
+
   return (
     <div className="min-h-screen bg-background pt-24 pb-16">
       <div className="max-w-6xl mx-auto px-5 sm:px-8 lg:px-10">
@@ -133,7 +166,7 @@ export default function RequestsPage() {
         </button>
 
         {/* Header row */}
-        <header className="mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+        <header className="mb-6 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
           <div>
             <h1 className="font-heading text-3xl sm:text-4xl font-semibold text-foreground">
               {tx.title}
@@ -174,6 +207,28 @@ export default function RequestsPage() {
             )}
           </div>
         </header>
+
+        {/* Sort bar — shown once requests are loaded and there is something to sort */}
+        {!isLoading && requests.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 mb-5">
+            <span className="font-body text-xs font-medium text-muted-foreground shrink-0">
+              {t('requests_sort_by')}:
+            </span>
+            {sortOptions.map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => setSortBy(opt.value)}
+                className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                  sortBy === opt.value
+                    ? 'bg-accent text-white shadow-sm'
+                    : 'bg-muted text-muted-foreground hover:text-foreground border border-border'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Content */}
         {isLoading ? (
