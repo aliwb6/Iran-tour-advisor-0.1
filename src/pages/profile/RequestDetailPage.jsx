@@ -3,13 +3,15 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   ArrowLeft, MapPin, Calendar, Users, Baby, Car, Hotel,
-  Sparkles, FileText, Globe, Star, Clock, RefreshCw,
+  Sparkles, FileText, Globe, Star, Clock,
   CheckSquare, Tag, Layers, ChevronDown, ChevronUp,
   SlidersHorizontal,
 } from 'lucide-react';
 import { supabase } from '@/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { useI18n } from '@/lib/i18n.jsx';
+
+// ── Status config ─────────────────────────────────────────────────────────────
 
 const STATUS_CONFIG = {
   pending:         { label: 'Pending',           classes: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' },
@@ -20,8 +22,10 @@ const STATUS_CONFIG = {
   confirmed:       { label: 'Confirmed',          classes: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' },
   completed:       { label: 'Completed',          classes: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' },
   received:        { label: 'Proposals Received', classes: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300' },
-  expired:         { label: 'Expired',            classes: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' },
+  expired:         { label: 'Expired',            classes: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-700' },
 };
+
+// ── Shared helpers ────────────────────────────────────────────────────────────
 
 function DetailRow({ icon: Icon, label, value }) {
   if (value == null || value === '' || (Array.isArray(value) && value.length === 0)) return null;
@@ -55,8 +59,6 @@ function formatDate(dateStr) {
   });
 }
 
-// ── Proposal helpers ──────────────────────────────────────────────────────────
-
 function StarRating({ value, max = 5 }) {
   const rounded = Math.round(value || 0);
   return (
@@ -81,56 +83,50 @@ function calcResponseTime(proposalCreatedAt, requestCreatedAt, t) {
   return t('proposals_responded_days', { d: Math.floor(hours / 24) });
 }
 
-function ProposalCard({ proposal, requestCreatedAt, t }) {
-  const profile      = proposal.proposer || {};
-  const name         = profile.full_name || 'Guide';
-  const rating       = profile.rating || 0;
-  const avatarUrl    = profile.avatar_url;
-  const initials     = name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
-  const responseTime = calcResponseTime(proposal.created_at, requestCreatedAt, t);
+// ── ProposalCard ──────────────────────────────────────────────────────────────
 
-  const isAgency   = proposal.provider_type === 'agency';
-  const badgeCls   = isAgency
-    ? 'bg-violet-100 text-violet-700 border border-violet-200 dark:bg-violet-400/15 dark:text-violet-300 dark:border-violet-400/20'
-    : 'bg-teal-100 text-teal-700 border border-teal-200 dark:bg-teal-400/15 dark:text-teal-300 dark:border-teal-400/20';
-  const badgeLabel = isAgency ? t('proposals_agency') : t('proposals_guide');
+function ProposalCard({ proposal, requestCreatedAt, t }) {
+  const proposer    = proposal.proposer || {};
+  const initials    = (proposer.full_name || 'G').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+  const responseTime = calcResponseTime(proposal.created_at, requestCreatedAt, t);
 
   return (
     <div className="bg-muted/50 border border-border rounded-2xl p-4 sm:p-5">
       {/* Top row: avatar / name / price */}
       <div className="flex items-start gap-3 mb-2">
         <div className="w-10 h-10 rounded-full overflow-hidden bg-muted border border-border flex items-center justify-center shrink-0">
-          {avatarUrl
-            ? <img src={avatarUrl} alt={name} className="w-full h-full object-cover" />
+          {proposer.avatar_url
+            ? <img src={proposer.avatar_url} alt={proposer.full_name} className="w-full h-full object-cover" />
             : <span className="text-xs font-bold text-foreground/70">{initials}</span>
           }
         </div>
 
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-1.5 mb-1">
-            <span className="text-sm font-semibold text-foreground leading-none">{name}</span>
-            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${badgeCls}`}>
-              {badgeLabel}
+            <span className="text-sm font-semibold text-foreground leading-none">
+              {proposer.full_name || '—'}
             </span>
+            {proposal.provider_type && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-muted text-muted-foreground border border-border">
+                {proposal.provider_type}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-1.5">
-            <StarRating value={rating} />
-            {rating > 0 && (
-              <span className="text-[11px] text-muted-foreground">{rating.toFixed(1)}</span>
+            <StarRating value={proposer.rating} />
+            {proposer.rating > 0 && (
+              <span className="text-[11px] text-muted-foreground">{proposer.rating.toFixed(1)}</span>
             )}
           </div>
         </div>
 
-        <div className="text-right shrink-0">
-          <p className="text-lg font-bold text-foreground">
-            ${(proposal.proposed_price || 0).toLocaleString()}
-          </p>
-          {proposal.price_type && (
-            <p className="text-[10px] text-muted-foreground capitalize">
-              {proposal.price_type.replace(/_/g, ' ')}
+        {proposal.proposed_price != null && (
+          <div className="text-right shrink-0">
+            <p className="text-lg font-bold text-foreground">
+              ${(proposal.proposed_price).toLocaleString()}
             </p>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Response time */}
@@ -141,9 +137,9 @@ function ProposalCard({ proposal, requestCreatedAt, t }) {
         </div>
       )}
 
-      {/* Message */}
+      {/* Message preview */}
       {proposal.message && (
-        <p className="text-sm text-foreground/70 leading-relaxed line-clamp-3 mt-2 pt-2 border-t border-border/40">
+        <p className="text-sm text-foreground/70 leading-relaxed line-clamp-2 mt-2 pt-2 border-t border-border/40">
           {proposal.message}
         </p>
       )}
@@ -168,7 +164,7 @@ function ProposalFilters({ filters, onFilterChange, t }) {
 
   return (
     <div className="bg-muted/50 border border-border rounded-2xl overflow-hidden">
-      {/* Mobile toggle — hidden on sm+ */}
+      {/* Mobile toggle */}
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
@@ -225,7 +221,7 @@ function ProposalFilters({ filters, onFilterChange, t }) {
                 className={`px-2 py-1.5 rounded-lg text-xs font-medium transition-all ${
                   filters.minRating === 0
                     ? 'bg-accent text-white'
-                    : 'bg-muted text-muted-foreground hover:bg-muted hover:text-foreground border border-border'
+                    : 'bg-muted text-muted-foreground hover:text-foreground border border-border'
                 }`}
               >
                 {t('proposals_any_rating')}
@@ -238,7 +234,7 @@ function ProposalFilters({ filters, onFilterChange, t }) {
                   className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all ${
                     filters.minRating === n
                       ? 'bg-amber-400/20 text-amber-500'
-                      : 'bg-muted text-muted-foreground hover:bg-muted hover:text-amber-500 border border-border'
+                      : 'bg-muted text-muted-foreground hover:text-amber-500 border border-border'
                   }`}
                 >
                   <Star className={`w-3 h-3 ${filters.minRating >= n ? 'fill-current' : ''}`} />
@@ -306,8 +302,7 @@ export default function RequestDetailPage() {
   const [loading, setLoading]  = useState(true);
   const [error, setError]      = useState(null);
 
-  // Proposals
-  const [proposals, setProposals]               = useState([]);
+  const [proposals,        setProposals]        = useState([]);
   const [proposalsLoading, setProposalsLoading] = useState(false);
 
   // Filter state
@@ -321,6 +316,7 @@ export default function RequestDetailPage() {
     if (!isLoadingAuth && !isAuthenticated) navigate('/login');
   }, [isLoadingAuth, isAuthenticated, navigate]);
 
+  // Fetch trip request
   useEffect(() => {
     if (!id || !user?.id) return;
     (async () => {
@@ -342,7 +338,7 @@ export default function RequestDetailPage() {
     })();
   }, [id, user?.id]);
 
-  // Fetch proposals for this trip request
+  // Fetch proposals from trip_proposals
   useEffect(() => {
     if (!id) return;
     setProposalsLoading(true);
@@ -385,7 +381,7 @@ export default function RequestDetailPage() {
       if (filterSortBy === 'price_asc')  return (a.proposed_price || 0) - (b.proposed_price || 0);
       if (filterSortBy === 'price_desc') return (b.proposed_price || 0) - (a.proposed_price || 0);
       if (filterSortBy === 'rating')     return (b.proposer?.rating || 0) - (a.proposer?.rating || 0);
-      return new Date(b.created_at) - new Date(a.created_at);
+      return new Date(b.created_at || 0) - new Date(a.created_at || 0);
     });
 
     return list;
@@ -403,7 +399,6 @@ export default function RequestDetailPage() {
   const statusCfg = STATUS_CONFIG[r?.status] || STATUS_CONFIG.active;
   const hasTransportation = r?.assistance?.includes('Transportation');
   const hasAccommodation  = r?.assistance?.includes('Accommodation');
-  // destination is a text[] column; tolerate legacy string values too
   const cities = Array.isArray(r?.destination) ? r.destination : r?.destination ? [r.destination] : [];
   const title = r?.title
     || (cities.length ? `Trip to ${cities.join(', ')}` : 'Trip Request');
@@ -514,7 +509,7 @@ export default function RequestDetailPage() {
               </Section>
             )}
 
-            {/* ── Proposals ─────────────────────────────────────────────────── */}
+            {/* ── Proposals section ─────────────────────────────────────────── */}
             <div className="space-y-3 pt-2">
               {/* Section header */}
               <div className="flex items-center justify-between">

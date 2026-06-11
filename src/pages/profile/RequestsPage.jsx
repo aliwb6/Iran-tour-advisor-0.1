@@ -9,6 +9,8 @@ import { supabase } from '@/supabaseClient';
 import RequestCard from '@/components/profile/RequestCard';
 import TripRequestForm from '@/components/profile/TripRequestForm';
 
+
+
 const HOLIDAY_TYPE_LABELS = {
   active:       'Active',
   local_living: 'Local Living',
@@ -52,6 +54,27 @@ export default function RequestsPage() {
       return data ?? [];
     },
     enabled: !!user?.id,
+  });
+
+  // Batched slot-count query: one round-trip for ALL requests
+  const { data: slotCountMap = {} } = useQuery({
+    queryKey: ['trip_slots_counts', requests.map(r => r.id)],
+    queryFn: async () => {
+      const ids = requests.map(r => r.id);
+      if (ids.length === 0) return {};
+      const { data } = await supabase
+        .from('trip_slots')
+        .select('trip_request_id')
+        .in('trip_request_id', ids)
+        .neq('status', 'rejected');
+      const map = {};
+      (data || []).forEach(row => {
+        map[row.trip_request_id] = (map[row.trip_request_id] || 0) + 1;
+      });
+      return map;
+    },
+    enabled: requests.length > 0,
+    staleTime: 30_000,
   });
 
   const isActiveRequest = (r) =>
@@ -270,6 +293,7 @@ export default function RequestsPage() {
               <RequestCard
                 key={r.id}
                 request={mapToCard(r)}
+                slotCount={slotCountMap[r.id] ?? 0}
                 onOpen={req => navigate(`/profile/requests/${req.id}`)}
               />
             ))}

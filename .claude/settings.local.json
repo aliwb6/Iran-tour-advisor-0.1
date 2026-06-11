@@ -9,7 +9,8 @@
       "Bash(grep -n \"useI18n\\\\|{ t,\" \"/home/alireza/Desktop/Iran-Tour-Advisor.0.1 base44/src/pages/AgencyProfile.jsx\")",
       "Bash(git commit -m ' *)",
       "Bash(echo \"EXIT:$?\")",
-      "Bash(git pull *)"
+      "Bash(git pull *)",
+      "Bash(node *)"
     ]
   }
 }
