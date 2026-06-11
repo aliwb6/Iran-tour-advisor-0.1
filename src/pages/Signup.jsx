@@ -16,6 +16,25 @@ const BENEFITS = [
   { icon: Star,    titleKey: 'login_benefit3_title', descKey: 'login_benefit3_desc' },
 ];
 
+const IRAN_CITIES = [
+  { en: 'Tehran',       fa: 'تهران',     ar: 'طهران' },
+  { en: 'Isfahan',      fa: 'اصفهان',    ar: 'أصفهان' },
+  { en: 'Shiraz',       fa: 'شیراز',     ar: 'شيراز' },
+  { en: 'Yazd',         fa: 'یزد',       ar: 'يزد' },
+  { en: 'Tabriz',       fa: 'تبریز',     ar: 'تبريز' },
+  { en: 'Mashhad',      fa: 'مشهد',      ar: 'مشهد' },
+  { en: 'Kerman',       fa: 'کرمان',     ar: 'كرمان' },
+  { en: 'Kashan',       fa: 'کاشان',     ar: 'كاشان' },
+  { en: 'Qom',          fa: 'قم',        ar: 'قم' },
+  { en: 'Kish',         fa: 'کیش',       ar: 'كيش' },
+  { en: 'Qeshm',        fa: 'قشم',       ar: 'قشم' },
+  { en: 'Rasht',        fa: 'رشت',       ar: 'رشت' },
+  { en: 'Hamadan',      fa: 'همدان',     ar: 'همدان' },
+  { en: 'Kermanshah',   fa: 'کرمانشاه',  ar: 'كرمانشاه' },
+  { en: 'Bandar Abbas', fa: 'بندرعباس',  ar: 'بندر عباس' },
+  { en: 'Ahvaz',        fa: 'اهواز',     ar: 'الأهواز' },
+];
+
 export default function Signup() {
   const { t, lang, dir } = useI18n();
   const navigate = useNavigate();
@@ -30,7 +49,7 @@ export default function Signup() {
     full_name: '',
     role: 'tourist',
     gender: '',
-    city: '',
+    cities: [],
     bio: '',
   });
   const [showPassword, setShowPassword] = useState(false);
@@ -45,6 +64,24 @@ export default function Signup() {
 
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const [customCity, setCustomCity] = useState('');
+
+  const cityLabel = (c) => (lang === 'fa' ? c.fa : lang === 'ar' ? c.ar : c.en);
+
+  const toggleCity = (v) =>
+    setFormData(prev => ({
+      ...prev,
+      cities: prev.cities.includes(v) ? prev.cities.filter(x => x !== v) : [...prev.cities, v],
+    }));
+
+  const addCustomCity = () => {
+    const v = customCity.trim();
+    if (v && !formData.cities.includes(v)) {
+      setFormData(prev => ({ ...prev, cities: [...prev.cities, v] }));
+    }
+    setCustomCity('');
   };
 
   // ── Submit: sign up and move to OTP screen ────────────────────────────────
@@ -62,8 +99,8 @@ export default function Signup() {
       return;
     }
 
-    if ((formData.role === 'guide' || formData.role === 'agency') && !formData.city) {
-      setError(t('signup_err_city'));
+    if ((formData.role === 'guide' || formData.role === 'agency') && formData.cities.length === 0) {
+      setError(lang === 'fa' ? 'لطفاً حداقل یک شهر انتخاب کنید' : lang === 'ar' ? 'يرجى اختيار مدينة واحدة على الأقل' : 'Please select at least one city');
       return;
     }
 
@@ -112,7 +149,9 @@ export default function Signup() {
           email: formData.email,
           full_name: formData.full_name,
           role: formData.role,
-          city: formData.city || null,
+          city: formData.cities[0] || null,
+          primary_city: formData.cities[0] || null,
+          other_cities: formData.cities.length ? formData.cities : null,
           bio: formData.bio || null,
         });
         if (profileError) throw profileError;
@@ -524,17 +563,73 @@ export default function Signup() {
                       className="overflow-hidden space-y-4"
                     >
                       <div>
-                        <label className={labelCls}>{t('signup_city_label')} *</label>
-                        <div className="relative">
-                          <MapPin className={iconCls} />
-                          <input
-                            type="text"
-                            value={formData.city}
-                            onChange={e => handleChange('city', e.target.value)}
-                            className={inputCls(true)}
-                            placeholder={t('signup_city_ph')}
-                          />
+                        <label className="block font-body text-sm text-muted-foreground mb-2">
+                          {lang === 'fa' ? 'شهرهای فعالیت' : lang === 'ar' ? 'مدن النشاط' : 'Cities of Activity'} *
+                        </label>
+
+                        <div className="flex flex-wrap gap-2 mb-3">
+                          {IRAN_CITIES.map(c => {
+                            const active = formData.cities.includes(c.en);
+                            return (
+                              <button
+                                key={c.en}
+                                type="button"
+                                onClick={() => toggleCity(c.en)}
+                                className={`px-3 py-1.5 rounded-full text-xs font-body font-medium border transition-all duration-200 ${
+                                  active
+                                    ? 'bg-accent text-white border-accent'
+                                    : 'bg-background text-muted-foreground border-border hover:text-foreground hover:border-accent/50'
+                                }`}
+                              >
+                                {active ? '✓ ' : ''}{cityLabel(c)}
+                              </button>
+                            );
+                          })}
+
+                          {formData.cities
+                            .filter(v => !IRAN_CITIES.some(c => c.en === v))
+                            .map(v => (
+                              <button
+                                key={v}
+                                type="button"
+                                onClick={() => toggleCity(v)}
+                                className="px-3 py-1.5 rounded-full text-xs font-body font-medium border bg-accent text-white border-accent"
+                              >
+                                {v} ✕
+                              </button>
+                            ))}
                         </div>
+
+                        <div className="flex gap-2">
+                          <div className="relative flex-1">
+                            <MapPin className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground ${dir === 'rtl' ? 'end-4' : 'start-4'}`} />
+                            <input
+                              type="text"
+                              value={customCity}
+                              onChange={e => setCustomCity(e.target.value)}
+                              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustomCity(); } }}
+                              className={`w-full ${dir === 'rtl' ? 'pe-11 ps-4' : 'ps-11 pe-4'} py-3 rounded-xl border border-border bg-background font-body text-foreground focus:outline-none focus:ring-2 focus:ring-accent/50`}
+                              placeholder={lang === 'fa' ? 'شهر دیگری اضافه کنید...' : lang === 'ar' ? 'أضف مدينة أخرى...' : 'Add another city...'}
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={addCustomCity}
+                            className="px-4 py-3 rounded-xl border border-border text-muted-foreground font-body text-sm hover:text-foreground hover:border-accent/50 transition whitespace-nowrap"
+                          >
+                            {lang === 'fa' ? 'افزودن' : lang === 'ar' ? 'إضافة' : 'Add'}
+                          </button>
+                        </div>
+
+                        {formData.cities.length > 0 && (
+                          <p className="mt-2 font-body text-xs text-muted-foreground">
+                            {lang === 'fa'
+                              ? `${formData.cities.length} شهر انتخاب شد`
+                              : lang === 'ar'
+                              ? `تم اختيار ${formData.cities.length} مدينة`
+                              : `${formData.cities.length} ${formData.cities.length === 1 ? 'city' : 'cities'} selected`}
+                          </p>
+                        )}
                       </div>
 
                       <div>
