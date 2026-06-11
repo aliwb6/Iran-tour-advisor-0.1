@@ -267,6 +267,33 @@ export default function SubmitProposalModal({
   const [imagesText, setImagesText]     = useState('');
   const [submitting, setSubmitting]     = useState(false);
   const [attempted, setAttempted]       = useState(false);
+  const [hasTransportation, setHasTransportation] = useState(false);
+  const [transportationItems, setTransportationItems] = useState([]);
+  const [customTransport, setCustomTransport] = useState('');
+
+  const TRANSPORT_OPTIONS = [
+    'Private car',
+    'Minibus / Van',
+    'Coach bus',
+    'Motorcycle',
+    'Bicycle',
+    'Boat',
+    'Train',
+    'Domestic flight',
+  ];
+
+  const toggleTransport = (v) =>
+    setTransportationItems(prev =>
+      prev.includes(v) ? prev.filter(x => x !== v) : [...prev, v]
+    );
+
+  const addCustomTransport = () => {
+    const v = customTransport.trim();
+    if (v && !transportationItems.includes(v)) {
+      setTransportationItems(prev => [...prev, v]);
+    }
+    setCustomTransport('');
+  };
 
   const priceNum   = parseFloat(price) || 0;
   const netPayout  = priceNum * (1 - commissionRate);
@@ -316,6 +343,7 @@ export default function SubmitProposalModal({
         excluded: parseLines(excludedText),
         message,
         images: parseLines(imagesText),
+        transportation: hasTransportation ? transportationItems : [],
       });
       toast.success(t('proposal_sent'));
       onSuccess?.();
@@ -443,6 +471,97 @@ export default function SubmitProposalModal({
                   className={inputCls}
                 />
               </div>
+            </div>
+
+            {/* ── Transportation ── */}
+            <div>
+              <p className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-3">
+                Transportation
+              </p>
+
+              {/* Toggle: included or not */}
+              <div className="flex gap-2 mb-3">
+                <button
+                  type="button"
+                  onClick={() => { setHasTransportation(true); }}
+                  className={`px-4 py-2 rounded-xl text-sm font-medium border transition ${
+                    hasTransportation
+                      ? 'bg-[hsl(178,85%,32%)]/20 border-[hsl(178,85%,45%)] text-[hsl(178,85%,70%)]'
+                      : 'bg-white/[0.04] border-white/15 text-white/50 hover:border-white/30'
+                  }`}
+                >
+                  ✓ Included
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setHasTransportation(false); setTransportationItems([]); setCustomTransport(''); }}
+                  className={`px-4 py-2 rounded-xl text-sm font-medium border transition ${
+                    !hasTransportation
+                      ? 'bg-red-500/10 border-red-400/40 text-red-300'
+                      : 'bg-white/[0.04] border-white/15 text-white/50 hover:border-white/30'
+                  }`}
+                >
+                  ✕ Not included
+                </button>
+              </div>
+
+              {/* Vehicle type chips — only visible when hasTransportation is true */}
+              {hasTransportation && (
+                <div>
+                  <p className="text-[11px] text-white/35 mb-2">Select vehicle type(s):</p>
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {TRANSPORT_OPTIONS.map(opt => {
+                      const active = transportationItems.includes(opt);
+                      return (
+                        <button
+                          key={opt}
+                          type="button"
+                          onClick={() => toggleTransport(opt)}
+                          className={`px-3 py-1.5 rounded-full text-xs font-medium border transition ${
+                            active
+                              ? 'bg-[hsl(178,85%,32%)]/25 border-[hsl(178,85%,45%)] text-white'
+                              : 'bg-white/[0.04] border-white/15 text-white/50 hover:border-white/30 hover:text-white/80'
+                          }`}
+                        >
+                          {active ? '✓ ' : ''}{opt}
+                        </button>
+                      );
+                    })}
+                    {/* Custom entries added by the guide */}
+                    {transportationItems
+                      .filter(v => !TRANSPORT_OPTIONS.includes(v))
+                      .map(v => (
+                        <button
+                          key={v}
+                          type="button"
+                          onClick={() => toggleTransport(v)}
+                          className="px-3 py-1.5 rounded-full text-xs font-medium border bg-[hsl(178,85%,32%)]/25 border-[hsl(178,85%,45%)] text-white"
+                        >
+                          {v} ✕
+                        </button>
+                      ))}
+                  </div>
+
+                  {/* Custom transport input */}
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={customTransport}
+                      onChange={e => setCustomTransport(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustomTransport(); } }}
+                      placeholder="Add other transport..."
+                      className="flex-1 px-3 py-2 rounded-xl bg-white/[0.05] border border-white/15 text-white text-sm placeholder:text-white/25 focus:outline-none focus:border-[hsl(178,85%,45%)] transition"
+                    />
+                    <button
+                      type="button"
+                      onClick={addCustomTransport}
+                      className="px-4 py-2 rounded-xl border border-white/20 text-white/60 text-sm hover:border-[hsl(178,85%,45%)] hover:text-white transition whitespace-nowrap"
+                    >
+                      Add
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* MESSAGE */}
