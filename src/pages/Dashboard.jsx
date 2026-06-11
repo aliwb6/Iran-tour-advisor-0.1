@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { supabase } from '@/supabaseClient';
 import { useI18n } from '@/lib/i18n.jsx';
@@ -210,6 +210,114 @@ function Sidebar({ section, onNavigate, profileExpanded, setProfileExpanded, use
         </button>
       </div>
     </aside>
+  );
+}
+
+// ─── LicenseCard ──────────────────────────────────────────────────────────────
+
+function LicenseCard({ profile }) {
+  const { t } = useI18n();
+  const fileRef = useRef(null);
+  const userId = profile?.id;
+
+  const [licensePath, setLicensePath] = useState(profile?.license_url || '');
+  const [status, setStatus] = useState(profile?.license_status || '');
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState('');
+
+  const openPicker = () => { if (!uploading) fileRef.current?.click(); };
+
+  const handleUpload = async (file) => {
+    if (!file || !userId) return;
+    setError('');
+
+    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+    if (!allowed.includes(file.type)) { setError(t('license_invalid_type')); return; }
+    if (file.size > 5 * 1024 * 1024) { setError(t('license_too_large')); return; }
+
+    setUploading(true);
+    try {
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const path = `${userId}/${Date.now()}-${safeName}`;
+
+      const { error: upErr } = await supabase.storage
+        .from('licenses').upload(path, file, { upsert: false });
+      if (upErr) throw upErr;
+
+      const { error: dbErr } = await supabase
+        .from('profiles')
+        .update({ license_url: path, license_status: 'pending' })
+        .eq('id', userId);
+      if (dbErr) throw dbErr;
+
+      setLicensePath(path);
+      setStatus('pending');
+    } catch (err) {
+      setError(err.message || 'Upload failed');
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  };
+
+  const handleView = async () => {
+    if (!licensePath) return;
+    const { data, error: signErr } = await supabase.storage
+      .from('licenses').createSignedUrl(licensePath, 60);
+    if (signErr) { setError(signErr.message); return; }
+    window.open(data.signedUrl, '_blank', 'noopener');
+  };
+
+  const statusLabel =
+    status === 'verified' ? t('dashboard_license_verified')
+    : status === 'rejected' ? t('dashboard_license_rejected')
+    : t('dashboard_license_pending');
+
+  return (
+    <>
+      <div className="flex items-center gap-2 mb-3">
+        <Shield className="w-4 h-4 text-[hsl(38,62%,58%)]" />
+        <p className="text-white/70 text-xs font-medium">{t('dashboard_my_license')}</p>
+      </div>
+
+      {licensePath ? (
+        <div className="flex-1 flex flex-col items-center justify-center py-4">
+          <div className="w-12 h-12 rounded-2xl bg-[hsl(178,85%,32%)]/15 border border-[hsl(178,85%,32%)]/30 flex items-center justify-center mb-3">
+            <CheckCircle2 className="w-5 h-5 text-[hsl(178,85%,45%)]" />
+          </div>
+          <p className="text-white/50 text-xs text-center mb-3">{statusLabel}</p>
+          <div className="flex items-center gap-2">
+            <button onClick={handleView}
+              className="px-3 py-1.5 rounded-xl border border-white/20 text-white/70 text-xs font-medium hover:border-[hsl(38,62%,58%)] hover:text-[hsl(38,62%,58%)] transition">
+              {t('license_view')}
+            </button>
+            <button onClick={openPicker} disabled={uploading}
+              className="px-3 py-1.5 rounded-xl border border-white/20 text-white/70 text-xs font-medium hover:border-[hsl(38,62%,58%)] hover:text-[hsl(38,62%,58%)] transition disabled:opacity-50">
+              {uploading ? '...' : t('license_replace')}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div onClick={openPicker}
+          className="flex-1 flex flex-col items-center justify-center py-4 cursor-pointer">
+          <div className="w-12 h-12 rounded-2xl bg-white/5 border-2 border-dashed border-white/15 flex items-center justify-center mb-3">
+            {uploading
+              ? <Loader2 className="w-5 h-5 text-white/40 animate-spin" />
+              : <Upload className="w-5 h-5 text-white/25" />}
+          </div>
+          <p className="text-white/40 text-xs text-center mb-4">{t('dashboard_license_missing')}</p>
+          <button type="button" onClick={(e) => { e.stopPropagation(); openPicker(); }} disabled={uploading}
+            className="px-4 py-2 rounded-xl border border-white/20 text-white/60 text-xs font-medium hover:border-[hsl(38,62%,58%)] hover:text-[hsl(38,62%,58%)] transition disabled:opacity-50">
+            {uploading ? t('dashboard_saving') : t('dashboard_upload_license')}
+          </button>
+        </div>
+      )}
+
+      {error && <p className="text-red-400 text-[11px] text-center mt-2">{error}</p>}
+
+      <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,application/pdf"
+        className="hidden" onChange={(e) => handleUpload(e.target.files?.[0])} />
+    </>
   );
 }
 
@@ -427,21 +535,7 @@ function HomeView({ profile, tours, reviews, userId, lang, onNavigate, onOpenCha
 
         {/* License */}
         <div className={`${cardBase} flex flex-col`}>
-          <div className="flex items-center gap-2 mb-3">
-            <Shield className="w-4 h-4 text-[hsl(38,62%,58%)]" />
-            <p className="text-white/70 text-xs font-medium">{t('dashboard_my_license')}</p>
-          </div>
-          <div className="flex-1 flex flex-col items-center justify-center py-4">
-            <div className="w-12 h-12 rounded-2xl bg-white/5 border-2 border-dashed border-white/15 flex items-center justify-center mb-3">
-              <Upload className="w-5 h-5 text-white/25" />
-            </div>
-            <p className="text-white/40 text-xs text-center mb-4">
-              {t('dashboard_license_missing')}
-            </p>
-            <button className="px-4 py-2 rounded-xl border border-white/20 text-white/60 text-xs font-medium hover:border-[hsl(38,62%,58%)] hover:text-[hsl(38,62%,58%)] transition">
-              {t('dashboard_upload_license')}
-            </button>
-          </div>
+          <LicenseCard profile={profile} />
         </div>
       </div>
 
