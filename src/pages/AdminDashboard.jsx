@@ -13,6 +13,7 @@ import { avatarFor } from '@/lib/avatar';
 import TourForm from '@/components/dashboard/TourForm';
 import { useAllArticlesAdmin } from '@/hooks/useSupabase';
 import ArticleEditor from '@/components/articles/ArticleEditor';
+import AdminChatMonitor from './AdminChatMonitor';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -22,6 +23,7 @@ const NAV = [
   { id: 'tours',    label: 'All Tours',      Icon: Briefcase },
   { id: 'platform', label: 'Platform Tours', Icon: Sparkles },
   { id: 'guides',   label: 'All Guides',     Icon: Users },
+  { id: 'chats',    label: 'Chat Monitor',   Icon: MessageSquare },
   { id: 'comments', label: 'Comments',       Icon: MessageSquare },
   { id: 'articles', label: 'Articles',       Icon: BookOpen },
 ];
@@ -1354,6 +1356,8 @@ export default function AdminDashboard() {
             onDelete={handleDeleteReview}
           />
         );
+      case 'chats':
+        return <AdminChatMonitor />;
       case 'articles':
         return <ArticlesView profile={profile} />;
       default:
