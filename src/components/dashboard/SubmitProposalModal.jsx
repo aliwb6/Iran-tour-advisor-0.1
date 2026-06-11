@@ -235,6 +235,16 @@ function FieldLabel({ children, optional }) {
   );
 }
 
+function InlineError({ show, message: msg }) {
+  if (!show) return null;
+  return (
+    <p className="mt-1.5 text-xs text-red-400 flex items-center gap-1">
+      <AlertTriangle className="w-3 h-3 shrink-0" />
+      {msg}
+    </p>
+  );
+}
+
 // ── Main export ───────────────────────────────────────────────────────────────
 
 export default function SubmitProposalModal({
@@ -256,10 +266,16 @@ export default function SubmitProposalModal({
   const [message, setMessage]           = useState('');
   const [imagesText, setImagesText]     = useState('');
   const [submitting, setSubmitting]     = useState(false);
+  const [attempted, setAttempted]       = useState(false);
 
   const priceNum   = parseFloat(price) || 0;
   const netPayout  = priceNum * (1 - commissionRate);
   const pctDisplay = Math.round(commissionRate * 100);
+
+  const priceValid     = priceNum > 0;
+  const itineraryValid = itinerary.trim().length > 0;
+  const messageValid   = message.trim().length > 0;
+  const isValid        = priceValid && itineraryValid && messageValid;
 
   // ── Subtitle: "Kish, Sari • 7 days • 3 travelers"
   const destStr     = cityList(request?.destination).join(', ');
@@ -285,19 +301,8 @@ export default function SubmitProposalModal({
     'w-full bg-white/[0.05] border border-white/[0.1] rounded-xl px-4 py-2.5 text-white text-sm placeholder:text-white/30 focus:outline-none focus:border-[hsl(178,85%,50%)] transition-colors resize-none';
 
   const handleSubmit = async () => {
-    if (!priceNum || priceNum <= 0) {
-      toast.error(t('invalid_price'));
-      return;
-    }
-    if (!itinerary.trim()) {
-      toast.error(t('itinerary_required'));
-      return;
-    }
-    const includedArr = parseLines(includedText);
-    if (includedArr.length === 0) {
-      toast.error(t('included_required'));
-      return;
-    }
+    setAttempted(true);
+    if (!isValid) return;
 
     try {
       setSubmitting(true);
@@ -307,7 +312,7 @@ export default function SubmitProposalModal({
         price_type: priceType,
         price_period: pricePeriod,
         itinerary,
-        included: includedArr,
+        included: parseLines(includedText),
         excluded: parseLines(excludedText),
         message,
         images: parseLines(imagesText),
@@ -378,6 +383,7 @@ export default function SubmitProposalModal({
                   className={`${inputCls} pl-9 text-2xl font-semibold`}
                 />
               </div>
+              <InlineError show={attempted && !priceValid} message={t('invalid_price')} />
 
               <SegmentedToggle
                 options={priceTypeOptions}
@@ -412,6 +418,7 @@ export default function SubmitProposalModal({
                 placeholder={`Day 1: Arrival in Tehran. Pick-up from IKA airport...\nDay 2: Morning visit to Golestan Palace...`}
                 className={inputCls}
               />
+              <InlineError show={attempted && !itineraryValid} message={t('itinerary_required')} />
             </div>
 
             {/* INCLUDED / EXCLUDED */}
@@ -440,7 +447,7 @@ export default function SubmitProposalModal({
 
             {/* MESSAGE */}
             <div>
-              <FieldLabel optional>{t('personal_message')}</FieldLabel>
+              <FieldLabel>{t('personal_message')}</FieldLabel>
               <textarea
                 rows={3}
                 value={message}
@@ -448,6 +455,7 @@ export default function SubmitProposalModal({
                 placeholder="Hi! I'd love to guide you through Iran..."
                 className={inputCls}
               />
+              <InlineError show={attempted && !messageValid} message={t('message_required')} />
               <div className="flex items-start gap-1.5 mt-2">
                 <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
                 <p className="text-[11px] text-amber-400/80">{t('do_not_share_contact')}</p>
@@ -484,7 +492,7 @@ export default function SubmitProposalModal({
             <button
               type="button"
               onClick={handleSubmit}
-              disabled={submitting}
+              disabled={submitting || (attempted && !isValid)}
               className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-60 shadow-lg"
               style={{ background: 'linear-gradient(135deg, hsl(178,85%,32%), hsl(178,85%,28%))' }}
             >

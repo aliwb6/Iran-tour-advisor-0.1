@@ -107,38 +107,6 @@ export async function getMyTripRequests(travelerId) {
   }));
 }
 
-export async function acceptTripRequest(guideId, tripRequestId) {
-  const { data: trip, error: fetchError } = await supabase
-    .from('trip_requests')
-    .select('slot_count, status')
-    .eq('id', tripRequestId)
-    .single();
-
-  if (fetchError) throw fetchError;
-  if (!trip) throw new Error('Trip request not found.');
-  if (trip.slot_count >= 3) throw new Error('This trip request is already full.');
-
-  const { error: slotError } = await supabase
-    .from('trip_slots')
-    .insert({ trip_request_id: tripRequestId, guide_id: guideId, status: 'chatting' });
-
-  if (slotError) throw slotError;
-
-  const newSlotCount = trip.slot_count + 1;
-
-  const { error: updateError } = await supabase
-    .from('trip_requests')
-    .update({
-      slot_count: newSlotCount,
-      status: 'active',
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', tripRequestId);
-
-  if (updateError) throw updateError;
-
-  return { success: true };
-}
 
 export async function rejectTripSlot(guideId, tripRequestId) {
   const { error: updateSlotError } = await supabase

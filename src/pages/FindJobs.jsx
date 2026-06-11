@@ -5,11 +5,10 @@ import {
   MapPin, Calendar, Users, Wallet, ChevronDown, ChevronUp,
   Briefcase, RefreshCw, Search, X,
 } from 'lucide-react';
-import { toast } from 'sonner';
 import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../supabaseClient';
-import { getAvailableTripRequests, acceptTripRequest } from '../api/tripRequests';
-import { Badge } from '@/components/ui/badge';
+import { getAvailableTripRequests } from '../api/tripRequests';
+import SubmitProposalModal from '@/components/dashboard/SubmitProposalModal';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -63,20 +62,7 @@ function SlotIndicator({ slotCount }) {
 
 function TripRequestCard({ trip, guideId, onAccepted }) {
   const [expanded, setExpanded] = useState(false);
-  const [accepting, setAccepting] = useState(false);
-
-  const handleAccept = async () => {
-    setAccepting(true);
-    try {
-      await acceptTripRequest(guideId, trip.id);
-      toast.success("You've accepted this trip! Start a conversation with the traveler.");
-      onAccepted();
-    } catch (err) {
-      toast.error(err.message || 'Failed to accept trip request.');
-    } finally {
-      setAccepting(false);
-    }
-  };
+  const [modalOpen, setModalOpen] = useState(false);
 
   const startDate = trip.travel_dates?.start
     ? new Date(trip.travel_dates.start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
@@ -172,23 +158,13 @@ function TripRequestCard({ trip, guideId, onAccepted }) {
 
         {/* Actions */}
         <div className="flex items-center gap-2">
-          {trip.already_accepted ? (
-            <Badge variant="secondary" className="font-body text-xs px-3 py-1">
-              Pending Response
-            </Badge>
-          ) : (
-            <Button
-              size="sm"
-              onClick={handleAccept}
-              disabled={accepting}
-              className="flex-1 bg-accent hover:bg-accent/90 text-white font-body font-semibold rounded-xl h-9"
-            >
-              {accepting ? (
-                <RefreshCw className="w-3.5 h-3.5 animate-spin mr-1.5" />
-              ) : null}
-              {accepting ? 'Accepting…' : 'Accept & Connect'}
-            </Button>
-          )}
+          <Button
+            size="sm"
+            onClick={() => setModalOpen(true)}
+            className="flex-1 bg-accent hover:bg-accent/90 text-white font-body font-semibold rounded-xl h-9"
+          >
+            Accept & Propose
+          </Button>
 
           {trip.notes && (
             <Button
@@ -225,6 +201,14 @@ function TripRequestCard({ trip, guideId, onAccepted }) {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <SubmitProposalModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        request={trip}
+        guideId={guideId}
+        onSuccess={() => { setModalOpen(false); onAccepted(); }}
+      />
     </motion.div>
   );
 }

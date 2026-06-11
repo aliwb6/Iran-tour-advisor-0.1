@@ -1,11 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   ArrowLeft, MapPin, Calendar, Users, Baby, Car, Hotel,
-  Sparkles, FileText, Globe, Star, Clock,
-  CheckSquare, Tag, Layers, ChevronDown, ChevronUp,
-  SlidersHorizontal,
+  Sparkles, FileText, Globe, Clock,
+  Tag, Layers,
 } from 'lucide-react';
 import { supabase } from '@/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
@@ -59,237 +58,6 @@ function formatDate(dateStr) {
   });
 }
 
-function StarRating({ value, max = 5 }) {
-  const rounded = Math.round(value || 0);
-  return (
-    <div className="flex items-center gap-0.5">
-      {Array.from({ length: max }, (_, i) => (
-        <Star
-          key={i}
-          className={`w-3.5 h-3.5 ${i < rounded ? 'text-amber-400 fill-amber-400' : 'text-muted-foreground/30'}`}
-        />
-      ))}
-    </div>
-  );
-}
-
-function calcResponseTime(proposalCreatedAt, requestCreatedAt, t) {
-  if (!proposalCreatedAt || !requestCreatedAt) return null;
-  const ms = new Date(proposalCreatedAt) - new Date(requestCreatedAt);
-  if (ms < 0) return null;
-  const hours = Math.floor(ms / 3600000);
-  if (hours < 1)  return t('proposals_responded_under_hour');
-  if (hours < 24) return t('proposals_responded_hours', { h: hours });
-  return t('proposals_responded_days', { d: Math.floor(hours / 24) });
-}
-
-// ── ProposalCard ──────────────────────────────────────────────────────────────
-
-function ProposalCard({ proposal, requestCreatedAt, t }) {
-  const proposer    = proposal.proposer || {};
-  const initials    = (proposer.full_name || 'G').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
-  const responseTime = calcResponseTime(proposal.created_at, requestCreatedAt, t);
-
-  return (
-    <div className="bg-muted/50 border border-border rounded-2xl p-4 sm:p-5">
-      {/* Top row: avatar / name / price */}
-      <div className="flex items-start gap-3 mb-2">
-        <div className="w-10 h-10 rounded-full overflow-hidden bg-muted border border-border flex items-center justify-center shrink-0">
-          {proposer.avatar_url
-            ? <img src={proposer.avatar_url} alt={proposer.full_name} className="w-full h-full object-cover" />
-            : <span className="text-xs font-bold text-foreground/70">{initials}</span>
-          }
-        </div>
-
-        <div className="flex-1 min-w-0">
-          <div className="flex flex-wrap items-center gap-1.5 mb-1">
-            <span className="text-sm font-semibold text-foreground leading-none">
-              {proposer.full_name || '—'}
-            </span>
-            {proposal.provider_type && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-muted text-muted-foreground border border-border">
-                {proposal.provider_type}
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-1.5">
-            <StarRating value={proposer.rating} />
-            {proposer.rating > 0 && (
-              <span className="text-[11px] text-muted-foreground">{proposer.rating.toFixed(1)}</span>
-            )}
-          </div>
-        </div>
-
-        {proposal.proposed_price != null && (
-          <div className="text-right shrink-0">
-            <p className="text-lg font-bold text-foreground">
-              ${(proposal.proposed_price).toLocaleString()}
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* Response time */}
-      {responseTime && (
-        <div className="flex items-center gap-1 mt-1 mb-1">
-          <Clock className="w-3 h-3 text-muted-foreground/50" />
-          <span className="text-[11px] text-muted-foreground">{responseTime}</span>
-        </div>
-      )}
-
-      {/* Message preview */}
-      {proposal.message && (
-        <p className="text-sm text-foreground/70 leading-relaxed line-clamp-2 mt-2 pt-2 border-t border-border/40">
-          {proposal.message}
-        </p>
-      )}
-    </div>
-  );
-}
-
-// ── ProposalFilters ───────────────────────────────────────────────────────────
-
-function ProposalFilters({ filters, onFilterChange, t }) {
-  const [open, setOpen] = useState(false);
-
-  const sortOptions = [
-    { value: 'newest',     label: t('proposals_sort_newest') },
-    { value: 'price_asc',  label: t('proposals_sort_price_low') },
-    { value: 'price_desc', label: t('proposals_sort_price_high') },
-    { value: 'rating',     label: t('proposals_sort_rating') },
-  ];
-
-  const inputCls =
-    'w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent/50 transition';
-
-  return (
-    <div className="bg-muted/50 border border-border rounded-2xl overflow-hidden">
-      {/* Mobile toggle */}
-      <button
-        type="button"
-        onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between px-4 py-3 sm:hidden"
-      >
-        <span className="flex items-center gap-2 text-sm font-medium text-foreground/70">
-          <SlidersHorizontal className="w-4 h-4" />
-          {t('proposals_filters')}
-        </span>
-        {open
-          ? <ChevronUp className="w-4 h-4 text-muted-foreground" />
-          : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
-      </button>
-
-      {/* Filter grid: always visible on sm+, collapsible on mobile */}
-      <div className={`${open ? 'block' : 'hidden'} sm:block px-4 pb-4 pt-3 border-t border-border sm:border-0`}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-
-          {/* Budget range */}
-          <div>
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-2">
-              {t('proposals_budget_range')}
-            </p>
-            <div className="flex items-center gap-2">
-              <input
-                type="number"
-                min="0"
-                placeholder={t('proposals_min_price')}
-                value={filters.minPrice}
-                onChange={e => onFilterChange('minPrice', e.target.value)}
-                className={inputCls}
-              />
-              <span className="text-muted-foreground text-sm shrink-0">–</span>
-              <input
-                type="number"
-                min="0"
-                placeholder={t('proposals_max_price')}
-                value={filters.maxPrice}
-                onChange={e => onFilterChange('maxPrice', e.target.value)}
-                className={inputCls}
-              />
-            </div>
-          </div>
-
-          {/* Min rating */}
-          <div>
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-2">
-              {t('proposals_min_rating')}
-            </p>
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => onFilterChange('minRating', 0)}
-                className={`px-2 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                  filters.minRating === 0
-                    ? 'bg-accent text-white'
-                    : 'bg-muted text-muted-foreground hover:text-foreground border border-border'
-                }`}
-              >
-                {t('proposals_any_rating')}
-              </button>
-              {[1, 2, 3, 4, 5].map(n => (
-                <button
-                  key={n}
-                  type="button"
-                  onClick={() => onFilterChange('minRating', n)}
-                  className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all ${
-                    filters.minRating === n
-                      ? 'bg-amber-400/20 text-amber-500'
-                      : 'bg-muted text-muted-foreground hover:text-amber-500 border border-border'
-                  }`}
-                >
-                  <Star className={`w-3 h-3 ${filters.minRating >= n ? 'fill-current' : ''}`} />
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Provider type */}
-          <div>
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-2">
-              {t('proposals_provider_type')}
-            </p>
-            <div className="flex gap-1.5">
-              {['all', 'guide', 'agency'].map(type => (
-                <button
-                  key={type}
-                  type="button"
-                  onClick={() => onFilterChange('providerType', type)}
-                  className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-medium transition-all border ${
-                    filters.providerType === type
-                      ? 'bg-accent text-white border-accent'
-                      : 'bg-muted text-muted-foreground hover:text-foreground border-border'
-                  }`}
-                >
-                  {t(`proposals_${type}`)}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Sort by */}
-          <div>
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-2">
-              {t('proposals_sort_by')}
-            </p>
-            <select
-              value={filters.sortBy}
-              onChange={e => onFilterChange('sortBy', e.target.value)}
-              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-accent/50 transition"
-            >
-              {sortOptions.map(opt => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function RequestDetailPage() {
@@ -301,16 +69,6 @@ export default function RequestDetailPage() {
   const [request, setRequest] = useState(null);
   const [loading, setLoading]  = useState(true);
   const [error, setError]      = useState(null);
-
-  const [proposals,        setProposals]        = useState([]);
-  const [proposalsLoading, setProposalsLoading] = useState(false);
-
-  // Filter state
-  const [filterMinPrice,     setFilterMinPrice]     = useState('');
-  const [filterMaxPrice,     setFilterMaxPrice]     = useState('');
-  const [filterMinRating,    setFilterMinRating]    = useState(0);
-  const [filterProviderType, setFilterProviderType] = useState('all');
-  const [filterSortBy,       setFilterSortBy]       = useState('newest');
 
   useEffect(() => {
     if (!isLoadingAuth && !isAuthenticated) navigate('/login');
@@ -337,55 +95,6 @@ export default function RequestDetailPage() {
       setLoading(false);
     })();
   }, [id, user?.id]);
-
-  // Fetch proposals from trip_proposals
-  useEffect(() => {
-    if (!id) return;
-    setProposalsLoading(true);
-    supabase
-      .from('trip_proposals')
-      .select('*, proposer:profiles(full_name, avatar_url, rating, role)')
-      .eq('trip_request_id', id)
-      .order('created_at', { ascending: false })
-      .then(({ data, error: err }) => {
-        if (!err && data) setProposals(data);
-        setProposalsLoading(false);
-      });
-  }, [id]);
-
-  const handleFilterChange = (key, value) => {
-    if (key === 'minPrice')          setFilterMinPrice(value);
-    else if (key === 'maxPrice')     setFilterMaxPrice(value);
-    else if (key === 'minRating')    setFilterMinRating(value);
-    else if (key === 'providerType') setFilterProviderType(value);
-    else if (key === 'sortBy')       setFilterSortBy(value);
-  };
-
-  const filters = {
-    minPrice:     filterMinPrice,
-    maxPrice:     filterMaxPrice,
-    minRating:    filterMinRating,
-    providerType: filterProviderType,
-    sortBy:       filterSortBy,
-  };
-
-  const filteredProposals = useMemo(() => {
-    let list = [...proposals];
-
-    if (filterMinPrice !== '')        list = list.filter(p => (p.proposed_price || 0) >= Number(filterMinPrice));
-    if (filterMaxPrice !== '')        list = list.filter(p => (p.proposed_price || 0) <= Number(filterMaxPrice));
-    if (filterMinRating > 0)          list = list.filter(p => (p.proposer?.rating || 0) >= filterMinRating);
-    if (filterProviderType !== 'all') list = list.filter(p => p.provider_type === filterProviderType);
-
-    list.sort((a, b) => {
-      if (filterSortBy === 'price_asc')  return (a.proposed_price || 0) - (b.proposed_price || 0);
-      if (filterSortBy === 'price_desc') return (b.proposed_price || 0) - (a.proposed_price || 0);
-      if (filterSortBy === 'rating')     return (b.proposer?.rating || 0) - (a.proposer?.rating || 0);
-      return new Date(b.created_at || 0) - new Date(a.created_at || 0);
-    });
-
-    return list;
-  }, [proposals, filterMinPrice, filterMaxPrice, filterMinRating, filterProviderType, filterSortBy]);
 
   if (isLoadingAuth || loading) {
     return (
@@ -508,56 +217,6 @@ export default function RequestDetailPage() {
                 </div>
               </Section>
             )}
-
-            {/* ── Proposals section ─────────────────────────────────────────── */}
-            <div className="space-y-3 pt-2">
-              {/* Section header */}
-              <div className="flex items-center justify-between">
-                <h2 className="font-heading text-lg font-semibold text-foreground">
-                  {t('proposals_section_title')}
-                </h2>
-                <p className="font-body text-xs text-muted-foreground">
-                  {t('proposals_showing', {
-                    shown: filteredProposals.length,
-                    total: proposals.length,
-                  })}
-                </p>
-              </div>
-
-              {/* Filters */}
-              <ProposalFilters
-                filters={filters}
-                onFilterChange={handleFilterChange}
-                t={t}
-              />
-
-              {/* List */}
-              {proposalsLoading ? (
-                <div className="flex items-center justify-center py-10">
-                  <div className="w-6 h-6 rounded-full border-2 border-accent/50 border-t-accent animate-spin" />
-                </div>
-              ) : filteredProposals.length === 0 ? (
-                <div className="bg-muted/30 border border-border rounded-2xl p-10 text-center">
-                  <p className="text-sm font-medium text-muted-foreground">
-                    {t('proposals_no_proposals')}
-                  </p>
-                  <p className="text-xs text-muted-foreground/70 mt-1 max-w-xs mx-auto">
-                    {t('proposals_no_proposals_desc')}
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {filteredProposals.map(p => (
-                    <ProposalCard
-                      key={p.id}
-                      proposal={p}
-                      requestCreatedAt={r?.created_at}
-                      t={t}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
 
           </motion.div>
         )}

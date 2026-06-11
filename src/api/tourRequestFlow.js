@@ -105,17 +105,13 @@ export async function guideSubmitProposal(guideId, requestId, proposal) {
       trip_request_id: requestId,
       guide_id: guideId,
       status: 'accepted',
+      accepted_at: new Date().toISOString(),
       ...proposal,
     })
     .select()
     .single();
   if (error) throw error;
   return data;
-}
-
-// @deprecated — use guideSubmitProposal instead
-export async function guideAcceptRequest(guideId, requestId) {
-  return guideSubmitProposal(guideId, requestId, {});
 }
 
 // ── Tourist: select a guide from the proposals ────────────────────────────────

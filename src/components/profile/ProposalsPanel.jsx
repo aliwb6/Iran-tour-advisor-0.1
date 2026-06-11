@@ -17,11 +17,27 @@ function profilePath(guide) {
     : `/guides/${guide.id}`;
 }
 
+function humanizeEnum(str) {
+  return str ? str.replace(/_/g, ' ') : '';
+}
+
 function formatPrice(slot, t) {
   if (slot.price == null) return t('proposal_no_price');
-  const type   = slot.price_type   === 'per_person'    ? t('proposal_per_person')   : t('proposal_entire_group');
-  const period = slot.price_period === 'per_day'       ? t('proposal_per_day')      : t('proposal_entire_trip');
-  return `${slot.price} ${slot.currency || ''} · ${type} · ${period}`;
+  const num      = Number(slot.price).toLocaleString('en-US');
+  const currency = slot.currency ? ` ${slot.currency}` : '';
+  const type     = slot.price_type   ? ` · ${humanizeEnum(slot.price_type)}`   : '';
+  const period   = slot.price_period ? ` · ${humanizeEnum(slot.price_period)}` : '';
+  return `${num}${currency}${type}${period}`;
+}
+
+function hasSubmittedDetails(slot) {
+  return (
+    slot.price != null ||
+    (slot.itinerary && slot.itinerary.trim()) ||
+    slot.included?.length > 0 ||
+    slot.excluded?.length > 0 ||
+    (slot.message && slot.message.trim())
+  );
 }
 
 function RoleBadge({ role, t }) {
@@ -55,12 +71,22 @@ function GuideAvatar({ guide, size = 'md' }) {
   );
 }
 
+function DetailBlock({ label, children }) {
+  return (
+    <div className="p-3.5 rounded-xl bg-background/40 border border-border/30">
+      <p className="text-[10px] uppercase tracking-wider text-muted-foreground/80 mb-1.5">{label}</p>
+      {children}
+    </div>
+  );
+}
+
 // ── Level 3: full proposal detail modal ───────────────────────────────────────
 
 function ProposalDetailModal({ slot, onClose }) {
   const { t, lang, dir } = useI18n();
   const guide = slot.guide || {};
   const path  = profilePath(guide);
+  const submitted = hasSubmittedDetails(slot);
 
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
@@ -75,7 +101,7 @@ function ProposalDetailModal({ slot, onClose }) {
         </DialogHeader>
 
         <div className="space-y-4 mt-2">
-          {/* Guide header */}
+          {/* Guide header — always shown */}
           <Link to={path} className="flex items-center gap-3 hover:opacity-80 transition-opacity w-fit">
             <GuideAvatar guide={guide} size="lg" />
             <div>
@@ -98,73 +124,91 @@ function ProposalDetailModal({ slot, onClose }) {
             </div>
           </Link>
 
-          {/* Price */}
-          <DetailBlock label={t('proposal_price_label')}>
-            <p className="text-sm font-semibold text-foreground">{formatPrice(slot, t)}</p>
-          </DetailBlock>
+          {/* Empty state — accepted but no details yet */}
+          {!submitted ? (
+            <p className="text-sm text-muted-foreground italic py-2">
+              {t('slot_not_submitted')}
+            </p>
+          ) : (
+            <>
+              {/* 1. PRICE */}
+              <DetailBlock label={t('proposal_price_label')}>
+                <p className="text-sm font-semibold text-foreground">{formatPrice(slot, t)}</p>
+              </DetailBlock>
 
-          {/* Message */}
-          {slot.message && (
-            <DetailBlock label={t('proposal_message')}>
-              <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap">{slot.message}</p>
-            </DetailBlock>
+              {/* 2. ITINERARY */}
+              {slot.itinerary?.trim() && (
+                <DetailBlock label={t('proposal_itinerary')}>
+                  <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-line">
+                    {slot.itinerary}
+                  </p>
+                </DetailBlock>
+              )}
+
+              {/* 3. WHAT'S INCLUDED */}
+              {slot.included?.length > 0 && (
+                <DetailBlock label={t('proposal_included')}>
+                  <ul className="space-y-1.5">
+                    {slot.included.map((item, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm text-foreground/80">
+                        <span className="mt-0.5 w-4 h-4 rounded-full bg-emerald-500/15 text-emerald-500 dark:text-emerald-400 flex items-center justify-center text-[10px] shrink-0 font-bold">
+                          ✓
+                        </span>
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </DetailBlock>
+              )}
+
+              {/* 4. WHAT'S NOT INCLUDED */}
+              {slot.excluded?.length > 0 && (
+                <DetailBlock label={t('proposal_excluded')}>
+                  <ul className="space-y-1.5">
+                    {slot.excluded.map((item, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm text-foreground/80">
+                        <span className="mt-0.5 w-4 h-4 rounded-full bg-red-500/15 text-red-500 dark:text-red-400 flex items-center justify-center text-[10px] shrink-0 font-bold">
+                          ✕
+                        </span>
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </DetailBlock>
+              )}
+
+              {/* 5. MESSAGE FROM THE GUIDE */}
+              {slot.message?.trim() && (
+                <DetailBlock label={t('proposal_message')}>
+                  <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-line">
+                    {slot.message}
+                  </p>
+                </DetailBlock>
+              )}
+
+              {/* 6. IMAGES */}
+              {slot.images?.length > 0 && (
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground/80 mb-2">
+                    {t('proposal_images')}
+                  </p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {slot.images.map((img, i) => (
+                      <a key={i} href={img} target="_blank" rel="noreferrer">
+                        <img
+                          src={img}
+                          alt=""
+                          className="w-full aspect-square object-cover rounded-xl border border-border/30 hover:opacity-90 transition-opacity"
+                        />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
 
-          {/* Itinerary */}
-          {slot.itinerary && (
-            <DetailBlock label={t('proposal_itinerary')}>
-              <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap">{slot.itinerary}</p>
-            </DetailBlock>
-          )}
-
-          {/* Included */}
-          {slot.included?.length > 0 && (
-            <DetailBlock label={t('proposal_included')}>
-              <ul className="space-y-1.5">
-                {slot.included.map((item, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-foreground/80">
-                    <span className="mt-0.5 w-4 h-4 rounded-full bg-emerald-500/15 text-emerald-400 flex items-center justify-center text-[10px] shrink-0">✓</span>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </DetailBlock>
-          )}
-
-          {/* Excluded */}
-          {slot.excluded?.length > 0 && (
-            <DetailBlock label={t('proposal_excluded')}>
-              <ul className="space-y-1.5">
-                {slot.excluded.map((item, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-foreground/80">
-                    <span className="mt-0.5 w-4 h-4 rounded-full bg-red-500/15 text-red-400 flex items-center justify-center text-[10px] shrink-0">✗</span>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </DetailBlock>
-          )}
-
-          {/* Images */}
-          {slot.images?.length > 0 && (
-            <div>
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground/80 mb-2">
-                {t('proposal_images')}
-              </p>
-              <div className="grid grid-cols-3 gap-2">
-                {slot.images.map((img, i) => (
-                  <a key={i} href={img} target="_blank" rel="noreferrer">
-                    <img
-                      src={img}
-                      alt=""
-                      className="w-full aspect-square object-cover rounded-xl border border-border/30 hover:opacity-90 transition-opacity"
-                    />
-                  </a>
-                ))}
-              </div>
-            </div>
-          )}
-
+          {/* View profile — always shown */}
           <Link
             to={path}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent text-white text-sm font-semibold hover:bg-accent/90 transition-colors"
@@ -174,15 +218,6 @@ function ProposalDetailModal({ slot, onClose }) {
         </div>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function DetailBlock({ label, children }) {
-  return (
-    <div className="p-3.5 rounded-xl bg-background/40 border border-border/30">
-      <p className="text-[10px] uppercase tracking-wider text-muted-foreground/80 mb-1.5">{label}</p>
-      {children}
-    </div>
   );
 }
 
@@ -220,7 +255,9 @@ function ProposalRow({ slot }) {
         </Link>
 
         <div className="hidden sm:block text-xs text-muted-foreground shrink-0 text-right">
-          {slot.price != null ? `${slot.price} ${slot.currency || ''}` : '—'}
+          {slot.price != null
+            ? `${Number(slot.price).toLocaleString('en-US')} ${slot.currency || ''}`
+            : '—'}
         </div>
 
         <button
