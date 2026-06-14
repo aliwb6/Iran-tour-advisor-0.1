@@ -262,7 +262,7 @@ export default function CityPage() {
 
     // Empty-state copy
     noTours:     lang === 'fa' ? 'هنوز پکیج توری برای این شهر ثبت نشده است.' : lang === 'ar' ? 'لا توجد باقات سياحية لهذه المدينة بعد.' : 'No tour packages available for this city yet.',
-    noToursSub:  lang === 'fa' ? 'به‌زودی برگرد یا با دستیار هوشمند ما برنامه‌ریزی کن.' : lang === 'ar' ? 'تحقق لاحقاً أو خطّط مع مساعدنا الذكي.' : 'Check back soon or plan with our AI Assistant.',
+    noToursSub:  lang === 'fa' ? 'به‌زودی دوباره سر بزن — در حال افزودن پکیج‌های جدید هستیم.' : lang === 'ar' ? 'تحقق لاحقاً — نضيف باقات جديدة قريباً.' : "Check back soon — we're adding new packages.",
     planWithAi:  lang === 'fa' ? 'برنامه‌ریزی با هوش مصنوعی' : lang === 'ar' ? 'خطّط مع الذكاء الاصطناعي' : 'Plan with AI',
     noGuides:    lang === 'fa' ? 'هنوز راهنمای محلی برای این شهر ثبت نشده است.' : lang === 'ar' ? 'لا يوجد مرشدون محليون مسجلون لهذه المدينة بعد.' : 'No local guides registered for this city yet.',
     noGuidesSub: lang === 'fa' ? 'می‌خواهی به‌عنوان راهنما ثبت‌نام کنی؟' : lang === 'ar' ? 'هل تريد الانضمام كمرشد؟' : 'Want to become a guide?',
@@ -445,9 +445,10 @@ export default function CityPage() {
           </motion.div>
         </AnimatePresence>
 
-        {/* "Plan with AI" content card is always reachable from the bottom of
-            the page even when the user is on another tab. */}
-        {tab !== 'ai' && (
+        {/* "Plan with AI" banner — shown only on cities that actually have
+            published tours, so cities with no packages aren't over-pushed
+            toward the AI assistant. */}
+        {tab !== 'ai' && !toursLoading && tours.length > 0 && (
           <PlanWithAiCard cityName={city.name} navigate={navigate} tx={tx} />
         )}
       </main>
@@ -493,14 +494,6 @@ function TourGrid({ tours, cityName, tx, Arrow, loading, searchActive, navigate 
         </div>
         <p className="font-heading text-lg text-foreground font-semibold">{tx.noTours}</p>
         <p className="font-body text-sm text-muted-foreground mt-2">{tx.noToursSub}</p>
-        <button
-          onClick={() => navigate(`/ai-assistant?city=${encodeURIComponent(cityName)}`)}
-          className="mt-6 inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-gold hover:bg-gold-light text-navy text-sm font-semibold transition-all hover:shadow-lg hover:shadow-gold/30"
-        >
-          <Sparkles className="w-4 h-4" />
-          {tx.planWithAi}
-          <ArrowUpRight className="w-4 h-4" />
-        </button>
       </div>
     );
   }
