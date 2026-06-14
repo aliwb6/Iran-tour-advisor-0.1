@@ -1,21 +1,45 @@
 const DRAFT_RE = /\[\[TRIP_DRAFT\]\]([\s\S]*?)\[\[\/TRIP_DRAFT\]\]/;
+// Opening marker with no matching close (e.g. the model was cut off mid-block).
+const OPEN_TO_END_RE = /\[\[TRIP_DRAFT\]\][\s\S]*$/;
+// Any leftover opening/closing marker — the final safety net.
+const STRAY_MARKER_RE = /\[\[\/?TRIP_DRAFT\]\]/g;
+
+function tryParseDraft(text) {
+  if (!text || typeof text !== 'string') return null;
+  // `{3} matches three backticks without writing them literally.
+  const cleaned = text.replace(/`{3}(?:json)?/gi, '').replace(/`{3}/g, '');
+  const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) return null;
+  try {
+    return JSON.parse(jsonMatch[0]);
+  } catch {
+    return null;
+  }
+}
 
 export function extractTripDraft(raw) {
-  if (!raw) return { content: raw, draft: null };
-  const blockMatch = raw.match(DRAFT_RE);
-  if (!blockMatch) return { content: raw, draft: null };
-  try {
-    let inner = blockMatch[1];
-    // Strip optional ```json fence the model may wrap around the object
-    inner = inner.replace(/```(?:json)?/g, '').replace(/```/g, '');
-    const jsonMatch = inner.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) return { content: raw, draft: null };
-    const draft = JSON.parse(jsonMatch[0]);
-    const content = raw.replace(DRAFT_RE, '').trim();
-    return { content, draft };
-  } catch {
-    return { content: raw, draft: null };
+  if (!raw || typeof raw !== 'string') return { content: raw, draft: null };
+
+  let draft = null;
+  let content = raw;
+
+  const full = raw.match(DRAFT_RE);
+  if (full) {
+    // Well-formed block: parse what we can, but ALWAYS strip the whole block,
+    // even if the JSON inside is malformed.
+    draft = tryParseDraft(full[1]);
+    content = raw.replace(DRAFT_RE, '');
+  } else if (OPEN_TO_END_RE.test(raw)) {
+    // Opening marker present but no closing marker: strip from marker to end.
+    const open = raw.match(OPEN_TO_END_RE);
+    draft = tryParseDraft(open[0]);
+    content = raw.replace(OPEN_TO_END_RE, '');
   }
+
+  // Guarantee no raw marker ever survives into the visible message.
+  content = content.replace(STRAY_MARKER_RE, '').trim();
+
+  return { content, draft };
 }
 
 // ── Canonical sets ────────────────────────────────────────────────────────────
