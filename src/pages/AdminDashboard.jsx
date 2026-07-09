@@ -121,7 +121,7 @@ function Sidebar({ section, onNavigate, counts, profile, onLogout }) {
             <Shield className="w-3.5 h-3.5 text-white" />
           </div>
           <span className="text-white font-semibold text-sm leading-tight">
-            Iran Tour Advisor<br />
+            Iran Trip Advisor<br />
             <span className="text-[hsl(38,62%,58%)] font-normal text-[10px] tracking-wider uppercase">Admin Panel</span>
           </span>
         </Link>

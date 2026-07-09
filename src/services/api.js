@@ -23,7 +23,7 @@ export async function sendChatMessage(messages, systemPrompt, language = 'en', m
       Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
       'HTTP-Referer': window.location.origin,
-      'X-Title': 'Iran Tour Advisor',
+      'X-Title': 'Iran Trip Advisor',
     },
     body: JSON.stringify(payload),
   });

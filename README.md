@@ -1,6 +1,6 @@
-# Iran Tour Advisor
+# Iran Trip Advisor
 
-Iran Tour Advisor is a modern AI-powered cultural travel platform designed for international travelers who want to explore the authentic soul of Iran through curated journeys, local experiences, and personalized travel planning.
+Iran Trip Advisor is a modern AI-powered cultural travel platform designed for international travelers who want to explore the authentic soul of Iran through curated journeys, local experiences, and personalized travel planning.
 
 The platform connects travelers with carefully designed tour packages based on their travel goals — including architecture, history, culture, photography, food, nature, desert adventures, luxury travel, and research-focused experiences.
 
@@ -8,21 +8,21 @@ In addition to curated tours, travelers can connect with local guides across dif
 
 ## Core Features
 
-* Curated Iran travel packages
-* Goal-based travel experiences
-* AI-powered travel assistant
-* Personalized trip builder
-* Local tour guide marketplace
-* Multilingual platform (English, Persian, Arabic)
-* Modern premium UI/UX
-* Fully responsive experience
-* Admin dashboard & CMS
-* Smart travel discovery system
-* Cultural storytelling-focused design
+- Curated Iran travel packages
+- Goal-based travel experiences
+- AI-powered travel assistant
+- Personalized trip builder
+- Local tour guide marketplace
+- Multilingual platform (English, Persian, Arabic)
+- Modern premium UI/UX
+- Fully responsive experience
+- Admin dashboard & CMS
+- Smart travel discovery system
+- Cultural storytelling-focused design
 
 ## Platform Vision
 
-Iran Tour Advisor aims to introduce the real beauty of Iran through modern technology, local expertise, and immersive cultural experiences.
+Iran Trip Advisor aims to introduce the real beauty of Iran through modern technology, local expertise, and immersive cultural experiences.
 
 The platform is designed to make discovering Iran easier, safer, and more inspiring for global travelers while showcasing the country’s architecture, history, hospitality, art, food, and natural landscapes in a premium digital experience.
 
@@ -30,12 +30,12 @@ The platform is designed to make discovering Iran easier, safer, and more inspir
 
 The platform combines:
 
-* Modern travel technology
-* AI-assisted planning
-* Authentic Iranian culture
-* Minimal luxury aesthetics
-* Human-centered UX
-* Story-driven travel experiences
+- Modern travel technology
+- AI-assisted planning
+- Authentic Iranian culture
+- Minimal luxury aesthetics
+- Human-centered UX
+- Story-driven travel experiences
 
 ## Main Sections
 
@@ -59,33 +59,33 @@ Create personalized travel itineraries based on destination, duration, interests
 
 Optimized for:
 
-* English
-* فارسی
-* العربية
+- English
+- فارسی
+- العربية
 
 With full RTL/LTR support and culturally adaptive UX.
 
 ## Future Roadmap
 
-* Smart AI itinerary generation
-* Booking & reservation system
-* Guide verification system
-* Interactive maps & travel timelines
-* Community reviews
-* Personalized recommendations
-* Advanced admin analytics
-* Travel journal & content platform
+- Smart AI itinerary generation
+- Booking & reservation system
+- Guide verification system
+- Interactive maps & travel timelines
+- Community reviews
+- Personalized recommendations
+- Advanced admin analytics
+- Travel journal & content platform
 
 ## Design Direction
 
-Iran Tour Advisor is designed to feel:
+Iran Trip Advisor is designed to feel:
 
-* Cinematic
-* Authentic
-* Premium
-* Minimal
-* Intelligent
-* Emotionally immersive
+- Cinematic
+- Authentic
+- Premium
+- Minimal
+- Intelligent
+- Emotionally immersive
 
 ---
 

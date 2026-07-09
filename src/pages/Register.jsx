@@ -175,7 +175,7 @@ export default function Register() {
               <Star className="w-5 h-5 text-white" />
             </div>
             <span className="font-heading text-white text-xl font-bold tracking-wide">
-              Iran Tour Advisor
+              Iran Trip Advisor
             </span>
           </div>
 

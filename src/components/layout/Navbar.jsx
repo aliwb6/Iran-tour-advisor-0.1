@@ -130,7 +130,7 @@ export default function Navbar() {
               <div className="flex flex-col leading-none">
                 <span className={`font-heading text-base font-semibold tracking-wide transition-colors ${
                   isLight ? 'text-white' : 'text-foreground'
-                }`}>Iran Tour Advisor</span>
+                }`}>Iran Trip Advisor</span>
                 <span className="font-body text-[9px] uppercase tracking-[0.18em] text-gold/80">{t('brand_tagline')}</span>
               </div>
             </Link>

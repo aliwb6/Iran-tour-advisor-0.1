@@ -63,7 +63,7 @@ const AuthenticatedApp = () => {
           <div className="w-10 h-10 rounded-full border-2 border-gold flex items-center justify-center">
             <div className="w-3 h-3 bg-accent rounded-full animate-pulse" />
           </div>
-          <span className="font-body text-sm text-muted-foreground">Iran Tour Advisor</span>
+          <span className="font-body text-sm text-muted-foreground">Iran Trip Advisor</span>
         </div>
       </div>
     );

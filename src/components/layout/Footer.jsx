@@ -30,7 +30,7 @@ export default function Footer() {
                 <Compass className="w-4 h-4 text-turquoise" />
               </div>
               <div>
-                <p className="font-heading text-base font-semibold text-white">Iran Tour Advisor</p>
+                <p className="font-heading text-base font-semibold text-white">Iran Trip Advisor</p>
                 <p className="font-body text-[9px] uppercase tracking-[0.18em] text-gold/60">{t('brand_tagline')}</p>
               </div>
             </Link>
@@ -120,7 +120,7 @@ export default function Footer() {
         {/* Bottom bar */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-6 border-t border-white/10">
           <p className="font-body text-xs text-white/35">
-            © {new Date().getFullYear()} Iran Tour Advisor. {t('footer_rights')}.
+            © {new Date().getFullYear()} Iran Trip Advisor. {t('footer_rights')}.
           </p>
           <div className="flex items-center gap-5">
             <a href="#" className="font-body text-xs text-white/35 hover:text-white/60 transition-colors">{t('footer_privacy')}</a>

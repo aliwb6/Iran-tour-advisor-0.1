@@ -339,7 +339,7 @@ function buildSystemPrompt(tours, guides, responseLang = 'English') {
         .join('\n')
     : '(no guides available right now)';
 
-  return `You are Aria, a warm and deeply knowledgeable travel companion for Iran Tour Advisor. You are FIRST a cultural guide and storyteller — an expert on Iran's history, architecture, cities, art, food, nature, customs, and practical travel — and only SECOND someone who can suggest a tour or a local guide. You are a real advisor, never a brochure.
+  return `You are Aria, a warm and deeply knowledgeable travel companion for Iran Trip Advisor. You are FIRST a cultural guide and storyteller — an expert on Iran's history, architecture, cities, art, food, nature, customs, and practical travel — and only SECOND someone who can suggest a tour or a local guide. You are a real advisor, never a brochure.
 
 CRITICAL LANGUAGE RULE: You MUST reply in ${responseLang} only. Never switch languages under any circumstances.
 
@@ -451,8 +451,8 @@ function buildGreeting(cityHint, lang) {
     return `Salaam! I see you're curious about ${cityHint} — great choice. What's drawing you there?`;
   }
   if (lang === 'fa') return 'سلام! من راهنمای سفر هوشمند ایران تور ادوایزر هستم. بگو ببینم، چه چیزی تو را به ایران می‌کشاند؟';
-  if (lang === 'ar') return 'مرحباً! أنا مستشار سفرك إلى إيران من Iran Tour Advisor. أخبرني، ما الذي يجذبك إلى إيران؟';
-  return "Salaam! I'm your Iran travel advisor at Iran Tour Advisor. Tell me — what's drawing you to Iran?";
+  if (lang === 'ar') return 'مرحباً! أنا مستشار سفرك إلى إيران من Iran Trip Advisor. أخبرني، ما الذي يجذبك إلى إيران؟';
+  return "Salaam! I'm your Iran travel advisor at Iran Trip Advisor. Tell me — what's drawing you to Iran?";
 }
 
 // ── Shared recommendations panel content (desktop sidebar + mobile sheet) ─────
@@ -991,7 +991,7 @@ export default function AIAssistant() {
                     className="text-[10px] font-semibold uppercase tracking-[0.18em]"
                     style={{ color: C.turq }}
                   >
-                    Iran Tour Advisor
+                    Iran Trip Advisor
                   </div>
                   <h1
                     className="text-[15px] sm:text-[20px] lg:text-[22px] font-bold leading-tight truncate"

@@ -491,7 +491,7 @@ function Step3({ lang }) {
 
   const bullets = [
     lang === 'fa' ? 'به زودی پیشنهادات سفر شخصی دریافت خواهید کرد' : 'You will receive personalized travel proposals shortly',
-    lang === 'fa' ? 'ممکن است یک نماینده ایران تور ادوایزر با شما تماس بگیرد' : 'An Iran Tour Advisor representative may contact you',
+    lang === 'fa' ? 'ممکن است یک نماینده ایران تور ادوایزر با شما تماس بگیرد' : 'An Iran Trip Advisor representative may contact you',
     lang === 'fa' ? 'برای کمک فوری از دستیار هوش مصنوعی ما استفاده کنید' : 'For immediate assistance, use our AI Assistant',
     lang === 'fa' ? '#آیا می‌دانستید با رزرو راهنمای محلی از جوامع ایرانی حمایت می‌کنید' : '#didyouknow By booking a local guide you support Iranian communities',
   ];
