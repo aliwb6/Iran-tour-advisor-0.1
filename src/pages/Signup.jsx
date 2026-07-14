@@ -157,12 +157,8 @@ export default function Signup() {
         if (profileError) throw profileError;
       }
 
-      if (formData.role === 'guide' || formData.role === 'agency') {
-        navigate('/dashboard');
-      } else {
-        navigate('/');
-        window.location.reload();
-      }
+      navigate('/');
+      window.location.reload();
     } catch (err) {
       setError(
         lang === 'fa'
