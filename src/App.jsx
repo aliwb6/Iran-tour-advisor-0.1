@@ -36,6 +36,7 @@ import CityPage from '@/pages/CityPage';
 import FindJobs from '@/pages/FindJobs';
 import MyTripRequests from '@/pages/MyTripRequests';
 import RequestDetailPage from '@/pages/profile/RequestDetailPage';
+import { NotificationsProvider } from '@/lib/NotificationsContext';
 
 function TripRequestsRedirect() {
   const { isAuthenticated, isLoadingAuth } = useAuth();
@@ -117,17 +118,19 @@ const AuthenticatedApp = () => {
 function App() {
   return (
     <AuthProvider>
-      <QueryClientProvider client={queryClientInstance}>
-        <ThemeProvider>
-          <I18nProvider>
-            <Router>
-              <AuthenticatedApp />
-            </Router>
-            <Toaster />
-            <SonnerToaster richColors position="top-right" />
-          </I18nProvider>
-        </ThemeProvider>
-      </QueryClientProvider>
+      <NotificationsProvider>
+        <QueryClientProvider client={queryClientInstance}>
+          <ThemeProvider>
+            <I18nProvider>
+              <Router>
+                <AuthenticatedApp />
+              </Router>
+              <Toaster />
+              <SonnerToaster richColors position="top-right" />
+            </I18nProvider>
+          </ThemeProvider>
+        </QueryClientProvider>
+      </NotificationsProvider>
     </AuthProvider>
   )
 }
