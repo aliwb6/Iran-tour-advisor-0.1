@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Bell, X, Check, CheckCheck, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNotifications } from '@/hooks/useNotifications';
+import { useNotificationsContext } from '@/lib/NotificationsContext';
 import { useAuth } from '@/lib/AuthContext';
 
 function timeAgo(dateStr) {
@@ -23,7 +23,7 @@ const TYPE_COLORS = {
 
 export default function NotificationBell({ isLight }) {
   const { user } = useAuth();
-  const { notifications, unreadCount, loading, markAllRead, markOneRead } = useNotifications(user?.id);
+  const { notifications, unreadCount, loading, markAllRead, markOneRead } = useNotificationsContext();
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
