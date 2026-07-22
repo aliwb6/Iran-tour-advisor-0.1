@@ -275,7 +275,7 @@ const translations = {
     signup_full_name_ph: "Your full name",
     signup_account_type: "Account Type",
     role_tourist: "Tourist",
-    role_guide: "Travelers Guide",
+    role_guide: "Tour Guide",
     role_agency: "Travel Agency",
     signup_gender: "Gender",
     gender_male: "Male",

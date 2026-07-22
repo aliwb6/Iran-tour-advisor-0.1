@@ -25,7 +25,7 @@ const COUNTRIES = [
 
 const ROLES = [
   { value: 'traveler', en: 'Traveler',        fa: 'مسافر',           icon: Compass },
-  { value: 'guide',    en: 'Travelers Guide', fa: 'راهنمای مسافران', icon: MapPin },
+  { value: 'guide',    en: 'Tour Guide', fa: 'راهنمای مسافران', icon: MapPin },
   { value: 'agency',   en: 'Travel Agency',   fa: 'آژانس مسافرتی',   icon: Building2 },
 ];
 
