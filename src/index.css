@@ -14,6 +14,15 @@
   font-display: swap;
 }
 
+/* Bold/Black weights of Khamenei have tight word spacing — compensate manually */
+.font-bold,
+.font-semibold,
+.font-black,
+h1, h2, h3 {
+  word-spacing: 0.2em;
+  letter-spacing: 0.01em;
+}
+
 @font-face {
   font-family: 'Khamenei';
   src: url('/fonts/Khamenei-Medium.ttf') format('truetype');
