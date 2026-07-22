@@ -232,7 +232,7 @@ export default function TourCard({ tour, image, index }) {
             )}
           </div>
           <button className="flex items-center gap-1.5 text-sm font-body font-semibold text-accent hover:gap-2.5 transition-all duration-200">
-            {t('package_inquiry')}
+            {t('card_read_more')}
             <span className="text-lg leading-none">→</span>
           </button>
         </div>

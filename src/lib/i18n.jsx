@@ -48,6 +48,7 @@ const translations = {
     package_cultural: "Cultural Intensity",
     package_view: "View Journey",
     package_inquiry: "Request Info",
+    card_read_more: "READ MORE",
     difficulty_easy: "Comfortable",
     difficulty_moderate: "Moderate",
     difficulty_challenging: "Adventurous",
