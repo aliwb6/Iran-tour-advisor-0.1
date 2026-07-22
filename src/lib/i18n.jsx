@@ -410,7 +410,7 @@ const translations = {
     username_taken: "This username is already taken.",
     username_saved: "Username updated.",
     username_copied: "Username copied",
-    request_cta: "Request this tour with your guide",
+    request_cta: "Request this tour with another guide",
     request_dialog_title: "Request this tour",
     request_dialog_desc: "Send this tour as a request to a specific guide or agency by their username.",
     request_username_label: "Guide / agency username",
