@@ -200,9 +200,9 @@ export default function TourFilters({ filters, onChange, resultCount }) {
 
           {/* Result count + reset */}
           <div className="flex items-center gap-3 ms-auto self-center px-2">
-            <span className="font-body text-sm text-muted-foreground whitespace-nowrap">
-              <span className="text-foreground font-semibold">{resultCount}</span>
-              {lang === 'fa' ? ' تور' : lang === 'ar' ? ' رحلة' : ' tours'}
+            <span className="font-body text-sm text-muted-foreground whitespace-nowrap inline-flex items-center gap-1">
+              <span className="text-accent font-bold text-2xl">{resultCount}</span>
+              {lang === 'fa' ? ' تور' : lang === 'ar' ? ' رحلة' : '    Tours'}
             </span>
             {hasActive && (
               <button
