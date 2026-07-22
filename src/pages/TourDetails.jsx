@@ -276,7 +276,7 @@ export default function TourDetails() {
         </Link>
 
         {/* Title overlay */}
-        <div className="absolute bottom-0 inset-x-0 p-6 sm:p-10">
+          <div className="absolute inset-0 flex items-center p-6 sm:p-10">
           <div className="max-w-7xl mx-auto">
             <motion.div
               initial={{ opacity: 0, y: 30 }}
@@ -308,9 +308,7 @@ export default function TourDetails() {
                 {title}
               </h1>
 
-              <p className="font-body text-white/80 text-lg max-w-2xl">
-                {desc}
-              </p>
+
             </motion.div>
           </div>
         </div>
@@ -366,18 +364,17 @@ export default function TourDetails() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-12">
-            {/* Overview */}
-            {desc && (
-              <section>
-                <h2 className="font-heading text-2xl font-semibold text-foreground mb-4">
-                  {lang === 'fa' ? 'مرور کلی' : lang === 'ar' ? 'نظرة عامة' : 'Overview'}
-                </h2>
-                <p className="font-body text-foreground/70 leading-relaxed">
-                  {desc}
-                </p>
-              </section>
-            )}
-
+          {/* Overview */}
+          {desc && (
+          <section>
+          <h2 className="font-heading text-2xl font-semibold text-foreground mb-4">
+            {lang === 'fa' ? 'مرور کلی' : lang === 'ar' ? 'نظرة عامة' : 'Overview'}
+            </h2>
+            <p className="font-body text-foreground/70 leading-relaxed">
+          {desc}
+          </p>
+          </section>
+                )}
             {/* Themes */}
             {themes.length > 0 && (
               <section>
