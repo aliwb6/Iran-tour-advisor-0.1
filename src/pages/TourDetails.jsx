@@ -443,42 +443,42 @@ export default function TourDetails() {
             )}
 
             {/* Included / Not Included */}
-            {(included.length > 0 || notIncluded.length > 0) && (
-              <section className="space-y-6">
-                {included.length > 0 && (
-                  <div>
-                    <h3 className="font-heading text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-                      <CheckCircle className="w-5 h-5 text-emerald-500" />
-                      {lang === 'fa' ? 'شامل' : lang === 'ar' ? 'مشمول' : 'Included'}
-                    </h3>
-                    <ul className="space-y-2">
-                      {included.map((item, i) => (
-                        <li key={i} className="flex items-start gap-2 font-body text-sm text-foreground/70">
-                          <CheckCircle className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
-                          {lookupInclusionLabel(item, lang)}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {notIncluded.length > 0 && (
-                  <div>
-                    <h3 className="font-heading text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-                      <XCircle className="w-5 h-5 text-red-500" />
-                      {lang === 'fa' ? 'شامل نیست' : lang === 'ar' ? 'غير مشمول' : 'Not Included'}
-                    </h3>
-                    <ul className="space-y-2">
-                      {notIncluded.map((item, i) => (
-                        <li key={i} className="flex items-start gap-2 font-body text-sm text-foreground/70">
-                          <XCircle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </section>
-            )}
+{(included.length > 0 || notIncluded.length > 0) && (
+  <section className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+    {included.length > 0 && (
+      <div>
+        <h3 className="font-heading text-lg font-bold text-foreground mb-4 flex items-center gap-2">
+          <CheckCircle className="w-5 h-5 text-emerald-500" />
+          {lang === 'fa' ? 'شامل' : lang === 'ar' ? 'مشمول' : 'Included'}
+        </h3>
+        <ul className="space-y-2">
+          {included.map((item, i) => (
+            <li key={i} className="flex items-start gap-2 font-body font-normal text-sm text-foreground/70">
+              <CheckCircle className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
+              {lookupInclusionLabel(item, lang)}
+            </li>
+          ))}
+        </ul>
+      </div>
+    )}
+    {notIncluded.length > 0 && (
+      <div>
+        <h3 className="font-heading text-lg font-bold text-foreground mb-4 flex items-center gap-2">
+          <XCircle className="w-5 h-5 text-red-500" />
+          {lang === 'fa' ? 'شامل نیست' : lang === 'ar' ? 'غير مشمول' : 'Not Included'}
+        </h3>
+        <ul className="space-y-2">
+          {notIncluded.map((item, i) => (
+            <li key={i} className="flex items-start gap-2 font-body font-normal text-sm text-foreground/70">
+              <XCircle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
+              {item}
+            </li>
+          ))}
+        </ul>
+      </div>
+    )}
+  </section>
+)}
 
             {/* Gallery */}
             {Array.isArray(tour.gallery) && tour.gallery.length > 0 && (

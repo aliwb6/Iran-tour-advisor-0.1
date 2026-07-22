@@ -141,12 +141,14 @@ export default function Navbar() {
                 <Link
                   key={link.path}
                   to={link.path}
-                  className={`relative px-3.5 py-2 text-[13px] font-body font-medium rounded-lg transition-all duration-300 ${
-                    isActive(link.path)
-                      ? 'text-accent'
-                      : isLight
-                        ? 'text-white/80 hover:text-white'
-                        : 'text-muted-foreground hover:text-foreground'
+                  className={`relative px-3.5 py-2 text-[13px] font-body font-medium rounded-full transition-all duration-300 ${
+                    link.path === '/tours'
+                      ? 'border border-border/70 bg-secondary/40 hover:bg-secondary/60 hover:border-border text-black hover:text-black'
+                      : isActive(link.path)
+                        ? 'text-accent'
+                        : isLight
+                          ? 'text-white/80 hover:text-white'
+                          : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
                   {link.label}
