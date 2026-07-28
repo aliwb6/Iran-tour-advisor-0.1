@@ -28,7 +28,7 @@ export default function Navbar() {
 
   // Role derivations must come first — used by navLinks below
   const role = profile?.role || user?.user_metadata?.role;
-  const isAdmin = profile?.role === 'admin';
+  const isAdmin = profile?.role === 'admin' || profile?.is_admin === true;
   const isGuideOrAgency = role === 'guide' || role === 'agency';
   const isTourist = role === 'tourist' || role === 'traveler';
 
