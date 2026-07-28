@@ -334,6 +334,7 @@ function useProfilesByRole(roles) {
           .select('*')
           .in('role', list)
           .eq('is_approved', true)
+          .eq('profile_completed', true)
           .order('created_at', { ascending: false });
 
         if (supabaseError) throw supabaseError;

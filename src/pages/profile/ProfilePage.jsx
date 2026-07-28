@@ -216,7 +216,7 @@ export default function ProfilePage() {
         </motion.div>
       </section>
 
-      {/* ── Pending approval banner (guide / agency only) ── */}
+      {/* ── Pending approval / incomplete profile banner (guide / agency only) ── */}
       {(localProfile?.role === 'guide' || localProfile?.role === 'agency') && !localProfile?.is_approved && (
         <div className="max-w-6xl mx-auto px-5 sm:px-8 lg:px-10 mt-6">
           <div className="flex items-start gap-3 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30">
@@ -227,6 +227,22 @@ export default function ProfilePage() {
               </p>
               <p className="font-body text-sm text-amber-700/80 dark:text-amber-400/80 mt-0.5">
                 {t('profile_pending_desc')}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ── Incomplete profile banner ── */}
+      {(localProfile?.role === 'guide' || localProfile?.role === 'agency') && !localProfile?.profile_completed && localProfile?.is_approved && (
+        <div className="max-w-6xl mx-auto px-5 sm:px-8 lg:px-10 mt-6">
+          <div className="flex items-start gap-3 p-4 rounded-2xl bg-red-500/10 border border-red-500/30">
+            <Clock className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-heading text-sm font-semibold text-red-700 dark:text-red-400">
+                Profile Incomplete
+              </p>
+              <p className="font-body text-sm text-red-700/80 dark:text-red-400/80 mt-0.5">
+                Your profile is not publicly visible because required fields are missing. Please complete your profile from the dashboard.
               </p>
             </div>
           </div>

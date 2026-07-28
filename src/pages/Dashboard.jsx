@@ -21,6 +21,8 @@ import MyArticlesSection from '../components/dashboard/MyArticlesSection';
 import GuideRequestsView from '@/components/dashboard/GuideRequestsView';
 import NotificationsView from '@/components/dashboard/NotificationsView';
 import TripRequestForm from '@/components/profile/TripRequestForm';
+import ProfileCompletionChecklist from '@/components/dashboard/ProfileCompletionChecklist';
+import { checkProfileCompletion } from '@/lib/profileCompletion';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -83,7 +85,8 @@ function StarRating({ rating }) {
 function Sidebar({ section, onNavigate, profileExpanded, setProfileExpanded, userName, userRole, onLogout, profile }) {
   const { t, lang, dir } = useI18n();
   const activeId = section || 'home';
-  const canAddTour = !profile || profile.role === 'traveler' || profile.license_status === 'verified';
+  const profileCheck = profile ? checkProfileCompletion(profile) : null;
+  const canAddTour = !profile || profile.role === 'traveler' || (profile.license_status === 'verified' && profileCheck?.completed);
 
   const NAV_LABELS = {
     home:        t('dashboard_nav_home'),
@@ -141,14 +144,14 @@ function Sidebar({ section, onNavigate, profileExpanded, setProfileExpanded, use
             <button
               onClick={() => {
                 if (isDisabled) {
-                  alert(item.id === 'add-tour' && profile?.role !== 'traveler' ? 'Please verify your license document before creating tours.' : '');
+                  alert(item.id === 'add-tour' && profile?.role !== 'traveler' ? t('profile_completion_required_for_tour') : '');
                   return;
                 }
                 if (item.sub) setProfileExpanded(v => !v);
                 else onNavigate(item.id);
               }}
               disabled={isDisabled}
-              title={isDisabled ? 'License verification required' : ''}
+              title={isDisabled ? t('profile_completion_required_for_tour') : ''}
               className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-left text-xs font-medium transition-all duration-150 group ${
                 isDisabled
                   ? 'text-white/25 cursor-not-allowed opacity-50'
@@ -1907,6 +1910,10 @@ export default function Dashboard() {
     init();
   }, [navigate]);
 
+  const isGuideOrAgency = profile?.role === 'guide' || profile?.role === 'agency';
+  const profileCheck = profile ? checkProfileCompletion(profile) : null;
+  const profileIncomplete = isGuideOrAgency && !profileCheck?.completed;
+
   const nav = (sec) => {
     setEditingTour(null);
     navigate(sec === 'home' ? '/dashboard' : `/dashboard/${sec}`);
@@ -1930,6 +1937,21 @@ export default function Dashboard() {
 
   const handleProfileSaved = (updated) => {
     setProfile(updated);
+  };
+
+  const handleSubmitForReview = async () => {
+    if (!authUser?.id) return;
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ review_requested: true })
+        .eq('id', authUser.id);
+      if (error) throw error;
+      setProfile(p => ({ ...p, review_requested: true }));
+      toast.success(_t('profile_review_request_sent'));
+    } catch (err) {
+      toast.error(err.message);
+    }
   };
 
   const handleLogout = async () => {
@@ -1970,7 +1992,16 @@ export default function Dashboard() {
       case 'my-tours':
         return <MyToursView tours={tours} onEdit={setEditingTour} onDelete={handleDeleteTour} />;
       case 'profile':
-        return <ProfileView profile={profile} userId={authUser?.id} onSave={handleProfileSaved} />;
+        return (
+          <>
+            <ProfileView profile={profile} userId={authUser?.id} onSave={handleProfileSaved} />
+            {isGuideOrAgency && (
+              <div className="mt-6">
+                <ProfileCompletionChecklist profile={profile} />
+              </div>
+            )}
+          </>
+        );
       case 'gallery':
         return <GalleryView profile={profile} userId={authUser?.id} onSave={handleProfileSaved} />;
       case 'settings':
@@ -2011,6 +2042,49 @@ export default function Dashboard() {
       {/* Main content */}
       <main className="flex-1 overflow-y-auto">
         <div className="max-w-5xl mx-auto px-6 py-8">
+
+          {/* Profile completion banner */}
+          {profileIncomplete && (
+            <div className="mb-5 flex items-start gap-3 bg-amber-500/10 border border-amber-500/30 rounded-2xl px-4 py-3">
+              <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="text-amber-300 font-semibold text-sm mb-0.5">{_t('profile_incomplete_banner')}</p>
+                <p className="text-amber-200/60 text-xs">
+                  {profileCheck.passed}/{profileCheck.total}
+                  {lang === 'fa' ? ' فیلد تکمیل شده' : lang === 'ar' ? ' حقلاً مكتملة' : ' fields completed'}
+                </p>
+              </div>
+              <button
+                onClick={() => nav('profile')}
+                className="shrink-0 px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-medium transition-colors"
+              >
+                {_t('profile_incomplete_banner_link')}
+              </button>
+            </div>
+          )}
+
+          {/* Submit for Review */}
+          {isGuideOrAgency && profileCheck?.completed && !profile?.is_approved && (
+            <div className="mb-5 flex items-start gap-3 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl px-4 py-3">
+              <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="text-emerald-300 font-semibold text-sm mb-0.5">
+                  {profile?.review_requested
+                    ? _t('profile_review_requested')
+                    : _t('profile_submit_for_review')}
+                </p>
+              </div>
+              {!profile?.review_requested && (
+                <button
+                  onClick={handleSubmitForReview}
+                  className="shrink-0 px-3 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-xs font-medium transition-colors"
+                >
+                  {_t('profile_submit_for_review')}
+                </button>
+              )}
+            </div>
+          )}
+
           <motion.div
             key={section + (editingTour?.id || '')}
             initial={{ opacity: 0, y: 12 }}

@@ -14,6 +14,7 @@ import TourForm from '@/components/dashboard/TourForm';
 import { useAllArticlesAdmin } from '@/hooks/useSupabase';
 import ArticleEditor from '@/components/articles/ArticleEditor';
 import AdminChatMonitor from './AdminChatMonitor';
+import { checkProfileCompletion } from '@/lib/profileCompletion';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -699,6 +700,7 @@ function GuidesView({ guides, loading, onToggleApproval, busyId }) {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {filtered.map(guide => {
             const busy = busyId === guide.id;
+            const comp = checkProfileCompletion(guide);
             return (
               <div key={guide.id} className={`${CARD} p-4`}>
                 <div className="flex items-start gap-3 mb-4">
@@ -731,15 +733,31 @@ function GuidesView({ guides, loading, onToggleApproval, busyId }) {
                       <MapPin className="w-3 h-3" />{guide.city}
                     </span>
                   )}
+                  {/* Profile completion badge */}
+                  <span className={`px-2 py-0.5 rounded-full font-medium border ${
+                    comp.completed
+                      ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25'
+                      : 'bg-amber-500/15 text-amber-400 border-amber-500/25'
+                  }`}>
+                    {comp.completed ? 'Profile Complete' : `Incomplete — ${comp.passed}/${comp.total}`}
+                  </span>
+                  {guide.review_requested && !guide.is_approved && (
+                    <span className="px-2 py-0.5 rounded-full font-medium border bg-blue-500/15 text-blue-400 border-blue-500/25">
+                      Review Requested
+                    </span>
+                  )}
                 </div>
 
                 <button
                   onClick={() => onToggleApproval(guide)}
-                  disabled={busy}
+                  disabled={busy || (!guide.is_approved && !comp.completed)}
+                  title={!guide.is_approved && !comp.completed ? 'Cannot approve: profile is incomplete' : ''}
                   className={`w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-medium transition border disabled:opacity-50 ${
                     guide.is_approved
                       ? 'bg-red-500/10 border-red-500/20 text-red-400 hover:bg-red-500/20'
-                      : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20'
+                      : comp.completed
+                        ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20'
+                        : 'bg-gray-500/10 border-gray-500/20 text-gray-400 cursor-not-allowed'
                   }`}
                 >
                   {busy
@@ -1117,7 +1135,8 @@ export default function AdminDashboard() {
           .single();
         if (cancelled) return;
         if (err) throw err;
-        if (!prof || prof.role !== 'admin') { navigate('/'); return; }
+        const isAdminUser = prof && (prof.role === 'admin' || prof.is_admin === true);
+        if (!isAdminUser) { navigate('/'); return; }
 
         setProfile(prof);
         setAuthChecked(true);

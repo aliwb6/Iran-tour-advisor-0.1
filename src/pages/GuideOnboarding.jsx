@@ -59,6 +59,7 @@ export default function GuideOnboarding() {
           specialty: formData.specialty,
           role: 'guide',
           is_approved: false,
+          profile_completed: false,
         })
         .eq('id', userId);
 
