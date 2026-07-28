@@ -77,7 +77,7 @@ export default function TourCard({ tour, image, index }) {
         {priceDisplay && (
           <div className="absolute bottom-4 end-4">
             <span className="font-heading text-white text-xl font-medium">
-              {t('price_from')}{priceDisplay}
+              {priceDisplay}
             </span>
           </div>
         )}
