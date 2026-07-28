@@ -1,16 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { useI18n } from '@/lib/i18n.jsx';
-import { ChevronDown, X, MapPin, SlidersHorizontal } from 'lucide-react';
+import { ChevronDown, X, MapPin } from 'lucide-react';
 
 // ── Data ─────────────────────────────────────────────────────────────────────
-
-const purposeOptions = [
-  { key: 'all',      icon: '✦', en: 'All Journeys',         fa: 'همه سفرها',        ar: 'كل الرحلات' },
-  { key: 'leisure',  icon: '☀', en: 'Leisure & Fun',        fa: 'تفریح و سرگرمی',   ar: 'ترفيه ومتعة' },
-  { key: 'work',     icon: '◈', en: 'Business',             fa: 'کسب‌وکار',          ar: 'أعمال' },
-  { key: 'research', icon: '◎', en: 'Research & Education', fa: 'تحقیق و آموزش',    ar: 'بحث وتعليم' },
-  { key: 'spiritual',icon: '✿', en: 'Spiritual & Religious',fa: 'معنوی و زیارتی',   ar: 'روحاني وديني' },
-];
 
 const themeOptions = [
   { key: 'all',         en: 'All Themes',        fa: 'همه تم‌ها',       ar: 'كل الأنواع' },
@@ -139,11 +131,11 @@ function FilterDropdown({ label, value, options, onChange, lang, icon: Icon }) {
 export default function TourFilters({ filters, onChange, resultCount }) {
   const { lang, dir } = useI18n();
 
-  const hasActive = filters.purpose !== 'all' || filters.theme !== 'all'
+  const hasActive = filters.theme !== 'all'
     || filters.duration !== 'all' || (filters.city && filters.city !== 'all')
     || (filters.price && filters.price !== 'all');
 
-  const reset = () => onChange({ purpose: 'all', theme: 'all', duration: 'all', city: 'all', price: 'all' });
+  const reset = () => onChange({ theme: 'all', duration: 'all', city: 'all', price: 'all' });
 
   return (
     <div dir={dir} className="mb-12">
@@ -160,14 +152,6 @@ export default function TourFilters({ filters, onChange, resultCount }) {
         <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-accent/[0.03] via-card/80 to-gold/[0.03] border border-border/40 backdrop-blur-sm" />
 
         <div className="relative flex flex-wrap gap-3 p-4">
-          <FilterDropdown
-            label={lang === 'fa' ? 'هدف' : lang === 'ar' ? 'الهدف' : 'Purpose'}
-            value={filters.purpose || 'all'}
-            options={purposeOptions}
-            onChange={(v) => onChange({ ...filters, purpose: v })}
-            lang={lang}
-            icon={SlidersHorizontal}
-          />
           <FilterDropdown
             label={lang === 'fa' ? 'شهر' : lang === 'ar' ? 'المدينة' : 'City'}
             value={filters.city || 'all'}

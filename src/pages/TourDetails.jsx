@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useI18n } from '@/lib/i18n.jsx';
 import { motion } from 'framer-motion';
 import {
-  Clock, MapPin, CheckCircle, XCircle,
+  CheckCircle, XCircle,
   ArrowRight, ArrowLeft, Star, Lock, Instagram, Loader2, Send,
 } from 'lucide-react';
 import { useTourBySlug, FALLBACK_IMAGE } from '@/hooks/useSupabase';
@@ -87,6 +87,7 @@ export default function TourDetails() {
   const [reqUsername, setReqUsername] = useState('');
   const [reqMessage, setReqMessage] = useState('');
   const [reqDate, setReqDate] = useState('');
+  const [reqEndDate, setReqEndDate] = useState('');
   const [reqGroupSize, setReqGroupSize] = useState('');
   const [reqLoading, setReqLoading] = useState(false);
 
@@ -94,6 +95,7 @@ export default function TourDetails() {
     setReqUsername('');
     setReqMessage('');
     setReqDate('');
+    setReqEndDate('');
     setReqGroupSize('');
   };
 
@@ -136,6 +138,7 @@ export default function TourDetails() {
         guide_id: guide.id,
         message: reqMessage || null,
         preferred_date: reqDate || null,
+        preferred_end_date: reqEndDate || null,
         group_size: reqGroupSize ? Number(reqGroupSize) : null,
         status: 'pending',
       });
@@ -276,7 +279,7 @@ export default function TourDetails() {
         </Link>
 
         {/* Title overlay */}
-          <div className="absolute inset-0 flex items-center p-6 sm:p-10">
+        <div className="absolute bottom-0 inset-x-0 p-6 sm:p-10">
           <div className="max-w-7xl mx-auto">
             <motion.div
               initial={{ opacity: 0, y: 30 }}
@@ -284,31 +287,20 @@ export default function TourDetails() {
               transition={{ duration: 0.6 }}
             >
               {/* Badges */}
-              <div className="flex flex-wrap gap-2 mb-4">
-                {tour.duration != null && (
-                  <span className="px-3 py-1.5 rounded-full bg-white/20 backdrop-blur-sm text-white text-xs font-body flex items-center gap-1.5">
-                    <Clock className="w-3.5 h-3.5" />
-                    {tour.duration} {t('package_duration')}
-                  </span>
-                )}
-                {location && (
-                  <span className="px-3 py-1.5 rounded-full bg-white/20 backdrop-blur-sm text-white text-xs font-body flex items-center gap-1.5">
-                    <MapPin className="w-3.5 h-3.5" />
-                    {location}
-                  </span>
-                )}
-                {tour.purpose && purposeBadgeConfig[tour.purpose] && (
+              {tour.purpose && purposeBadgeConfig[tour.purpose] && (
+                <div className="flex flex-wrap gap-2 mb-4">
                   <span className={`px-3 py-1.5 rounded-full text-xs font-body font-medium ${purposeBadgeConfig[tour.purpose].color}`}>
                     {purposeBadgeConfig[tour.purpose][lang] || purposeBadgeConfig[tour.purpose].en}
                   </span>
-                )}
-              </div>
+                </div>
+              )}
 
-              <h1 className="font-heading text-4xl sm:text-5xl lg:text-6xl text-white mb-4">
+              <h1
+                className="font-heading text-4xl sm:text-5xl lg:text-6xl text-white mb-4"
+                style={{ WebkitTextStroke: '1px black' }}
+              >
                 {title}
               </h1>
-
-
             </motion.div>
           </div>
         </div>
@@ -347,6 +339,23 @@ export default function TourDetails() {
                 <p className="font-heading text-lg font-semibold text-foreground">{t(`cultural_${cultural}`)}</p>
               </div>
             )}
+            {themes.length > 0 && (
+              <div>
+                <p className="font-body text-xs text-muted-foreground mb-1">
+                  {lang === 'fa' ? 'موضوعات' : lang === 'ar' ? 'المواضيع' : 'Themes'}
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {themes.map((th, i) => (
+                    <span
+                      key={i}
+                      className="px-2.5 py-0.5 rounded-full bg-accent/10 border border-accent/20 text-accent text-xs font-body font-medium"
+                    >
+                      {th}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {priceFrom != null && (
@@ -364,33 +373,15 @@ export default function TourDetails() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-12">
-          {/* Overview */}
-          {desc && (
-          <section>
-          <h2 className="font-heading text-2xl font-semibold text-foreground mb-4">
-            {lang === 'fa' ? 'مرور کلی' : lang === 'ar' ? 'نظرة عامة' : 'Overview'}
-            </h2>
-            <p className="font-body text-foreground/70 leading-relaxed">
-          {desc}
-          </p>
-          </section>
-                )}
-            {/* Themes */}
-            {themes.length > 0 && (
+            {/* Overview */}
+            {desc && (
               <section>
                 <h2 className="font-heading text-2xl font-semibold text-foreground mb-4">
-                  {lang === 'fa' ? 'موضوع تور' : lang === 'ar' ? 'موضوع الرحلة' : 'Tour Themes'}
+                  {lang === 'fa' ? 'مرور کلی' : lang === 'ar' ? 'نظرة عامة' : 'Overview'}
                 </h2>
-                <div className="flex flex-wrap gap-2">
-                  {themes.map((th, i) => (
-                    <span
-                      key={i}
-                      className="px-3 py-1.5 rounded-full bg-accent/10 border border-accent/20 text-accent text-xs font-body font-medium"
-                    >
-                      {th}
-                    </span>
-                  ))}
-                </div>
+                <p className="font-body text-foreground/70 leading-relaxed">
+                  {desc}
+                </p>
               </section>
             )}
 
@@ -443,42 +434,42 @@ export default function TourDetails() {
             )}
 
             {/* Included / Not Included */}
-{(included.length > 0 || notIncluded.length > 0) && (
-  <section className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-    {included.length > 0 && (
-      <div>
-        <h3 className="font-heading text-lg font-bold text-foreground mb-4 flex items-center gap-2">
-          <CheckCircle className="w-5 h-5 text-emerald-500" />
-          {lang === 'fa' ? 'شامل' : lang === 'ar' ? 'مشمول' : 'Included'}
-        </h3>
-        <ul className="space-y-2">
-          {included.map((item, i) => (
-            <li key={i} className="flex items-start gap-2 font-body font-normal text-sm text-foreground/70">
-              <CheckCircle className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
-              {lookupInclusionLabel(item, lang)}
-            </li>
-          ))}
-        </ul>
-      </div>
-    )}
-    {notIncluded.length > 0 && (
-      <div>
-        <h3 className="font-heading text-lg font-bold text-foreground mb-4 flex items-center gap-2">
-          <XCircle className="w-5 h-5 text-red-500" />
-          {lang === 'fa' ? 'شامل نیست' : lang === 'ar' ? 'غير مشمول' : 'Not Included'}
-        </h3>
-        <ul className="space-y-2">
-          {notIncluded.map((item, i) => (
-            <li key={i} className="flex items-start gap-2 font-body font-normal text-sm text-foreground/70">
-              <XCircle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
-              {item}
-            </li>
-          ))}
-        </ul>
-      </div>
-    )}
-  </section>
-)}
+            {(included.length > 0 || notIncluded.length > 0) && (
+              <section className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                {included.length > 0 && (
+                  <div>
+                    <h3 className="font-heading text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+                      <CheckCircle className="w-5 h-5 text-emerald-500" />
+                      {lang === 'fa' ? 'شامل' : lang === 'ar' ? 'مشمول' : 'Included'}
+                    </h3>
+                    <ul className="space-y-2">
+                      {included.map((item, i) => (
+                        <li key={i} className="flex items-start gap-2 font-body text-sm text-foreground/70">
+                          <CheckCircle className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
+                          {lookupInclusionLabel(item, lang)}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {notIncluded.length > 0 && (
+                  <div>
+                    <h3 className="font-heading text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+                      <XCircle className="w-5 h-5 text-red-500" />
+                      {lang === 'fa' ? 'شامل نیست' : lang === 'ar' ? 'غير مشمول' : 'Not Included'}
+                    </h3>
+                    <ul className="space-y-2">
+                      {notIncluded.map((item, i) => (
+                        <li key={i} className="flex items-start gap-2 font-body text-sm text-foreground/70">
+                          <XCircle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </section>
+            )}
 
             {/* Gallery */}
             {Array.isArray(tour.gallery) && tour.gallery.length > 0 && (
@@ -596,16 +587,30 @@ export default function TourDetails() {
               />
             </div>
 
-            {/* Preferred date */}
-            <div className="space-y-1.5">
-              <Label>{t('request_date_label')}</Label>
-              <Input
-                type="date"
-                value={reqDate}
-                onChange={(e) => setReqDate(e.target.value)}
-                min={new Date().toISOString().split('T')[0]}
-                dir="ltr"
-              />
+            {/* Preferred dates */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>{t('request_date_label')}</Label>
+                <Input
+                  type="date"
+                  value={reqDate}
+                  onChange={(e) => setReqDate(e.target.value)}
+                  min={new Date().toISOString().split('T')[0]}
+                  dir="ltr"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>
+                  {lang === 'fa' ? 'تاریخ پایان (اختیاری)' : lang === 'ar' ? 'تاريخ الانتهاء (اختياري)' : 'End date (optional)'}
+                </Label>
+                <Input
+                  type="date"
+                  value={reqEndDate}
+                  onChange={(e) => setReqEndDate(e.target.value)}
+                  min={reqDate || new Date().toISOString().split('T')[0]}
+                  dir="ltr"
+                />
+              </div>
             </div>
 
             {/* Group size */}
@@ -616,7 +621,7 @@ export default function TourDetails() {
                 min={1}
                 value={reqGroupSize}
                 onChange={(e) => setReqGroupSize(e.target.value)}
-                placeholder="2"
+                placeholder="1"
                 dir="ltr"
               />
             </div>
