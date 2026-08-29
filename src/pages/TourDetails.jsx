@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useI18n } from '@/lib/i18n.jsx';
 import { motion } from 'framer-motion';
 import {
   CheckCircle, XCircle,
-  ArrowRight, ArrowLeft, Star, Lock, Instagram, Loader2, Send,
+  ArrowRight, ArrowLeft, Star, Lock, Instagram, Loader2, Send, ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { useTourBySlug, FALLBACK_IMAGE } from '@/hooks/useSupabase';
 import { supabase } from '@/supabaseClient';
@@ -18,6 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { TourDetailsSkeleton } from '@/components/ui/Skeletons';
 
 const purposeBadgeConfig = {
   leisure: { en: 'Leisure', fa: 'تفریحی', ar: 'ترفيه', color: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400' },
@@ -25,6 +26,10 @@ const purposeBadgeConfig = {
   research: { en: 'Research', fa: 'تحقیقاتی', ar: 'بحثي', color: 'bg-violet-500/15 text-violet-700 dark:text-violet-400' },
   spiritual: { en: 'Spiritual', fa: 'معنوی', ar: 'روحاني', color: 'bg-amber-500/15 text-amber-700 dark:text-amber-400' },
 };
+
+// How many gallery thumbnails to show in the compact sidebar before the
+// "+N more" indicator. The rest are still reachable through the lightbox.
+const GALLERY_PREVIEW_LIMIT = 6;
 
 const pickLang = (val, lang) => {
   if (val == null) return '';
@@ -44,7 +49,7 @@ const pickLangArray = (val, lang) => {
 
 const pickHeroImage = (tour) => {
   if (!tour) return FALLBACK_IMAGE;
-  if (Array.isArray(tour.gallery) && tour.gallery[0]) return tour.gallery[0];
+  if (tour && Array.isArray(tour.gallery) && tour.gallery[0]) return tour.gallery[0];
   return tour.cover_image || tour.image_url || tour.image || FALLBACK_IMAGE;
 };
 
@@ -91,6 +96,10 @@ export default function TourDetails() {
   const [reqGroupSize, setReqGroupSize] = useState('');
   const [reqLoading, setReqLoading] = useState(false);
 
+  // Lightbox state for the sidebar gallery thumbnails. `lightboxIndex` is the
+  // index into `tour.gallery` of the currently-opened image; null means closed.
+  const [lightboxIndex, setLightboxIndex] = useState(null);
+
   const resetRequestForm = () => {
     setReqUsername('');
     setReqMessage('');
@@ -98,6 +107,53 @@ export default function TourDetails() {
     setReqEndDate('');
     setReqGroupSize('');
   };
+
+  const closeLightbox = () => setLightboxIndex(null);
+  const stepLightbox = (delta) => {
+    setLightboxIndex((idx) => {
+      if (idx == null) return idx;
+      return (idx + delta + gallery.length) % gallery.length;
+    });
+  };
+
+  // Keyboard navigation for the lightbox: arrows move between images, Escape closes.
+  // Radix Dialog already handles Escape/click-outside, so we only need the arrows.
+  useEffect(() => {
+    if (lightboxIndex == null) return;
+    const onKey = (e) => {
+      if (e.key === 'ArrowRight') {
+        // In RTL we flip so the visual "next" is consistent with reading direction.
+        stepLightbox(dir === 'rtl' ? -1 : 1);
+      } else if (e.key === 'ArrowLeft') {
+        stepLightbox(dir === 'rtl' ? 1 : -1);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [lightboxIndex, dir]);
+
+  // Guard: while data is still loading (or before a non-existent slug resolves
+  // to a Supabase 400 and `tour` is still null), show the skeleton instead of
+  // dereferencing `tour` below. This must stay above any `tour.…` access.
+  if (loading) {
+    return <TourDetailsSkeleton />;
+  }
+
+  if (error || !tour) {
+    return (
+      <div dir={dir} className="pt-32 pb-20 min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="font-heading text-3xl text-foreground mb-4">
+            {lang === 'fa' ? 'تور یافت نشد' : lang === 'ar' ? 'الرحلة غير موجودة' : 'Tour Not Found'}
+          </h1>
+          {error && <p className="font-body text-sm text-destructive mb-4">{error}</p>}
+          <Link to="/tours" className="text-accent hover:underline">{t('view_all')} →</Link>
+        </div>
+      </div>
+    );
+  }
+
+  const gallery = (tour && Array.isArray(tour.gallery) ? tour.gallery : []).filter(Boolean);
 
   const handleSubmitRequest = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -157,30 +213,6 @@ export default function TourDetails() {
       setReqLoading(false);
     }
   };
-
-  if (loading) {
-    return (
-      <div dir={dir} className="pt-32 pb-20 min-h-screen flex items-center justify-center">
-        <p className="font-body text-muted-foreground">
-          {lang === 'fa' ? 'در حال بارگذاری تور...' : lang === 'ar' ? 'جار تحميل الرحلة...' : 'Loading tour...'}
-        </p>
-      </div>
-    );
-  }
-
-  if (error || !tour) {
-    return (
-      <div dir={dir} className="pt-32 pb-20 min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="font-heading text-3xl text-foreground mb-4">
-            {lang === 'fa' ? 'تور یافت نشد' : lang === 'ar' ? 'الرحلة غير موجودة' : 'Tour Not Found'}
-          </h1>
-          {error && <p className="font-body text-sm text-destructive mb-4">{error}</p>}
-          <Link to="/tours" className="text-accent hover:underline">{t('view_all')} →</Link>
-        </div>
-      </div>
-    );
-  }
 
   const title = pickLang(tour.title, lang);
   const desc = pickLang(tour.desc ?? tour.description, lang);
@@ -470,22 +502,6 @@ export default function TourDetails() {
                 )}
               </section>
             )}
-
-            {/* Gallery */}
-            {Array.isArray(tour.gallery) && tour.gallery.length > 0 && (
-              <section>
-                <h2 className="font-heading text-2xl font-semibold text-foreground mb-4">
-                  {lang === 'fa' ? 'گالری' : lang === 'ar' ? 'معرض الصور' : 'Gallery'}
-                </h2>
-                <div className="grid grid-cols-2 gap-3">
-                  {tour.gallery.map((img, i) => (
-                    <div key={i} className="aspect-video rounded-xl overflow-hidden">
-                      <img src={img} alt={`${title} ${i + 1}`} className="w-full h-full object-cover" />
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
           </div>
 
           {/* Sidebar */}
@@ -546,6 +562,37 @@ export default function TourDetails() {
                   </button>
                 </div>
               </div>
+
+              {/* Gallery (compact thumbnails in the sidebar) */}
+              {gallery.length > 0 && (
+                <div className="p-6 rounded-2xl bg-card border border-border/50">
+                  <h3 className="font-heading text-lg font-semibold text-foreground mb-3">
+                    {lang === 'fa' ? 'گالری' : lang === 'ar' ? 'معرض الصور' : 'Gallery'}
+                  </h3>
+                  <div className="grid grid-cols-3 gap-2">
+                    {gallery.slice(0, GALLERY_PREVIEW_LIMIT).map((img, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => setLightboxIndex(i)}
+                        className="aspect-square rounded-lg overflow-hidden bg-secondary/40 hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-accent"
+                        aria-label={`${lang === 'fa' ? 'مشاهده تصویر' : lang === 'ar' ? 'عرض الصورة' : 'View image'} ${i + 1}`}
+                      >
+                        <img src={img} alt={`${title} ${i + 1}`} className="w-full h-full object-cover" />
+                      </button>
+                    ))}
+                    {gallery.length > GALLERY_PREVIEW_LIMIT && (
+                      <button
+                        type="button"
+                        onClick={() => setLightboxIndex(GALLERY_PREVIEW_LIMIT)}
+                        className="aspect-square rounded-lg overflow-hidden bg-secondary/40 hover:bg-secondary/70 transition-colors flex items-center justify-center text-muted-foreground font-body text-sm font-medium focus:outline-none focus:ring-2 focus:ring-accent"
+                      >
+                        +{gallery.length - GALLERY_PREVIEW_LIMIT}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -640,6 +687,48 @@ export default function TourDetails() {
               {t('request_submit')}
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Gallery Lightbox */}
+      <Dialog open={lightboxIndex != null} onOpenChange={(open) => { if (!open) closeLightbox(); }}>
+        <DialogContent
+          dir={dir}
+          className="max-w-3xl w-[92vw] bg-transparent border-0 p-0 shadow-none sm:rounded-none"
+        >
+          {lightboxIndex != null && gallery[lightboxIndex] && (
+            <div className="relative flex items-center justify-center">
+              {/* Prev */}
+              <button
+                type="button"
+                onClick={() => stepLightbox(-1)}
+                aria-label={lang === 'fa' ? 'تصویر قبلی' : lang === 'ar' ? 'الصورة السابقة' : 'Previous image'}
+                className={`absolute ${dir === 'rtl' ? 'end-0' : 'start-0'} top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors focus:outline-none focus:ring-2 focus:ring-white`}
+              >
+                <ChevronLeft className="w-6 h-6" />
+              </button>
+
+              <img
+                src={gallery[lightboxIndex]}
+                alt={`${title} ${lightboxIndex + 1}`}
+                className="max-h-[80vh] w-auto max-w-full rounded-lg object-contain"
+              />
+
+              {/* Next */}
+              <button
+                type="button"
+                onClick={() => stepLightbox(1)}
+                aria-label={lang === 'fa' ? 'تصویر بعدی' : lang === 'ar' ? 'الصورة التالية' : 'Next image'}
+                className={`absolute ${dir === 'rtl' ? 'start-0' : 'end-0'} top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors focus:outline-none focus:ring-2 focus:ring-white`}
+              >
+                <ChevronRight className="w-6 h-6" />
+              </button>
+
+              <span className="absolute bottom-3 start-1/2 -translate-x-1/2 z-10 px-3 py-1 rounded-full bg-black/60 text-white font-body text-xs">
+                {lightboxIndex + 1} / {gallery.length}
+              </span>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
