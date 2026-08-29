@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, ShieldAlert, AlertTriangle, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { useAuth } from '@/lib/AuthContext';
 import { useI18n } from '@/lib/i18n.jsx';
 import { supabase } from '@/supabaseClient';
@@ -185,7 +186,17 @@ export default function SettingsPage() {
                     label={tx.email}
                     value={user?.email || ''}
                     type="email"
-                    onSave={async () => { throw new Error(lang === 'fa' ? 'برای تغییر ایمیل با پشتیبانی تماس بگیر.' : lang === 'ar' ? 'تواصل مع الدعم لتغيير البريد.' : 'Contact support to change your email address.'); }}
+                    onSave={async (v) => {
+                      const next = (v || '').trim();
+                      if (!next || next === user?.email) return;
+                      const { error } = await supabase.auth.updateUser({ email: next });
+                      if (error) throw error;
+                      // Supabase sends a confirmation email to the new address; the
+                      // change only takes effect once the user clicks the link.
+                      toast.success(
+                        lang === 'fa' ? 'لینک تأیید به ایمیل جدید ارسال شد.' : lang === 'ar' ? 'أُرسل رابط التأكيد إلى بريدك الجديد.' : 'Check your new email to confirm the change.'
+                      );
+                    }}
                     rightSlot={
                       user?.email_confirmed_at ? (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-400/30 text-emerald-300 text-[10px] font-semibold">
@@ -203,7 +214,15 @@ export default function SettingsPage() {
                     value={local?.phone || ''}
                     type="tel"
                     placeholder="+98 ..."
-                    onSave={(v) => savePersistent('phone', (v || '').trim() || null)}
+                    onSave={(v) => {
+                      const next = (v || '').trim();
+                      if (!next) return savePersistent('phone', null);
+                      // Loose validation only: digits, spaces, dashes, parens, leading +.
+                      if (!/^[+\d][\d\s\-()]{6,19}$/.test(next)) {
+                        throw new Error(lang === 'fa' ? 'شماره تلفن معتبر نیست.' : lang === 'ar' ? 'رقم الهاتف غير صالح.' : 'Please enter a valid phone number.');
+                      }
+                      return savePersistent('phone', next);
+                    }}
                   />
                   <EditableField
                     label={tx.password}

@@ -13,7 +13,8 @@
       "Bash(node *)",
       "Bash(npx vite *)",
       "Bash(echo \"EXIT: $?\")",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "Bash(echo \"\\(exit: $?\\); if empty, no bookings table is queried\\)\")"
     ]
   }
 }

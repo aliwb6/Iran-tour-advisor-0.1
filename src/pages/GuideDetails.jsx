@@ -4,14 +4,23 @@ import { useI18n } from '@/lib/i18n.jsx';
 import { motion } from 'framer-motion';
 import {
   Star, MapPin, Globe, Calendar, BadgeCheck, ChevronLeft, ChevronRight,
-  ArrowRight, Map, PenLine, Plus, Minus, ChevronDown, Copy,
+  ArrowRight, Map, PenLine, Plus, Minus, ChevronDown, Copy, Lock, MessageCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/supabaseClient';
 import { avatarFor } from '@/lib/avatar';
+import { useAuth } from '@/lib/AuthContext';
+import TourCard from '@/components/tours/TourCard';
+import { FALLBACK_IMAGE } from '@/hooks/useSupabase';
 
 const FALLBACK_IMG = 'https://images.unsplash.com/photo-1589562784072-9ede7d082e5e?w=800&h=1000&fit=crop';
 const CITIES_LIST = ['Tehran', 'Isfahan', 'Shiraz', 'Yazd', 'Mashhad', 'Tabriz', 'Kerman', 'Rasht', 'Qom', 'Kashan'];
+
+// TourCard expects a flat image as a separate prop; reuse the same fallback chain
+// used on the Tours listing page.
+const pickTourImage = (tour) =>
+  tour.cover_image || tour.image_url || tour.image ||
+  (Array.isArray(tour.gallery) && tour.gallery[0]) || FALLBACK_IMAGE;
 
 function StarRow({ rating, size = 'sm' }) {
   const sz = size === 'sm' ? 'w-4 h-4' : 'w-5 h-5';
@@ -214,10 +223,12 @@ function RatingBreakdown({ reviewList = [] }) {
 export default function GuideDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { t, lang, dir } = useI18n();
 
   const [guide, setGuide] = useState(null);
   const [tours, setTours] = useState([]);
+  const [chatUnlocked, setChatUnlocked] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showAllReviews, setShowAllReviews] = useState(false);
@@ -229,14 +240,37 @@ export default function GuideDetails() {
 
     const run = async () => {
       try {
+        // Part 1/2/3: profile + published tours (newest first).
         const [{ data: profileData, error: profileErr }, { data: tourData }] = await Promise.all([
           supabase.from('profiles').select('*').eq('id', id).single(),
-          supabase.from('tours').select('*').eq('guide_id', id).limit(6),
+          supabase
+            .from('tours')
+            .select('*')
+            .or(`guide_id.eq.${id},agency_id.eq.${id}`)
+            .eq('status', 'published')
+            .order('created_at', { ascending: false }),
         ]);
         if (profileErr) throw profileErr;
+
+        // Part 4: unlock chat if the current tourist has a confirmed/finalized
+        // trip with this guide/agency (proxy for a paid booking — no real
+        // payment gateway is wired up yet).
+        let unlocked = false;
+        if (user?.id) {
+          const { data: tripData } = await supabase
+            .from('trip_requests')
+            .select('id')
+            .or(`guide_id.eq.${id},agency_id.eq.${id}`)
+            .eq('traveler_id', user.id)
+            .in('status', ['confirmed', 'completed'])
+            .limit(1);
+          unlocked = Array.isArray(tripData) && tripData.length > 0;
+        }
+
         if (mounted) {
           setGuide(profileData);
           setTours(tourData || []);
+          setChatUnlocked(unlocked);
           setError(null);
         }
       } catch (err) {
@@ -247,7 +281,7 @@ export default function GuideDetails() {
     };
     run();
     return () => { mounted = false; };
-  }, [id]);
+  }, [id, user?.id]);
 
   if (loading) {
     return (
@@ -286,12 +320,21 @@ export default function GuideDetails() {
   const reviewList = Array.isArray(guide.review_list) ? guide.review_list : [];
   const otherCities = Array.isArray(guide.other_cities) ? guide.other_cities : [];
   const licenseId = guide.license_id || guide.license_number || null;
+  const licenseVerified = guide.license_status === 'verified';
   const guideSince = guide.guide_since || guide.created_at?.slice(0, 4) || null;
 
   const avatar = avatarFor(guide);
   const isRtl = dir === 'rtl';
 
   const visibleReviews = showAllReviews ? reviewList : reviewList.slice(0, 3);
+
+  const handleChat = () => {
+    if (!chatUnlocked) {
+      toast(lang === 'fa' ? 'برای چت، ابتدا یک تور پرداخت‌شده رزرو کنید.' : lang === 'ar' ? 'للدردشة، أكمل حجزاً مدفوعاً أولاً.' : 'Complete a paid booking to unlock chat.');
+      return;
+    }
+    navigate(`/chat/${id}`);
+  };
 
   return (
     <div dir={dir} className="min-h-screen bg-background pb-20">
@@ -367,15 +410,20 @@ export default function GuideDetails() {
 
             {/* Info rows */}
             <div className="space-y-3">
-              {licenseId && (
+              {licenseVerified && (
                 <div className="flex items-center gap-3">
-                  <BadgeCheck className="w-5 h-5 text-gold flex-shrink-0" />
-                  <span className="font-body text-sm text-foreground">
-                    <span className="text-muted-foreground">
-                      {lang === 'fa' ? 'شناسه مجوز:' : lang === 'ar' ? 'رقم الترخيص:' : 'License ID:'}
-                    </span>{' '}
-                    {licenseId}
+                  <BadgeCheck className="w-5 h-5 text-emerald-500 flex-shrink-0" />
+                  <span className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-400/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold">
+                    {lang === 'fa' ? 'مجوز تأیید شده' : lang === 'ar' ? 'رخصة موثقة' : 'Verified'}
                   </span>
+                  {licenseId && (
+                    <span className="font-body text-sm text-foreground">
+                      <span className="text-muted-foreground">
+                        {lang === 'fa' ? 'شناسه مجوز:' : lang === 'ar' ? 'رقم الترخيص:' : 'License ID:'}
+                      </span>{' '}
+                      {licenseId}
+                    </span>
+                  )}
                 </div>
               )}
               {guideSince && (
@@ -434,6 +482,19 @@ export default function GuideDetails() {
                 <ArrowRight className="w-4 h-4" />
               </button>
               <button
+                onClick={() => handleChat()}
+                disabled={!chatUnlocked}
+                title={chatUnlocked ? '' : (lang === 'fa' ? 'پس از پرداخت تور در دسترس است' : lang === 'ar' ? 'متاح بعد الدفع' : 'Available after booking payment')}
+                className={`flex items-center justify-center gap-2 px-8 py-3 rounded-xl font-body font-semibold text-sm active:scale-[0.98] transition-all ${
+                  chatUnlocked
+                    ? 'border-2 border-gold text-gold hover:bg-gold/5'
+                    : 'border-2 border-border text-muted-foreground/60 cursor-not-allowed bg-muted/30'
+                }`}
+              >
+                {chatUnlocked ? <MessageCircle className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+                {lang === 'fa' ? 'چت' : lang === 'ar' ? 'محادثة' : 'Chat'}
+              </button>
+              <button
                 className="flex items-center justify-center gap-2 px-8 py-3 rounded-xl border-2 border-gold text-gold font-body font-semibold text-sm hover:bg-gold/5 active:scale-[0.98] transition-all"
               >
                 <PenLine className="w-4 h-4" />
@@ -472,53 +533,30 @@ export default function GuideDetails() {
             )}
 
             {/* Tours */}
-            {tours.length > 0 && (
+            {tours.length > 0 ? (
               <section>
                 <h2 className="font-heading text-2xl font-semibold text-foreground mb-4 pb-2 border-b border-border/50">
                   {lang === 'fa' ? `تورهای ${name.split(' ')[0]}` : lang === 'ar' ? `جولات ${name.split(' ')[0]}` : `Tours by ${name.split(' ')[0]}`}
                 </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                  {tours.map((tour) => (
-                    <Link
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-10">
+                  {tours.map((tour, i) => (
+                    <TourCard
                       key={tour.id}
-                      to={`/tours/${tour.slug || tour.id}`}
-                      className="group rounded-2xl border border-border/40 overflow-hidden hover:border-gold/40 hover:shadow-lg transition-all duration-300"
-                    >
-                      <div className="relative aspect-video bg-muted overflow-hidden">
-                        {tour.image_url || tour.cover_image ? (
-                          <img
-                            src={tour.image_url || tour.cover_image}
-                            alt={tour.title}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-gradient-to-br from-gold/10 to-gold/5 flex items-center justify-center">
-                            <span className="font-body text-gold/40 text-sm">No image</span>
-                          </div>
-                        )}
-                        {tour.duration && (
-                          <span className="absolute top-3 start-3 px-2.5 py-1 rounded-lg bg-black/60 text-white text-xs font-body font-medium">
-                            {tour.duration}
-                          </span>
-                        )}
-                      </div>
-                      <div className="p-4">
-                        {tour.city && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gold/10 text-gold text-xs font-body font-medium mb-2">
-                            <MapPin className="w-3 h-3" />
-                            {tour.city}
-                          </span>
-                        )}
-                        <h3 className="font-body font-semibold text-foreground text-sm mb-1 line-clamp-2">{tour.title}</h3>
-                        {tour.price != null && (
-                          <p className="font-body text-sm text-gold font-semibold">
-                            {lang === 'fa' ? `از $${tour.price} برای گروه` : `From $${tour.price} Per Group`}
-                          </p>
-                        )}
-                      </div>
-                    </Link>
+                      tour={tour}
+                      image={pickTourImage(tour)}
+                      index={i}
+                    />
                   ))}
                 </div>
+              </section>
+            ) : (
+              <section>
+                <h2 className="font-heading text-2xl font-semibold text-foreground mb-4 pb-2 border-b border-border/50">
+                  {lang === 'fa' ? `تورهای ${name.split(' ')[0]}` : lang === 'ar' ? `جولات ${name.split(' ')[0]}` : `Tours by ${name.split(' ')[0]}`}
+                </h2>
+                <p className="font-body text-muted-foreground text-sm py-6 text-center">
+                  {lang === 'fa' ? 'هنوز توری ثبت نشده است' : lang === 'ar' ? 'لا توجد جولات بعد' : 'No tours yet'}
+                </p>
               </section>
             )}
 
