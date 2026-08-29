@@ -92,19 +92,22 @@ export default function SpotlightDestinations() {
   const Arrow = dir === 'rtl' ? ArrowLeft : ArrowRight;
   const [currentSlide, setCurrentSlide] = useState(0);
   const [visibleCards, setVisibleCards] = useState(3);
+  // Tracks the active flex gap (gap-5 = 20px below lg, lg:gap-6 = 24px at ≥1024px)
+  // so the width/translate math can account for it exactly.
+  const [gapPx, setGapPx] = useState(24);
   const [isHovering, setIsHovering] = useState(false);
   const carouselRef = useRef(null);
 
   useEffect(() => {
-    const updateVisibleCards = () => {
-      if (window.innerWidth < 768) setVisibleCards(1);
-      else if (window.innerWidth < 1024) setVisibleCards(2);
-      else setVisibleCards(3);
+    const updateLayout = () => {
+      if (window.innerWidth < 768) { setVisibleCards(1); setGapPx(20); }
+      else if (window.innerWidth < 1024) { setVisibleCards(2); setGapPx(20); }
+      else { setVisibleCards(3); setGapPx(24); }
     };
 
-    updateVisibleCards();
-    window.addEventListener('resize', updateVisibleCards);
-    return () => window.removeEventListener('resize', updateVisibleCards);
+    updateLayout();
+    window.addEventListener('resize', updateLayout);
+    return () => window.removeEventListener('resize', updateLayout);
   }, []);
 
   const maxSlide = Math.max(0, SPOTLIGHT_CITIES.length - visibleCards);
@@ -172,7 +175,9 @@ export default function SpotlightDestinations() {
         >
           <motion.div
             className="flex gap-5 lg:gap-6"
-            animate={{ x: -currentSlide * (100 / visibleCards) + '%' }}
+            animate={{
+              x: `calc(-1 * ${currentSlide} * (100% - ${gapPx * (visibleCards - 1)}px) / ${visibleCards} - ${currentSlide * gapPx}px)`,
+            }}
             transition={{ duration: 0.5, ease: 'easeInOut' }}
           >
             {SPOTLIGHT_CITIES.map((city, i) => {
@@ -184,7 +189,7 @@ export default function SpotlightDestinations() {
               <motion.div
                 key={city.slug}
                 className="flex-shrink-0"
-                style={{ width: (100 / visibleCards) + '%' }}
+                style={{ width: `calc((100% - ${gapPx * (visibleCards - 1)}px) / ${visibleCards})` }}
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: '-60px' }}
