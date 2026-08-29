@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/supabaseClient';
 import { useI18n } from '@/lib/i18n.jsx';
@@ -33,6 +33,13 @@ const IRAN_CITIES = [
   { en: 'Kermanshah',   fa: 'کرمانشاه',  ar: 'كرمانشاه' },
   { en: 'Bandar Abbas', fa: 'بندرعباس',  ar: 'بندر عباس' },
   { en: 'Ahvaz',        fa: 'اهواز',     ar: 'الأهواز' },
+];
+
+const POPULAR_CITIES = [
+  { en: 'Shiraz',  fa: 'شیراز',  ar: 'شيراز' },
+  { en: 'Isfahan', fa: 'اصفهان', ar: 'أصفهان' },
+  { en: 'Yazd',    fa: 'یزد',    ar: 'يزد' },
+  { en: 'Hamadan', fa: 'همدان',  ar: 'همدان' },
 ];
 
 export default function Signup() {
@@ -82,6 +89,49 @@ export default function Signup() {
       setFormData(prev => ({ ...prev, cities: [...prev.cities, v] }));
     }
     setCustomCity('');
+  };
+
+  // ── City search-with-suggestions ──────────────────────────────────────────
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const citySearchRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (citySearchRef.current && !citySearchRef.current.contains(e.target)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const citySuggestions = customCity.trim()
+    ? IRAN_CITIES.filter(c =>
+        !formData.cities.includes(c.en) &&
+        cityLabel(c).toLowerCase().startsWith(customCity.trim().toLowerCase())
+      ).slice(0, 6)
+    : [];
+
+  const selectSuggestion = (c) => {
+    toggleCity(c.en);
+    setCustomCity('');
+    setShowSuggestions(false);
+  };
+
+  const handleCityInputKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const exact = IRAN_CITIES.find(
+        c => cityLabel(c).toLowerCase() === customCity.trim().toLowerCase()
+      );
+      if (exact) {
+        toggleCity(exact.en);
+        setCustomCity('');
+        setShowSuggestions(false);
+      } else {
+        addCustomCity();
+      }
+    }
   };
 
   // ── Submit: sign up and move to OTP screen ────────────────────────────────
@@ -564,7 +614,7 @@ export default function Signup() {
                         </label>
 
                         <div className="flex flex-wrap gap-2 mb-3">
-                          {IRAN_CITIES.map(c => {
+                          {POPULAR_CITIES.map(c => {
                             const active = formData.cities.includes(c.en);
                             return (
                               <button
@@ -583,7 +633,7 @@ export default function Signup() {
                           })}
 
                           {formData.cities
-                            .filter(v => !IRAN_CITIES.some(c => c.en === v))
+                            .filter(v => !POPULAR_CITIES.some(c => c.en === v))
                             .map(v => (
                               <button
                                 key={v}
@@ -596,17 +646,44 @@ export default function Signup() {
                             ))}
                         </div>
 
-                        <div className="flex gap-2">
+                        <div className="flex gap-2" ref={citySearchRef}>
                           <div className="relative flex-1">
                             <MapPin className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground ${dir === 'rtl' ? 'end-4' : 'start-4'}`} />
                             <input
                               type="text"
                               value={customCity}
-                              onChange={e => setCustomCity(e.target.value)}
-                              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustomCity(); } }}
+                              onChange={e => { setCustomCity(e.target.value); setShowSuggestions(true); }}
+                              onKeyDown={handleCityInputKeyDown}
+                              onFocus={() => setShowSuggestions(true)}
                               className={`w-full ${dir === 'rtl' ? 'pe-11 ps-4' : 'ps-11 pe-4'} py-3 rounded-xl border border-border bg-background font-body text-foreground focus:outline-none focus:ring-2 focus:ring-accent/50`}
                               placeholder={lang === 'fa' ? 'شهر دیگری اضافه کنید...' : lang === 'ar' ? 'أضف مدينة أخرى...' : 'Add another city...'}
+                              autoComplete="off"
                             />
+
+                            {/* Dropdown suggestions */}
+                            <AnimatePresence>
+                              {showSuggestions && customCity.trim() && citySuggestions.length > 0 && (
+                                <motion.div
+                                  initial={{ opacity: 0, translateY: -8 }}
+                                  animate={{ opacity: 1, translateY: 0 }}
+                                  exit={{ opacity: 0, translateY: -8 }}
+                                  transition={{ duration: 0.15 }}
+                                  className="absolute z-10 mt-2 w-full bg-white border border-border rounded-xl shadow-lg overflow-hidden"
+                                >
+                                  {citySuggestions.map(c => (
+                                    <button
+                                      key={c.en}
+                                      type="button"
+                                      onClick={() => selectSuggestion(c)}
+                                      className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-accent/10 transition-colors border-b border-border/60 last:border-b-0"
+                                    >
+                                      <MapPin className="w-4 h-4 text-accent flex-shrink-0" />
+                                      <span className="text-foreground font-medium">{cityLabel(c)}</span>
+                                    </button>
+                                  ))}
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
                           </div>
                           <button
                             type="button"

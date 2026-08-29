@@ -10,7 +10,10 @@
       "Bash(git commit -m ' *)",
       "Bash(echo \"EXIT:$?\")",
       "Bash(git pull *)",
-      "Bash(node *)"
+      "Bash(node *)",
+      "Bash(npx vite *)",
+      "Bash(echo \"EXIT: $?\")",
+      "Read(//tmp/**)"
     ]
   }
 }
