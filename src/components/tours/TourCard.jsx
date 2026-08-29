@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Mountain } from 'lucide-react';
 import { useI18n } from '@/lib/i18n.jsx';
+import { transformImage, imgPresets } from '@/lib/imageTransform';
 
 // Persian carpet corner motif as SVG
 const CarpetMotif = ({ className = '' }) => (
@@ -65,8 +66,8 @@ export default function TourCard({ tour, image, index }) {
 
       {/* Image */}
       <div className="relative aspect-[16/9] overflow-hidden">
-        <img
-          src={image}
+        <img decoding="async" loading="lazy"
+          src={transformImage(image, imgPresets.card)}
           alt={title}
           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
         />

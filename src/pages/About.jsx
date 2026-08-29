@@ -15,7 +15,7 @@ export default function About() {
     <div dir={dir} className="pt-24 pb-16">
       {/* Hero */}
       <div className="relative h-[50vh] min-h-[400px] overflow-hidden">
-        <img
+        <img decoding="async" loading="lazy"
           src={IMAGES.isfahan}
           alt="Panoramic view of Isfahan's historic architecture"
           className="w-full h-full object-cover"
@@ -62,7 +62,7 @@ export default function About() {
             className="relative"
           >
             <div className="aspect-[4/3] rounded-2xl overflow-hidden">
-              <img
+              <img decoding="async" loading="lazy"
                 src={IMAGES.tilework}
                 alt="Intricate Persian geometric tilework mosaic in turquoise and gold"
                 className="w-full h-full object-cover"
@@ -81,7 +81,7 @@ export default function About() {
             className="order-2 lg:order-1"
           >
             <div className="aspect-[4/3] rounded-2xl overflow-hidden">
-              <img
+              <img decoding="async" loading="lazy"
                 src={IMAGES.persepolis}
                 alt="Ancient Persepolis ruins at golden hour, massive stone columns against amber sky"
                 className="w-full h-full object-cover"

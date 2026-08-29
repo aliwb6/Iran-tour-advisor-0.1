@@ -36,7 +36,7 @@ export default function PackageDetails() {
   return (
     <div dir={dir} className="pt-0 pb-20 min-h-screen">
       <div className="relative h-[60vh] min-h-[400px] overflow-hidden">
-        <img
+        <img decoding="async" loading="lazy"
           src={pkg.header_image || FALLBACK_IMAGE}
           alt={pkg.title}
           className="w-full h-full object-cover"

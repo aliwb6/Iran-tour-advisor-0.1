@@ -66,7 +66,7 @@ export default function UserDropdown({ isLight = false }) {
           aria-expanded={open}
         >
           <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-gold/40 bg-navy">
-            <img src={avatarFor(profile)} alt="" className="w-full h-full object-cover" />
+            <img decoding="async" loading="lazy" src={avatarFor(profile)} alt="" className="w-full h-full object-cover" />
           </div>
           <ChevronDown className={`hidden sm:block w-3.5 h-3.5 transition-transform ${open ? 'rotate-180' : ''} ${
             isLight ? 'text-white/80' : 'text-muted-foreground'
@@ -86,7 +86,7 @@ export default function UserDropdown({ isLight = false }) {
               {/* Identity block */}
               <div className="flex items-center gap-3 px-4 py-4 bg-gradient-to-br from-card/90 to-card/40 border-b border-border/40">
                 <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-gold/50 flex-shrink-0">
-                  <img src={avatarFor(profile)} alt="" className="w-full h-full object-cover" />
+                  <img decoding="async" loading="lazy" src={avatarFor(profile)} alt="" className="w-full h-full object-cover" />
                 </div>
                 <div className="min-w-0">
                   <p className="font-body text-sm font-semibold text-foreground truncate">

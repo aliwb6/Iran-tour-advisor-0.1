@@ -94,7 +94,7 @@ function GuideCard({ guide, lang, onNavigate }) {
     >
       {/* Photo */}
       <div className="relative aspect-[4/3] overflow-hidden bg-muted">
-        <img
+        <img decoding="async" loading="lazy"
           src={avatarFor(guide)}
           alt={guide.full_name || ''}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"

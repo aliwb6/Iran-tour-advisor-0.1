@@ -32,7 +32,7 @@ export default function BookingCard({ booking }) {
     >
       <div className="aspect-[16/10] overflow-hidden bg-navy relative">
         {booking.image ? (
-          <img
+          <img decoding="async" loading="lazy"
             src={booking.image}
             alt={booking.title}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"

@@ -45,43 +45,43 @@ const SPOTLIGHT_CITIES = [
   },
   {
     slug: 'kerman',
-    image: '/images/destinations/kerman.jpg',
+    image: '/images/kerman.jpg',
     name:     { en: 'Kerman',  fa: 'کرمان',   ar: 'كرمان' },
     category: { en: 'History', fa: 'تاریخ', ar: 'التاريخ' },
   },
   {
     slug: 'kashan',
-    image: '/images/destinations/kashan.jpg',
+    image: '/images/kashan.jpg',
     name:     { en: 'Kashan',  fa: 'کاشان',   ar: 'كاشان' },
     category: { en: 'Architecture', fa: 'معماری', ar: 'العمارة' },
   },
   {
     slug: 'qom',
-    image: '/images/destinations/qom.jpg',
+    image: '/images/qom.jpg',
     name:     { en: 'Qom',  fa: 'قم',   ar: 'قم' },
     category: { en: 'Spiritual', fa: 'معنوی', ar: 'روحاني' },
   },
   {
     slug: 'tabriz',
-    image: '/images/destinations/tabriz.jpg',
+    image: '/images/tabriz.jpg',
     name:     { en: 'Tabriz',  fa: 'تبریز',   ar: 'تبريز' },
     category: { en: 'Culture', fa: 'فرهنگ', ar: 'الثقافة' },
   },
   {
     slug: 'kish-island',
-    image: '/images/destinations/kish-island.jpg',
+    image: '/images/kish island.jpg',
     name:     { en: 'Kish Island',  fa: 'جزیره کیش',   ar: 'جزيرة كيش' },
     category: { en: 'Nature', fa: 'طبیعت', ar: 'الطبيعة' },
   },
   {
     slug: 'qeshm-island',
-    image: '/images/destinations/qeshm-island.jpg',
+    image: '/images/qeshm island.jpg',
     name:     { en: 'Qeshm Island',  fa: 'جزیره قشم',   ar: 'جزيرة قشم' },
     category: { en: 'Nature', fa: 'طبیعت', ar: 'الطبيعة' },
   },
   {
     slug: 'hormuz-island',
-    image: '/images/destinations/hormuz-island.jpg',
+    image: '/images/Hormuz Island.jpg',
     name:     { en: 'Hormuz Island',  fa: 'جزیره هرمز',   ar: 'جزيرة هرمز' },
     category: { en: 'Nature', fa: 'طبیعت', ar: 'الطبيعة' },
   },
@@ -195,7 +195,7 @@ export default function SpotlightDestinations() {
                   className="group relative block aspect-[4/5] rounded-3xl overflow-hidden border border-border/40 hover:border-gold/40 shadow-md hover:shadow-2xl hover:shadow-black/30 transition-all duration-500"
                 >
               {/* Background image */}
-              <img
+              <img decoding="async"
                 src={city.image}
                 alt={cityName}
                 loading="lazy"

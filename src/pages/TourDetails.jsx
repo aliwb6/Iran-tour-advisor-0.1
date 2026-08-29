@@ -19,6 +19,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { TourDetailsSkeleton } from '@/components/ui/Skeletons';
+import { transformImage, imgPresets } from '@/lib/imageTransform';
 
 const purposeBadgeConfig = {
   leisure: { en: 'Leisure', fa: 'تفریحی', ar: 'ترفيه', color: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400' },
@@ -294,8 +295,8 @@ export default function TourDetails() {
     <div dir={dir} className="pt-0 pb-20 min-h-screen">
       {/* Hero Banner */}
       <div className="relative h-[60vh] min-h-[400px] overflow-hidden">
-        <img
-          src={heroImage}
+        <img decoding="async" loading="lazy"
+          src={transformImage(heroImage, imgPresets.hero)}
           alt={title}
           className="w-full h-full object-cover"
         />
@@ -578,7 +579,7 @@ export default function TourDetails() {
                         className="aspect-square rounded-lg overflow-hidden bg-secondary/40 hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-accent"
                         aria-label={`${lang === 'fa' ? 'مشاهده تصویر' : lang === 'ar' ? 'عرض الصورة' : 'View image'} ${i + 1}`}
                       >
-                        <img src={img} alt={`${title} ${i + 1}`} className="w-full h-full object-cover" />
+                        <img decoding="async" loading="lazy" src={transformImage(img, imgPresets.card)} alt={`${title} ${i + 1}`} className="w-full h-full object-cover" />
                       </button>
                     ))}
                     {gallery.length > GALLERY_PREVIEW_LIMIT && (
@@ -708,8 +709,8 @@ export default function TourDetails() {
                 <ChevronLeft className="w-6 h-6" />
               </button>
 
-              <img
-                src={gallery[lightboxIndex]}
+              <img decoding="async" loading="lazy"
+                src={transformImage(gallery[lightboxIndex], imgPresets.full)}
                 alt={`${title} ${lightboxIndex + 1}`}
                 className="max-h-[80vh] w-auto max-w-full rounded-lg object-contain"
               />

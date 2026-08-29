@@ -234,7 +234,7 @@ function OverviewView({ tours, guides, reviews, loading }) {
               <div key={tour.id} className="flex items-center gap-3 pb-3 border-b border-white/[0.06] last:border-0 last:pb-0">
                 <div className="w-10 h-10 rounded-xl bg-white/5 overflow-hidden flex-shrink-0">
                   {tour.image_url ? (
-                    <img src={tour.image_url} alt="" className="w-full h-full object-cover" />
+                    <img decoding="async" loading="lazy" src={tour.image_url} alt="" className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
                       <ImageIcon className="w-4 h-4 text-white/20" />
@@ -343,7 +343,7 @@ function PlatformToursView({ tours, loading, busyId, onSaved, onDelete }) {
               <div key={tour.id} className={`${CARD} overflow-hidden flex flex-col`}>
                 <div className="aspect-[16/9] bg-white/[0.04] relative overflow-hidden">
                   {tour.image_url ? (
-                    <img src={tour.image_url} alt="" className="w-full h-full object-cover" />
+                    <img decoding="async" loading="lazy" src={tour.image_url} alt="" className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
                       <ImageIcon className="w-8 h-8 text-white/15" />
@@ -504,7 +504,7 @@ function TourRow({ tour, busyId, onApprove, onReject, onEdit }) {
     <div className={`${CARD} p-4`}>
       <div className="flex items-start gap-4">
         {tour.image_url ? (
-          <img src={tour.image_url} alt="" className="w-16 h-16 rounded-xl object-cover flex-shrink-0" />
+          <img decoding="async" loading="lazy" src={tour.image_url} alt="" className="w-16 h-16 rounded-xl object-cover flex-shrink-0" />
         ) : (
           <div className="w-16 h-16 rounded-xl bg-white/5 flex items-center justify-center flex-shrink-0">
             <ImageIcon className="w-5 h-5 text-white/20" />
@@ -705,7 +705,7 @@ function GuidesView({ guides, loading, onToggleApproval, busyId }) {
               <div key={guide.id} className={`${CARD} p-4`}>
                 <div className="flex items-start gap-3 mb-4">
                   <div className="w-11 h-11 rounded-xl bg-[hsl(178,85%,32%)]/20 border border-[hsl(178,85%,32%)]/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                    <img src={avatarFor(guide)} alt="" className="w-full h-full object-cover" />
+                    <img decoding="async" loading="lazy" src={avatarFor(guide)} alt="" className="w-full h-full object-cover" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-white font-semibold text-sm truncate">{guide.full_name || 'Unnamed'}</p>
@@ -1018,7 +1018,7 @@ function ArticlesView({ profile }) {
               <div key={article.id} className={`${CARD} p-4`}>
                 <div className="flex gap-4 items-start">
                   {article.image_url ? (
-                    <img
+                    <img decoding="async" loading="lazy"
                       src={article.image_url}
                       alt=""
                       className="w-20 h-16 rounded-xl object-cover shrink-0 border border-white/10"

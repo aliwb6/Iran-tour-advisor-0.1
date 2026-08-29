@@ -67,7 +67,7 @@ export default function FeaturedPackages() {
                 className="group relative bg-card rounded-3xl overflow-hidden border border-border/50 hover:border-accent/30 hover:shadow-xl transition-all duration-500 cursor-pointer"
               >
                 <div className="relative aspect-[4/3] overflow-hidden">
-                  <img
+                  <img decoding="async" loading="lazy"
                     src={tour.image_url || tour.cover_image || FALLBACK_IMAGE}
                     alt={tour.title}
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"

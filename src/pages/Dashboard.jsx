@@ -507,7 +507,7 @@ function HomeView({ profile, tours, reviews, userId, lang, onNavigate, onOpenCha
             <div>
               {upcomingTour.image_url && (
                 <div className="w-full aspect-[16/7] rounded-xl overflow-hidden mb-3">
-                  <img src={upcomingTour.image_url} alt={upcomingTour.title} className="w-full h-full object-cover" />
+                  <img decoding="async" loading="lazy" src={upcomingTour.image_url} alt={upcomingTour.title} className="w-full h-full object-cover" />
                 </div>
               )}
               <p className="text-white font-semibold text-sm leading-tight mb-1 line-clamp-2">
@@ -574,7 +574,7 @@ function HomeView({ profile, tours, reviews, userId, lang, onNavigate, onOpenCha
                   onClick={() => onOpenChat(req.sender_id)}
                   className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] hover:border-[hsl(178,85%,32%)]/40 transition text-left"
                 >
-                  <img
+                  <img decoding="async" loading="lazy"
                     src={avatarFor(req.sender)}
                     alt=""
                     className="w-10 h-10 rounded-full object-cover border border-white/10 flex-shrink-0"
@@ -632,7 +632,7 @@ function HomeView({ profile, tours, reviews, userId, lang, onNavigate, onOpenCha
                   onClick={() => onOpenChat(c.otherId)}
                   className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/[0.04] transition text-left"
                 >
-                  <img
+                  <img decoding="async" loading="lazy"
                     src={avatarFor(c.profile)}
                     alt=""
                     className="w-9 h-9 rounded-full object-cover border border-white/10 flex-shrink-0"
@@ -785,7 +785,7 @@ function MyToursView({ tours, onEdit, onDelete }) {
               {/* Image */}
               <div className="aspect-[16/9] bg-white/5 relative overflow-hidden">
                 {tour.image_url ? (
-                  <img src={tour.image_url} alt={tour.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  <img decoding="async" loading="lazy" src={tour.image_url} alt={tour.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
                     <ImageIcon className="w-8 h-8 text-white/15" />
@@ -984,7 +984,7 @@ function ProfileView({ profile, userId, onSave }) {
         {/* Avatar */}
         <div className="flex items-center gap-4 pb-5 border-b border-white/[0.07]">
           <div className="w-16 h-16 rounded-2xl bg-[hsl(178,85%,32%)]/20 border border-[hsl(178,85%,32%)]/30 flex items-center justify-center flex-shrink-0 overflow-hidden">
-            <img src={avatarFor(form)} alt="" className="w-full h-full object-cover" />
+            <img decoding="async" loading="lazy" src={avatarFor(form)} alt="" className="w-full h-full object-cover" />
           </div>
           <div className="flex-1">
             <label className={labelClass}>Avatar URL</label>
@@ -1168,7 +1168,7 @@ function GalleryView({ profile, userId, onSave }) {
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
           {gallery.map((img, i) => (
             <div key={i} className="relative group aspect-square rounded-2xl overflow-hidden bg-white/[0.05] border border-white/[0.08]">
-              <img src={img} alt={`Gallery ${i + 1}`} className="w-full h-full object-cover" />
+              <img decoding="async" loading="lazy" src={img} alt={`Gallery ${i + 1}`} className="w-full h-full object-cover" />
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all duration-200 flex items-center justify-center">
                 <button
                   onClick={() => handleDeletePhoto(img)}
@@ -1221,7 +1221,7 @@ function GalleryView({ profile, userId, onSave }) {
 
               {newUrl && (
                 <div className="w-full aspect-video rounded-xl overflow-hidden bg-white/5 mb-4">
-                  <img src={newUrl} alt="Preview" className="w-full h-full object-cover" onError={e => { e.currentTarget.style.display = 'none'; }} />
+                  <img decoding="async" loading="lazy" src={newUrl} alt="Preview" className="w-full h-full object-cover" onError={e => { e.currentTarget.style.display = 'none'; }} />
                 </div>
               )}
 
@@ -1687,7 +1687,7 @@ function MessagesView({ userId, onOpen }) {
               onClick={() => onOpen(c.otherId)}
               className="w-full flex items-center gap-4 p-4 rounded-2xl bg-[hsl(222,45%,14%)] border border-white/[0.06] hover:border-[hsl(178,85%,32%)]/40 hover:bg-[hsl(222,45%,16%)] transition text-left"
             >
-              <img
+              <img decoding="async" loading="lazy"
                 src={avatarFor(c.profile)}
                 alt=""
                 className="w-12 h-12 rounded-full object-cover border border-white/10 flex-shrink-0"

@@ -84,7 +84,7 @@ export default function ArticleEditor({ userId, authorType, onSuccess, onCancel 
           className="w-full bg-white/[0.05] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-teal-500/50"
         />
         {form.image_url && (
-          <img
+          <img decoding="async" loading="lazy"
             src={form.image_url}
             alt="پیش‌نمایش"
             onError={(e) => { e.currentTarget.style.display = 'none'; }}

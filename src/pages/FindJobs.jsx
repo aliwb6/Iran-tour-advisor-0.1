@@ -106,7 +106,7 @@ function TripRequestCard({ trip, guideId, onAccepted }) {
           <div className="flex items-center gap-2 shrink-0">
             <div className="w-9 h-9 rounded-full overflow-hidden bg-accent/20 border border-border/50 flex items-center justify-center">
               {avatarUrl ? (
-                <img src={avatarUrl} alt={travelerName} className="w-full h-full object-cover" />
+                <img decoding="async" loading="lazy" src={avatarUrl} alt={travelerName} className="w-full h-full object-cover" />
               ) : (
                 <span className="font-body text-xs font-bold text-accent">{initials}</span>
               )}

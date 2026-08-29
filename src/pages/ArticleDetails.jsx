@@ -36,7 +36,7 @@ export default function ArticleDetails() {
     <div dir={dir} className="pt-0 pb-20 min-h-screen">
       {/* Hero Banner */}
       <div className="relative h-[50vh] min-h-[350px] overflow-hidden">
-        <img
+        <img decoding="async" loading="lazy"
           src={article.coverImage}
           alt={title}
           className="w-full h-full object-cover"
@@ -176,7 +176,7 @@ export default function ArticleDetails() {
                   className="group"
                 >
                   <div className="aspect-[4/3] rounded-xl overflow-hidden mb-3">
-                    <img 
+                    <img decoding="async" loading="lazy" 
                       src={related.coverImage} 
                       alt={related.title[lang] || related.title.en}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 

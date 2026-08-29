@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useI18n } from '@/lib/i18n.jsx';
+import { transformImage, imgPresets } from '@/lib/imageTransform';
 import { motion } from 'framer-motion';
 import {
   Star, MapPin, Globe, Calendar, BadgeCheck, ChevronLeft, ChevronRight,
@@ -362,8 +363,8 @@ export default function GuideDetails() {
         >
           {/* Photo */}
           <div className="w-full lg:w-[400px] aspect-[3/4] rounded-2xl overflow-hidden shadow-lg">
-            <img
-              src={avatar || FALLBACK_IMG}
+            <img decoding="async" loading="lazy"
+              src={transformImage(avatar || FALLBACK_IMG, imgPresets.card)}
               alt={name}
               className="w-full h-full object-cover"
             />

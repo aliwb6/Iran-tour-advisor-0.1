@@ -3,6 +3,7 @@ import { Camera, Loader2, Check, X } from 'lucide-react';
 import { avatarFor } from '@/lib/avatar';
 import { supabase } from '@/supabaseClient';
 import { useI18n } from '@/lib/i18n.jsx';
+import { transformImage, imgPresets } from '@/lib/imageTransform';
 
 // Premium circular avatar with hover edit overlay. Clicking opens a small
 // URL prompt (matches the existing ProfileView/GalleryView pattern in
@@ -45,8 +46,8 @@ export default function UserAvatar({ profile, userId, onSave, size = 132, editab
       <div
         className="absolute inset-0 rounded-full border-2 border-gold/60 shadow-[0_8px_40px_rgba(0,0,0,0.45)] overflow-hidden bg-navy"
       >
-        <img
-          src={avatarFor(profile)}
+        <img decoding="async" loading="lazy"
+          src={transformImage(avatarFor(profile), imgPresets.avatar)}
           alt=""
           className="w-full h-full object-cover"
         />

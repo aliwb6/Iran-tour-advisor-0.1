@@ -182,7 +182,7 @@ export default function ProfilePage() {
       {/* ── Hero ── */}
       <section className="relative h-[420px] sm:h-[460px] overflow-hidden">
         <div className="absolute inset-0">
-          <img src={HERO_BG} alt="" className="w-full h-full object-cover scale-110 blur-[3px]" />
+          <img src={HERO_BG} alt="" className="w-full h-full object-cover scale-110 blur-[3px]" loading="eager" decoding="async" />
           <div className="absolute inset-0 bg-gradient-to-b from-navy/60 via-navy/75 to-background" />
           <div className="absolute inset-0 carpet-texture opacity-40" />
         </div>

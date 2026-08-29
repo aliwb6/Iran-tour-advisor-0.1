@@ -69,6 +69,9 @@ export default function HeroSection() {
             src={img}
             alt=""
             className="w-full h-full object-cover"
+            loading="eager"
+            fetchPriority={i === 0 ? 'high' : 'auto'}
+            decoding="async"
           />
         </motion.div>
       ))}

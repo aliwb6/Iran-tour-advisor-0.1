@@ -82,7 +82,7 @@ function TripSidebarCard({ guide, destination, date, adults, children, lang }) {
       {/* Guide mini-card */}
       <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/50 border border-border/40">
         <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 border-2 border-gold/30">
-          <img
+          <img decoding="async" loading="lazy"
             src={avatarFor(guide)}
             alt={name}
             className="w-full h-full object-cover"

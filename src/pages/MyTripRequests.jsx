@@ -102,7 +102,7 @@ function GuideSlot({ slot, tripId }) {
       <div className="flex items-center gap-2.5">
         <div className="w-8 h-8 rounded-full overflow-hidden bg-accent/20 flex items-center justify-center shrink-0">
           {avatarUrl ? (
-            <img src={avatarUrl} alt={guideName} className="w-full h-full object-cover" />
+            <img decoding="async" loading="lazy" src={avatarUrl} alt={guideName} className="w-full h-full object-cover" />
           ) : (
             <span className="font-body text-xs font-bold text-accent">{initials}</span>
           )}

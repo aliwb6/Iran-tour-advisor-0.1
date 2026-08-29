@@ -131,7 +131,7 @@ export default function SearchPage() {
                 className="group flex gap-6 p-4 rounded-2xl border border-border/50 bg-card hover:border-accent/30 hover:shadow-lg transition-all cursor-pointer"
               >
                 <div className="w-40 h-32 sm:w-48 sm:h-36 rounded-xl overflow-hidden shrink-0">
-                  <img
+                  <img decoding="async" loading="lazy"
                     src={tour.image_url || tour.cover_image || "https://images.unsplash.com/photo-1564960723835-2898c9df9297?w=400&h=300&fit=crop"}
                     alt={tour.title}
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"

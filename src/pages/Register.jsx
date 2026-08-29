@@ -430,7 +430,7 @@ export default function Register() {
                           : 'border-border bg-background hover:border-accent/40 hover:bg-accent/5'
                       }`}
                     >
-                      <img
+                      <img decoding="async" loading="lazy"
                         src={img}
                         alt={en}
                         className={`w-14 h-14 rounded-full object-cover transition-opacity ${selected ? 'opacity-100' : 'opacity-80'}`}

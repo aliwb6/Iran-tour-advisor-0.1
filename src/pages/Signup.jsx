@@ -587,7 +587,7 @@ export default function Signup() {
                               : 'border-border bg-background text-muted-foreground hover:border-accent/40 hover:text-foreground'
                           }`}
                         >
-                          <img
+                          <img decoding="async" loading="lazy"
                             src={img}
                             alt={t('gender_' + value)}
                             className="w-8 h-8 rounded-full object-cover shrink-0"

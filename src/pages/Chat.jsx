@@ -616,7 +616,7 @@ export default function Chat() {
                 className="relative w-24 h-24 rounded-2xl overflow-hidden mb-4 border-2"
                 style={{ borderColor: C.turq }}
               >
-                <img
+                <img decoding="async" loading="lazy"
                   src={avatarFor(guide)}
                   alt={guide.full_name}
                   className="w-full h-full object-cover"

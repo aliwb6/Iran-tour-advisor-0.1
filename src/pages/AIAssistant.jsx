@@ -1051,7 +1051,7 @@ export default function AIAssistant() {
                     <div key={key} className="group relative">
                       {msg.role === 'user' && msg.image && (
                         <div className="flex justify-end mb-1">
-                          <img src={msg.image} alt="uploaded" className="max-w-xs rounded-xl max-h-48 object-cover" />
+                          <img decoding="async" loading="lazy" src={msg.image} alt="uploaded" className="max-w-xs rounded-xl max-h-48 object-cover" />
                         </div>
                       )}
                       {msg.role === 'user' && msg.fileName && (
@@ -1130,7 +1130,7 @@ export default function AIAssistant() {
               {attachedFile && (
                 <div className="flex items-center gap-2 rounded-xl px-3 py-2" style={{ background: `${C.muted}12`, border: `1px solid ${C.muted}25` }}>
                   {attachedFile.type === 'image' ? (
-                    <img src={attachedFile.preview} alt="preview" className="w-10 h-10 rounded-lg object-cover shrink-0" />
+                    <img decoding="async" loading="lazy" src={attachedFile.preview} alt="preview" className="w-10 h-10 rounded-lg object-cover shrink-0" />
                   ) : (
                     <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ background: `${C.turq}20` }}>
                       <FileText className="w-5 h-5" style={{ color: C.turq }} />
@@ -1307,7 +1307,7 @@ function TourCard({ tour }) {
       className="group flex gap-3 p-3 rounded-2xl bg-card border border-border/50 hover:border-accent/40 hover:shadow-md transition-all"
     >
       <div className="w-20 h-20 rounded-xl overflow-hidden shrink-0 bg-secondary">
-        <img src={img} alt={tour.title || ''} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+        <img decoding="async" loading="lazy" src={img} alt={tour.title || ''} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
       </div>
       <div className="flex-1 min-w-0">
         <p className="font-heading text-sm font-semibold text-foreground truncate group-hover:text-accent transition-colors">
@@ -1347,7 +1347,7 @@ function GuideCard({ guide }) {
       to={`/guides/${guide.id}`}
       className="group flex items-center gap-3 p-3 rounded-2xl bg-card border border-border/50 hover:border-accent/40 hover:shadow-md transition-all"
     >
-      <img
+      <img decoding="async" loading="lazy"
         src={avatarFor(guide)}
         alt=""
         className="w-12 h-12 rounded-full object-cover border-2 border-gold/40 shrink-0"

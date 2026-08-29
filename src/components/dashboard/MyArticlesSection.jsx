@@ -99,7 +99,7 @@ export default function MyArticlesSection({ user }) {
               >
                 {/* Thumbnail */}
                 {article.image_url ? (
-                  <img
+                  <img decoding="async" loading="lazy"
                     src={article.image_url}
                     alt=""
                     className="w-20 h-16 object-cover rounded-lg shrink-0 border border-white/10"

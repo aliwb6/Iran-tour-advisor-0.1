@@ -305,7 +305,7 @@ export default function CityPage() {
     <div dir={dir} className="min-h-screen bg-background">
       {/* ── Hero ────────────────────────────────────────────────────────────── */}
       <section className="relative h-[460px] sm:h-[520px] overflow-hidden">
-        <img src={city.image} alt={localName} className="absolute inset-0 w-full h-full object-cover" />
+        <img decoding="async" loading="lazy" src={city.image} alt={localName} className="absolute inset-0 w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-background via-navy/70 to-navy/35" />
         <div className="absolute inset-0 carpet-texture opacity-25" />
 
@@ -512,7 +512,7 @@ function TourGrid({ tours, cityName, tx, Arrow, loading, searchActive, navigate 
             className="group block bg-card rounded-3xl overflow-hidden border border-border/50 hover:border-accent/40 hover:shadow-xl transition-all duration-500"
           >
             <div className="relative aspect-[4/3] overflow-hidden">
-              <img src={img} alt={title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+              <img decoding="async" loading="lazy" src={img} alt={title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
               <span className="absolute top-3 start-3 px-2.5 py-1 rounded-full bg-white/15 backdrop-blur-md border border-white/25 text-[10px] font-semibold text-white">
                 {cityName}
               </span>
@@ -573,7 +573,7 @@ function GuideGrid({ guides, cityName, tx, loading, searchActive, navigate }) {
           className="bg-card rounded-3xl border border-border/50 p-6 hover:border-accent/40 hover:shadow-xl transition-all duration-500"
         >
           <div className="flex items-center gap-4 mb-4">
-            <img
+            <img decoding="async" loading="lazy"
               src={avatarFor(guide)}
               alt=""
               className="w-14 h-14 rounded-full object-cover border-2 border-gold/40 flex-shrink-0"

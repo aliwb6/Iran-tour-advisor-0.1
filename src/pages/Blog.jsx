@@ -71,7 +71,7 @@ export default function Blog() {
           >
             <div className="aspect-[4/3] rounded-2xl overflow-hidden bg-muted">
               {hero.image_url ? (
-                <img
+                <img decoding="async" loading="lazy"
                   src={hero.image_url}
                   alt={hero.title_fa}
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
@@ -125,7 +125,7 @@ export default function Blog() {
               >
                 <div className="aspect-[4/3] rounded-2xl overflow-hidden mb-4 bg-muted">
                   {article.image_url ? (
-                    <img
+                    <img decoding="async" loading="lazy"
                       src={article.image_url}
                       alt={article.title_fa}
                       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"

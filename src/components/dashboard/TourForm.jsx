@@ -724,7 +724,7 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
               </div>
             ) : imageUrl ? (
               <div className="relative" onClick={e => e.stopPropagation()}>
-                <img src={imageUrl} className="w-full h-48 object-cover rounded-lg" alt="main" />
+                <img decoding="async" loading="lazy" src={imageUrl} className="w-full h-48 object-cover rounded-lg" alt="main" />
                 <button type="button" onClick={() => setImageUrl('')}
                   className="absolute top-2 right-2 p-1.5 rounded-full bg-black/60 text-white hover:bg-red-500/80 transition">
                   <X className="w-4 h-4" />
@@ -749,7 +749,7 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
             <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 mb-3">
               {galleryUrls.map((url, i) => (
                 <div key={i} className="relative aspect-square rounded-xl overflow-hidden border border-white/10 group">
-                  <img src={url} alt={`g${i}`} className="w-full h-full object-cover" />
+                  <img decoding="async" loading="lazy" src={url} alt={`g${i}`} className="w-full h-full object-cover" />
                   <button type="button"
                     onClick={() => setGalleryUrls(prev => prev.filter((_, idx) => idx !== i))}
                     className="absolute top-1 right-1 p-1 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition hover:bg-red-500/80">

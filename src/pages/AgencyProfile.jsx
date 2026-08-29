@@ -10,6 +10,7 @@ import {
 import { toast } from 'sonner';
 import { supabase } from '@/supabaseClient';
 import { avatarFor } from '@/lib/avatar';
+import { transformImage, imgPresets } from '@/lib/imageTransform';
 import { useAuth } from '@/lib/AuthContext';
 import TourCard from '@/components/tours/TourCard';
 import { FALLBACK_IMAGE } from '@/hooks/useSupabase';
@@ -331,7 +332,7 @@ export default function AgencyProfile() {
           {/* Logo/Photo */}
           <div className="w-full lg:w-[400px] aspect-[3/4] rounded-2xl overflow-hidden shadow-lg bg-gold/5 flex items-center justify-center">
             {hasAvatar ? (
-              <img src={avatarFor(agency)} alt={name} className="w-full h-full object-cover" />
+              <img decoding="async" loading="lazy" src={transformImage(avatarFor(agency), imgPresets.card)} alt={name} className="w-full h-full object-cover" />
             ) : (
               <div className="flex flex-col items-center gap-4 text-gold/40">
                 <Building2 className="w-24 h-24" />

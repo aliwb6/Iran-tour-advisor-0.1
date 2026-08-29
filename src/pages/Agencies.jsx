@@ -90,7 +90,7 @@ function AgencyCard({ agency, lang, onNavigate }) {
       {/* Photo / Logo area */}
       <div className="relative aspect-[4/3] overflow-hidden bg-gold/5">
         {hasAvatar ? (
-          <img
+          <img decoding="async" loading="lazy"
             src={avatarFor(agency)}
             alt={agency.full_name || ''}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"

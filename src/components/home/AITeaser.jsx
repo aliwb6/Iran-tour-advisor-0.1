@@ -19,7 +19,7 @@ export default function AITeaser() {
     <section dir={dir} className="section-gap relative overflow-hidden">
       {/* Background */}
       <div className="absolute inset-0">
-        <img src={BG} alt="" className="w-full h-full object-cover" />
+        <img decoding="async" loading="lazy" src={BG} alt="" className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-navy/80" />
         <div className="absolute inset-0 carpet-texture" />
       </div>

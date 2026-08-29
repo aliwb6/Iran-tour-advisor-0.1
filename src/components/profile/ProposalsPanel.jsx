@@ -57,7 +57,7 @@ function GuideAvatar({ guide, size = 'md' }) {
   const sz = size === 'lg' ? 'w-12 h-12 text-base' : 'w-9 h-9 text-sm';
   if (guide?.avatar_url) {
     return (
-      <img
+      <img decoding="async" loading="lazy"
         src={guide.avatar_url}
         alt={guide.full_name}
         className={`${sz} rounded-full object-cover border border-border/40 shrink-0`}
@@ -195,7 +195,7 @@ function ProposalDetailModal({ slot, onClose }) {
                   <div className="grid grid-cols-3 gap-2">
                     {slot.images.map((img, i) => (
                       <a key={i} href={img} target="_blank" rel="noreferrer">
-                        <img
+                        <img decoding="async" loading="lazy"
                           src={img}
                           alt=""
                           className="w-full aspect-square object-cover rounded-xl border border-border/30 hover:opacity-90 transition-opacity"
