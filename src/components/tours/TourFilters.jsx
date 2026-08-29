@@ -63,13 +63,24 @@ const priceOptions = [
   { key: 'luxury', en: 'Luxury',     fa: 'لوکس',        ar: 'فاخر',        min: 2500 },
 ];
 
+const sortOptions = [
+  { key: 'recommended', en: 'Recommended',     fa: 'پیشنهاد شده',     ar: 'موصى به' },
+  { key: 'price_asc',   en: 'Price: Low to High',  fa: 'قیمت: کم به زیاد',   ar: 'السعر: من الأقل للأعلى' },
+  { key: 'price_desc',  en: 'Price: High to Low',  fa: 'قیمت: زیاد به کم',   ar: 'السعر: من الأعلى للأقل' },
+  { key: 'duration_asc',  en: 'Duration: Shortest First', fa: 'مدت: کوتاه‌ترین اول', ar: 'المدة: الأقصر أولاً' },
+  { key: 'duration_desc', en: 'Duration: Longest First',  fa: 'مدت: طولانی‌ترین اول', ar: 'المدة: الأطول أولاً' },
+  { key: 'difficulty_asc',  en: 'Difficulty: Easiest First', fa: 'سختی: آسان‌ترین اول', ar: 'الصعوبة: الأسهل أولاً' },
+  { key: 'difficulty_desc', en: 'Difficulty: Hardest First', fa: 'سختی: سخت‌ترین اول',  ar: 'الصعوبة: الأصعب أولاً' },
+  { key: 'newest',      en: 'Newest First',  fa: 'جدیدترین اول',   ar: 'الأحدث أولاً' },
+];
+
 // ── FilterDropdown sub-component ─────────────────────────────────────────────
 
-function FilterDropdown({ label, value, options, onChange, lang, icon: Icon }) {
+function FilterDropdown({ label, value, options, onChange, lang, icon: Icon, inactiveKey = 'all' }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const selected = options.find(o => o.key === value) || options[0];
-  const isActive = value !== 'all';
+  const isActive = value !== inactiveKey;
 
   useEffect(() => {
     const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
@@ -128,7 +139,7 @@ function FilterDropdown({ label, value, options, onChange, lang, icon: Icon }) {
 
 // ── Main Component ────────────────────────────────────────────────────────────
 
-export default function TourFilters({ filters, onChange, resultCount }) {
+export default function TourFilters({ filters, onChange, resultCount, sortBy, onSortChange }) {
   const { lang, dir } = useI18n();
 
   const hasActive = filters.theme !== 'all'
@@ -180,6 +191,17 @@ export default function TourFilters({ filters, onChange, resultCount }) {
             options={priceOptions}
             onChange={(v) => onChange({ ...filters, price: v })}
             lang={lang}
+          />
+
+          {/* Sort by — visually separated from the category filters */}
+          <div className="w-px self-stretch bg-border/40 mx-1 hidden sm:block" />
+          <FilterDropdown
+            label={lang === 'fa' ? 'مرتب‌سازی' : lang === 'ar' ? 'ترتيب' : 'Sort by'}
+            value={sortBy || 'recommended'}
+            options={sortOptions}
+            onChange={(v) => onSortChange?.(v)}
+            lang={lang}
+            inactiveKey="recommended"
           />
 
           {/* Result count + reset */}

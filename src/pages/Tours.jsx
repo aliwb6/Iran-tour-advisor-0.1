@@ -39,9 +39,42 @@ const pickImage = (tour) => {
   return FALLBACK_IMAGE;
 };
 
+// Difficulty ordering, easiest → hardest. Tours with an unknown/missing
+// difficulty sort to the end on "easiest" and to the front on "hardest" via
+// the rank fallback below.
+const DIFFICULTY_RANK = { easy: 1, moderate: 2, challenging: 3 };
+
+// Pull a numeric value for sorting, with safe fallbacks.
+const priceOf = (t) => Number(t.priceFrom ?? t.price_from ?? t.price) || 0;
+const durationOf = (t) => Number(t.duration) || 0;
+const difficultyRankOf = (t) => DIFFICULTY_RANK[t.difficulty] ?? Object.keys(DIFFICULTY_RANK).length + 1;
+const createdOf = (t) => {
+  const v = t.created_at ?? t.id;
+  return v == null ? 0 : v;
+};
+
+// Sort AFTER filtering. `recommended` is a no-op (keeps the existing order
+// returned by the query). Each comparator pushes nulls/missing values toward
+// the end so a missing field never crashes or produces a confusing order.
+const SORTERS = {
+  price_asc: (a, b) => priceOf(a) - priceOf(b),
+  price_desc: (a, b) => priceOf(b) - priceOf(a),
+  duration_asc: (a, b) => durationOf(a) - durationOf(b),
+  duration_desc: (a, b) => durationOf(b) - durationOf(a),
+  difficulty_asc: (a, b) => difficultyRankOf(a) - difficultyRankOf(b),
+  difficulty_desc: (a, b) => difficultyRankOf(b) - difficultyRankOf(a),
+  newest: (a, b) => {
+    const av = createdOf(a);
+    const bv = createdOf(b);
+    if (av === bv) return 0;
+    return av < bv ? 1 : -1; // descending
+  },
+};
+
 export default function Tours() {
   const { dir, lang } = useI18n();
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  const [sortBy, setSortBy] = useState('recommended');
   const { tours: rawTours, loading, error } = useTours(filters);
   const tours = rawTours.filter(t => {
     if (filters.city && filters.city !== 'all') {
@@ -58,6 +91,11 @@ export default function Tours() {
     return true;
   });
 
+  // Apply sorting to the filtered list (skip for the default "recommended").
+  const sortedTours = sortBy !== 'recommended' && SORTERS[sortBy]
+    ? [...tours].sort(SORTERS[sortBy])
+    : tours;
+
   const loadingText = lang === 'fa' ? 'در حال بارگذاری تورها...' : lang === 'ar' ? 'جار تحميل الرحلات...' : 'Loading tours...';
   const errorTitle = lang === 'fa' ? 'بارگذاری تورها با خطا مواجه شد' : lang === 'ar' ? 'فشل تحميل الرحلات' : 'Failed to load tours';
 
@@ -66,7 +104,13 @@ export default function Tours() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* Filters */}
-        <TourFilters filters={filters} onChange={setFilters} resultCount={tours.length} />
+        <TourFilters
+          filters={filters}
+          onChange={setFilters}
+          resultCount={tours.length}
+          sortBy={sortBy}
+          onSortChange={setSortBy}
+        />
 
         {/* States */}
         {loading ? (
@@ -87,7 +131,7 @@ export default function Tours() {
         ) : (
           /* Tour Grid */
           <AnimatePresence mode="wait">
-            {tours.length === 0 ? (
+            {sortedTours.length === 0 ? (
               <motion.div
                 key="empty"
                 initial={{ opacity: 0 }}
@@ -115,9 +159,9 @@ export default function Tours() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-10"
+                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8"
               >
-                {tours.map((tour, i) => (
+                {sortedTours.map((tour, i) => (
                   <TourCard
                     key={tour.id}
                     tour={normalizeTour(tour)}

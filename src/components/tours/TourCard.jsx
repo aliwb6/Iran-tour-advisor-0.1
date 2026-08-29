@@ -93,7 +93,7 @@ export default function TourCard({ tour, image, index }) {
         </div>
 
         <h2
-          className="font-heading text-2xl lg:text-3xl font-medium text-foreground mb-1 group-hover:text-accent transition-colors duration-300"
+          className="font-heading text-xl sm:text-2xl font-medium text-foreground mb-1 group-hover:text-accent transition-colors duration-300"
           style={{ WebkitTextStroke: '1px black' }}
         >
           {title}
