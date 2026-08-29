@@ -133,6 +133,7 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
     if (Array.isArray(editing.gallery)) return editing.gallery;
     return editing.gallery ? editing.gallery.split(',').map(s => s.trim()).filter(Boolean) : [];
   });
+  const [pasteUrl,     setPasteUrl]     = useState('');
   const [uploadingMain,    setUploadingMain]    = useState(false);
   const [uploadingGallery, setUploadingGallery] = useState(false);
   const [saving,   setSaving]   = useState(false);
@@ -207,6 +208,50 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
       setGalleryUrls(prev => [...prev, ...urls.filter(Boolean)]);
     } catch (err) { setError(err.message); }
     finally { setUploadingGallery(false); }
+  };
+
+  // Add an externally-hosted image by pasting its URL — it shares the same
+  // `galleryUrls` array / 10-image limit as device uploads and is NOT uploaded
+  // to the bucket. We validate the string and optionally verify it actually
+  // loads before committing it.
+  const handleAddGalleryUrl = (e) => {
+    e.preventDefault();
+    const raw = pasteUrl.trim();
+    if (!raw) return;
+    if (!/^https?:\/\//i.test(raw)) {
+      setError(
+        lang === 'fa' ? 'لطفاً یک نشانی تصویر معتبر وارد کنید (با http:// یا https:// شروع شود).'
+        : lang === 'ar' ? 'يرجى إدخال رابط صورة صالح (يبدأ بـ http:// أو https://).'
+        : 'Please enter a valid image URL (starting with http:// or https://).'
+      );
+      return;
+    }
+    if (galleryUrls.length >= 10) {
+      setError(
+        lang === 'fa' ? 'حداکثر ۱۰ تصویر مجاز است.'
+        : lang === 'ar' ? 'الحد الأقصى ١٠ صور.'
+        : 'Maximum of 10 images allowed.'
+      );
+      return;
+    }
+
+    const verifyAndAdd = () => {
+      setGalleryUrls(prev => [...prev, raw]);
+      setPasteUrl('');
+      setError('');
+    };
+
+    // Sanity-check the URL loads before adding (so we don't persist dead links).
+    const img = new Image();
+    img.onload = verifyAndAdd;
+    img.onerror = () => {
+      setError(
+        lang === 'fa' ? 'این نشانی بارگذاری نشد. مطمئن شوید یک تصویر معتبر است و دسترسی‌پذیر است.'
+        : lang === 'ar' ? 'تعذّر تحميل هذا الرابط. تأكد أنه صورة صالحة ويمكن الوصول إليها.'
+        : 'That URL could not be loaded. Make sure it is a valid, accessible image.'
+      );
+    };
+    img.src = raw;
   };
 
   const handleSubmit = async (e) => {
@@ -735,6 +780,30 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
               <input ref={galleryRef} type="file" accept="image/*" multiple className="hidden"
                 onChange={e => handleGalleryUpload(e.target.files)} />
             </div>
+          )}
+
+          {/* Add an external image by pasting its URL — shares the same limit. */}
+          {galleryUrls.length < 10 && (
+            <form onSubmit={handleAddGalleryUrl} className="flex gap-2">
+              <input
+                type="url"
+                value={pasteUrl}
+                onChange={e => setPasteUrl(e.target.value)}
+                className={`${inputClass} flex-1`}
+                placeholder={
+                  lang === 'fa' ? 'یا یک نشانی تصویر (URL) بچسبانید…'
+                  : lang === 'ar' ? 'أو الصق رابط صورة (URL)…'
+                  : '…or paste an image URL'
+                }
+              />
+              <button
+                type="submit"
+                disabled={!pasteUrl.trim()}
+                className="px-4 py-2.5 rounded-xl border border-white/20 text-white/70 text-sm hover:border-teal-400 hover:text-white transition whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {lang === 'fa' ? 'افزودن' : lang === 'ar' ? 'إضافة' : 'Add'}
+              </button>
+            </form>
           )}
         </div>
 

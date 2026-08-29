@@ -49,8 +49,8 @@ const pickLangArray = (val, lang) => {
 
 const pickHeroImage = (tour) => {
   if (!tour) return FALLBACK_IMAGE;
-  if (tour && Array.isArray(tour.gallery) && tour.gallery[0]) return tour.gallery[0];
-  return tour.cover_image || tour.image_url || tour.image || FALLBACK_IMAGE;
+  if (Array.isArray(tour?.gallery) && tour.gallery[0]) return tour.gallery[0];
+  return tour?.cover_image || tour?.image_url || tour?.image || FALLBACK_IMAGE;
 };
 
 // The dashboard TourForm currently stores `itinerary` as a free-text string
@@ -153,7 +153,7 @@ export default function TourDetails() {
     );
   }
 
-  const gallery = (tour && Array.isArray(tour.gallery) ? tour.gallery : []).filter(Boolean);
+  const gallery = (Array.isArray(tour?.gallery) ? tour.gallery : []).filter(Boolean);
 
   const handleSubmitRequest = async () => {
     const { data: { user } } = await supabase.auth.getUser();
