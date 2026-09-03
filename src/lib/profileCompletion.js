@@ -40,12 +40,9 @@ export function checkProfileCompletion(profile) {
     || (Array.isArray(profile.tour_types) && profile.tour_types.length > 0);
   check(role === 'agency' ? 'tour_types' : 'specialty', hasSpecialty);
 
-  // license_url + license_status = 'verified'
-  check('license_url', !!profile.license_url?.trim() && profile.license_status === 'verified');
-
-  // gallery_images: at least 1
-  const gallery = Array.isArray(profile.gallery_images) ? profile.gallery_images : [];
-  check('gallery', gallery.length >= 1);
+  // Uploading the license is the user's responsibility. Verification is a
+  // separate admin-review state and must not keep the user's form incomplete.
+  check('license_url', !!profile.license_url?.trim());
 
   const total = items.length;
   const percentage = total > 0 ? Math.round((passed / total) * 100) : 0;

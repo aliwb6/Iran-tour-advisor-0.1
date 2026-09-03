@@ -21,9 +21,9 @@ import MyArticlesSection from '../components/dashboard/MyArticlesSection';
 import GuideRequestsView from '@/components/dashboard/GuideRequestsView';
 import NotificationsView from '@/components/dashboard/NotificationsView';
 import TripRequestForm from '@/components/profile/TripRequestForm';
-import ProfileCompletionChecklist from '@/components/dashboard/ProfileCompletionChecklist';
 import { checkProfileCompletion } from '@/lib/profileCompletion';
 import { parseLanguages, popularLanguages } from '@/data/languages';
+import { iranianDestinations } from '@/data/iranianCities';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -53,6 +53,19 @@ const NAV = [
 ];
 
 const PROFILE_FIELDS = ['full_name', 'phone', 'city', 'bio', 'avatar_url', 'languages'];
+const PROFILE_TOUR_TYPES = [
+  { value: 'Cultural', en: 'Cultural', fa: 'فرهنگی', ar: 'ثقافي' },
+  { value: 'Adventure', en: 'Adventure', fa: 'ماجراجویی', ar: 'مغامرة' },
+  { value: 'Nature', en: 'Nature & Eco', fa: 'طبیعت و بوم‌گردی', ar: 'الطبيعة والبيئة' },
+  { value: 'History & Heritage', en: 'History & Heritage', fa: 'تاریخ و میراث', ar: 'التاريخ والتراث' },
+  { value: 'Architecture', en: 'Architecture', fa: 'معماری', ar: 'العمارة' },
+  { value: 'Food & Culinary', en: 'Food & Culinary', fa: 'غذا و آشپزی', ar: 'الطعام وفنون الطهي' },
+  { value: 'Photography', en: 'Photography', fa: 'عکاسی', ar: 'التصوير' },
+  { value: 'Religious', en: 'Religious', fa: 'مذهبی', ar: 'ديني' },
+  { value: 'Luxury', en: 'Luxury', fa: 'لاکچری', ar: 'فاخر' },
+  { value: 'Budget-friendly', en: 'Budget-friendly', fa: 'اقتصادی', ar: 'اقتصادي' },
+  { value: 'Business Travel', en: 'Business Travel', fa: 'سفر تجاری', ar: 'سفر الأعمال' },
+];
 
 // ─── Shared sub-components ───────────────────────────────────────────────────
 
@@ -64,6 +77,103 @@ function EmptyState({ Icon, title, desc }) {
       </div>
       <p className="text-white/60 font-medium text-sm mb-1">{title}</p>
       {desc && <p className="text-white/35 text-xs max-w-xs">{desc}</p>}
+    </div>
+  );
+}
+
+const parseProfileCities = (profile) => {
+  const source = Array.isArray(profile?.other_cities) && profile.other_cities.length
+    ? profile.other_cities
+    : String(profile?.city || '').split(/[,،;]/);
+  const seen = new Set();
+  return source.map(city => String(city || '').trim()).filter(city => {
+    const key = city.toLocaleLowerCase();
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+
+function ProfileCityMultiSelect({ values, onChange, lang }) {
+  const [search, setSearch] = useState('');
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef(null);
+  const inputRef = useRef(null);
+  const normalizedSearch = search.trim().toLocaleLowerCase();
+
+  useEffect(() => {
+    if (!open) return;
+    const closeOutside = event => {
+      if (wrapRef.current && !wrapRef.current.contains(event.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', closeOutside);
+    return () => document.removeEventListener('mousedown', closeOutside);
+  }, [open]);
+
+  const isSelected = city => values.some(value => value.toLocaleLowerCase() === city.toLocaleLowerCase());
+  const labelFor = city => {
+    const match = iranianDestinations.find(item => item.en.toLocaleLowerCase() === city.toLocaleLowerCase());
+    return match?.[lang] || match?.en || city;
+  };
+  const matches = iranianDestinations
+    .filter(city => !isSelected(city.en))
+    .filter(city => normalizedSearch && [city.en, city.fa, city.ar].some(label => label.toLocaleLowerCase().includes(normalizedSearch)))
+    .slice(0, 12);
+  const exactMatch = iranianDestinations.find(city => [city.en, city.fa, city.ar].some(label => label.toLocaleLowerCase() === normalizedSearch));
+  const customAlreadySelected = isSelected(search.trim());
+
+  const add = city => {
+    const clean = city.trim();
+    if (!clean || isSelected(clean)) return;
+    onChange([...values, clean]);
+    setSearch('');
+    setOpen(false);
+  };
+
+  return (
+    <div ref={wrapRef} className="relative">
+      <div className="flex flex-wrap gap-2 mb-2">
+        {values.map(city => (
+          <button key={city} type="button" onClick={() => onChange(values.filter(value => value !== city))} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[hsl(178,85%,32%)]/20 border border-[hsl(178,85%,32%)] text-teal-300 text-xs" title="Remove city">
+            <MapPin className="w-3 h-3" />{labelFor(city)}<X className="w-3 h-3" />
+          </button>
+        ))}
+      </div>
+      <div className="relative">
+        <MapPin className="absolute start-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30 pointer-events-none" />
+        <input
+          ref={inputRef}
+          value={search}
+          onChange={event => { setSearch(event.target.value); setOpen(true); }}
+          onFocus={() => setOpen(true)}
+          onKeyDown={event => {
+            if (event.key === 'Escape') setOpen(false);
+            if (event.key === 'Enter') {
+              event.preventDefault();
+              add(matches[0]?.en || exactMatch?.en || search);
+            }
+          }}
+          className="w-full ps-10 pe-4 py-2.5 rounded-xl border border-white/10 bg-white/[0.05] text-white text-sm placeholder:text-white/25 focus:outline-none focus:border-[hsl(178,85%,32%)] focus:ring-1 focus:ring-[hsl(178,85%,32%)]/50 transition"
+          placeholder={lang === 'fa' ? 'جست‌وجو و افزودن شهر…' : lang === 'ar' ? 'ابحث عن مدينة وأضفها…' : 'Search and add a city…'}
+          autoComplete="off"
+        />
+      </div>
+      <AnimatePresence>
+        {open && normalizedSearch && (matches.length > 0 || (!exactMatch && !customAlreadySelected)) && (
+          <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} className="absolute z-40 mt-1.5 w-full max-h-56 overflow-y-auto rounded-xl bg-[hsl(222,45%,14%)] border border-white/10 shadow-2xl py-1">
+            {matches.map(city => (
+              <button key={city.en} type="button" onMouseDown={event => { event.preventDefault(); add(city.en); }} className="w-full flex items-center gap-2 px-3 py-2 text-start text-sm text-white/70 hover:bg-white/[0.07] hover:text-white">
+                <MapPin className="w-3.5 h-3.5 text-teal-400" />{city[lang] || city.en}
+              </button>
+            ))}
+            {!exactMatch && !customAlreadySelected && (
+              <button type="button" onMouseDown={event => { event.preventDefault(); add(search); }} className="w-full flex items-center gap-2 px-3 py-2 text-start text-sm text-teal-300 hover:bg-teal-500/10 border-t border-white/[0.06]">
+                <Plus className="w-3.5 h-3.5" />{lang === 'fa' ? `افزودن «${search.trim()}»` : lang === 'ar' ? `إضافة «${search.trim()}»` : `Add “${search.trim()}”`}
+              </button>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -889,27 +999,46 @@ function MyToursView({ tours, onEdit, onDelete }) {
 
 function ProfileView({ profile, userId, onSave }) {
   const { t, lang, dir } = useI18n();
+  const isAgency = profile?.role === 'agency';
+  const initialTourTypes = Array.isArray(profile?.tour_types)
+    ? profile.tour_types
+    : Array.isArray(profile?.specialties)
+      ? profile.specialties
+      : profile?.specialty
+        ? [profile.specialty]
+        : [];
   const [form, setForm] = useState({
     full_name:  profile?.full_name || '',
     phone:      profile?.phone || '',
-    city:       profile?.city || '',
+    cities:     parseProfileCities(profile),
     bio:        profile?.bio || '',
     avatar_url: profile?.avatar_url || '',
     languages:  parseLanguages(profile?.languages),
+    tourTypes:  initialTourTypes,
   });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
   const [otherLanguage, setOtherLanguage] = useState('');
+  const [otherTourType, setOtherTourType] = useState('');
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [avatarDragActive, setAvatarDragActive] = useState(false);
   const avatarFileRef = useRef(null);
 
-  const completionFields = profile?.role === 'guide' || profile?.role === 'agency'
-    ? PROFILE_FIELDS
-    : PROFILE_FIELDS.filter(field => field !== 'languages');
-  const completion = Math.round(
-    completionFields.filter(f => form[f]?.toString().trim()).length / completionFields.length * 100
+  const isGuideOrAgencyProfile = profile?.role === 'guide' || profile?.role === 'agency';
+  const liveProfileCheck = isGuideOrAgencyProfile
+    ? checkProfileCompletion({
+        ...profile,
+        ...form,
+        city: form.cities.join(', '),
+        languages: form.languages.join(', '),
+        specialties: isAgency ? profile?.specialties : form.tourTypes,
+        tour_types: isAgency ? form.tourTypes : profile?.tour_types,
+      })
+    : null;
+  const completionFields = PROFILE_FIELDS.filter(field => field !== 'languages' && field !== 'city');
+  const completion = liveProfileCheck?.percentage ?? Math.round(
+    [...completionFields.map(field => form[field]), form.cities.length].filter(value => value?.toString().trim()).length / (completionFields.length + 1) * 100
   );
 
   const handleChange = (e) => {
@@ -937,6 +1066,27 @@ function ProfileView({ profile, userId, onSave }) {
       languages: parseLanguages([...prev.languages, language]),
     }));
     setOtherLanguage('');
+  };
+
+  const toggleTourType = (tourType) => {
+    setForm(prev => ({
+      ...prev,
+      tourTypes: prev.tourTypes.some(item => item.toLocaleLowerCase() === tourType.toLocaleLowerCase())
+        ? prev.tourTypes.filter(item => item.toLocaleLowerCase() !== tourType.toLocaleLowerCase())
+        : [...prev.tourTypes, tourType],
+    }));
+  };
+
+  const addOtherTourType = () => {
+    const tourType = otherTourType.trim();
+    if (!tourType) return;
+    setForm(prev => ({
+      ...prev,
+      tourTypes: prev.tourTypes.some(item => item.toLocaleLowerCase() === tourType.toLocaleLowerCase())
+        ? prev.tourTypes
+        : [...prev.tourTypes, tourType],
+    }));
+    setOtherTourType('');
   };
 
   const handleAvatarUpload = async (file) => {
@@ -986,7 +1136,15 @@ function ProfileView({ profile, userId, onSave }) {
     setError('');
     setSaving(true);
     try {
-      const profilePayload = { ...form, languages: form.languages.join(', ') };
+      const { tourTypes, cities, ...profileFields } = form;
+      const profilePayload = {
+        ...profileFields,
+        city: cities.join(', '),
+        primary_city: cities[0] || null,
+        other_cities: cities.length ? cities : null,
+        languages: form.languages.join(', '),
+        ...(isAgency ? { tour_types: tourTypes } : { specialties: tourTypes }),
+      };
       const { error: err } = await supabase
         .from('profiles')
         .update(profilePayload)
@@ -1026,13 +1184,21 @@ function ProfileView({ profile, userId, onSave }) {
         </div>
       </div>
 
-      {/* License Warning Banner */}
-      {(profile?.role === 'guide' || profile?.role === 'agency') && profile?.license_status !== 'verified' && (
-        <div className="mb-4 p-4 rounded-xl bg-red-500/10 border border-red-500/25 flex items-start gap-3">
-          <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+      {/* License status is separate from user-completable profile fields. */}
+      {isGuideOrAgencyProfile && profile?.license_status !== 'verified' && (
+        <div className={`mb-4 p-4 rounded-xl border flex items-start gap-3 ${profile?.license_url && profile?.license_status !== 'rejected' ? 'bg-amber-500/10 border-amber-500/25' : 'bg-red-500/10 border-red-500/25'}`}>
+          <AlertTriangle className={`w-5 h-5 flex-shrink-0 mt-0.5 ${profile?.license_url && profile?.license_status !== 'rejected' ? 'text-amber-400' : 'text-red-400'}`} />
           <div>
-            <p className="text-red-400 font-semibold text-sm">License Document Required</p>
-            <p className="text-red-400/70 text-xs mt-1">Your profile is hidden from travelers until you upload and verify your license document. You won't be able to create new tours until your license is verified.</p>
+            <p className={`font-semibold text-sm ${profile?.license_url && profile?.license_status !== 'rejected' ? 'text-amber-400' : 'text-red-400'}`}>
+              {profile?.license_status === 'rejected' ? 'License Document Rejected' : profile?.license_url ? 'License Awaiting Admin Review' : 'License Document Required'}
+            </p>
+            <p className={`text-xs mt-1 ${profile?.license_url && profile?.license_status !== 'rejected' ? 'text-amber-400/70' : 'text-red-400/70'}`}>
+              {profile?.license_status === 'rejected'
+                ? 'Please upload a replacement license document for review.'
+                : profile?.license_url
+                  ? 'Your profile information is complete. An admin must verify your license before your profile becomes public or you can create tours.'
+                  : 'Upload your license document below. Admin verification happens separately after upload.'}
+            </p>
           </div>
         </div>
       )}
@@ -1106,12 +1272,10 @@ function ProfileView({ profile, userId, onSave }) {
           </div>
         </div>
 
-        {/* City */}
+        {/* Service cities */}
         <div>
-          <div>
-            <label className={labelClass}>City</label>
-            <input name="city" value={form.city} onChange={handleChange} className={inputClass} placeholder="Isfahan" />
-          </div>
+          <label className={labelClass}>{lang === 'fa' ? 'شهرهای فعالیت' : lang === 'ar' ? 'مدن النشاط' : 'Service Cities'}</label>
+          <ProfileCityMultiSelect values={form.cities} onChange={cities => setForm(prev => ({ ...prev, cities }))} lang={lang} />
         </div>
 
         {/* Languages */}
@@ -1174,6 +1338,65 @@ function ProfileView({ profile, userId, onSave }) {
                 onClick={addOtherLanguage}
                 className="shrink-0 flex items-center gap-1.5 px-4 rounded-xl bg-white/10 text-white/70 text-xs hover:bg-white/15"
               >
+                <Plus className="w-3.5 h-3.5" /> Add
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Tour types / specialties */}
+        {isGuideOrAgencyProfile && (
+          <div>
+            <label className={labelClass}>{isAgency ? 'Tour Types' : 'Tour Types / Specialties'}</label>
+            <p className="text-white/35 text-xs mb-3">
+              {lang === 'fa' ? 'حداقل یک نوع تور یا تخصص را انتخاب کنید.' : lang === 'ar' ? 'اختر نوع رحلة أو تخصصاً واحداً على الأقل.' : 'Choose at least one tour type or specialty.'}
+            </p>
+            <div className="flex flex-wrap gap-2 mb-3">
+              {PROFILE_TOUR_TYPES.map(option => {
+                const selected = form.tourTypes.some(item => item.toLocaleLowerCase() === option.value.toLocaleLowerCase());
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => toggleTourType(option.value)}
+                    className={`px-3 py-1.5 rounded-full text-xs border transition ${selected
+                      ? 'bg-[hsl(38,62%,58%)]/20 border-[hsl(38,62%,58%)] text-[hsl(38,62%,70%)]'
+                      : 'bg-white/[0.03] border-white/10 text-white/55 hover:border-white/25'
+                    }`}
+                  >
+                    {selected && <span className="me-1">✓</span>}{option[lang] || option.en}
+                  </button>
+                );
+              })}
+            </div>
+
+            {form.tourTypes.filter(tourType => !PROFILE_TOUR_TYPES.some(option => option.value.toLocaleLowerCase() === tourType.toLocaleLowerCase())).length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-3">
+                {form.tourTypes
+                  .filter(tourType => !PROFILE_TOUR_TYPES.some(option => option.value.toLocaleLowerCase() === tourType.toLocaleLowerCase()))
+                  .map(tourType => (
+                    <button key={tourType} type="button" onClick={() => toggleTourType(tourType)} className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs bg-[hsl(38,62%,58%)]/20 border border-[hsl(38,62%,58%)] text-[hsl(38,62%,70%)]" title="Remove tour type">
+                      {tourType}<X className="w-3 h-3" />
+                    </button>
+                  ))}
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <input
+                value={otherTourType}
+                onChange={event => setOtherTourType(event.target.value)}
+                onKeyDown={event => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    addOtherTourType();
+                  }
+                }}
+                className={inputClass}
+                placeholder={lang === 'fa' ? 'نوع تور یا تخصص دیگر' : lang === 'ar' ? 'نوع رحلة أو تخصص آخر' : 'Other tour type or specialty'}
+                maxLength={80}
+              />
+              <button type="button" onClick={addOtherTourType} className="shrink-0 flex items-center gap-1.5 px-4 rounded-xl bg-white/10 text-white/70 text-xs hover:bg-white/15">
                 <Plus className="w-3.5 h-3.5" /> Add
               </button>
             </div>
@@ -2233,16 +2456,7 @@ export default function Dashboard() {
       case 'my-tours':
         return <MyToursView tours={tours} onEdit={setEditingTour} onDelete={handleDeleteTour} />;
       case 'profile':
-        return (
-          <>
-            <ProfileView profile={profile} userId={authUser?.id} onSave={handleProfileSaved} />
-            {isGuideOrAgency && (
-              <div className="mt-6">
-                <ProfileCompletionChecklist profile={profile} />
-              </div>
-            )}
-          </>
-        );
+        return <ProfileView profile={profile} userId={authUser?.id} onSave={handleProfileSaved} />;
       case 'gallery':
         return <GalleryView profile={profile} userId={authUser?.id} onSave={handleProfileSaved} />;
       case 'settings':

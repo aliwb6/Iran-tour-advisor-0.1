@@ -794,6 +794,7 @@ function GuideProfileReviewModal({ guide, busy, onClose, onSave }) {
   const [openingLicense, setOpeningLicense] = useState(false);
   const hasLicense = Boolean(guide.license_url?.trim());
   const completion = checkProfileCompletion({ ...guide, ...form });
+  const canApprove = completion.completed && hasLicense && form.license_status === 'verified';
   const profileHref = guide.role === 'agency' ? `/agencies/${guide.id}` : `/guides/${guide.id}`;
   const inputClass = 'w-full px-3 py-2 rounded-xl border border-white/10 bg-white/[0.05] text-white text-sm placeholder:text-white/25 focus:outline-none focus:border-[hsl(178,85%,32%)]/60';
 
@@ -908,7 +909,7 @@ function GuideProfileReviewModal({ guide, busy, onClose, onSave }) {
           <div className="flex items-center justify-end gap-2 flex-wrap pt-2 border-t border-white/10">
             <button disabled={busy} onClick={() => submit('save')} className="px-4 py-2 rounded-xl bg-white/8 text-white/70 text-xs hover:bg-white/12 disabled:opacity-50">Save changes</button>
             <button disabled={busy} onClick={() => submit('reject')} className="px-4 py-2 rounded-xl bg-red-500/15 border border-red-500/25 text-red-400 text-xs hover:bg-red-500/25 disabled:opacity-50">Reject profile</button>
-            <button disabled={busy || !completion.completed} onClick={() => submit('approve')} title={!completion.completed ? 'Complete and verify all required profile fields first.' : ''} className="px-4 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 text-xs hover:bg-emerald-500/25 disabled:opacity-40">{busy ? 'Saving…' : 'Approve profile'}</button>
+            <button disabled={busy || !canApprove} onClick={() => submit('approve')} title={!completion.completed ? 'All profile fields must be completed first.' : form.license_status !== 'verified' ? 'Verify the uploaded license before approving this profile.' : ''} className="px-4 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 text-xs hover:bg-emerald-500/25 disabled:opacity-40">{busy ? 'Saving…' : 'Approve profile'}</button>
           </div>
         </div>
       </div>

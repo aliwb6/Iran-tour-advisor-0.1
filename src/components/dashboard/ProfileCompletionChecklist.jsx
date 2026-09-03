@@ -11,8 +11,7 @@ const FIELD_LABELS = {
   languages:   { en: 'Languages (at least 1)',  fa: 'زبان‌ها (حداقل ۱)',    ar: 'اللغات (لغة واحدة على الأقل)' },
   specialty:   { en: 'Specialty',               fa: 'تخصص',                 ar: 'التخصص' },
   tour_types:  { en: 'Tour Types',              fa: 'نوع تور',              ar: 'أنواع الجولات' },
-  license_url: { en: 'Verified License',        fa: 'مجوز تأیید شده',      ar: 'رخصة موثقة' },
-  gallery:     { en: 'Gallery (at least 1 photo)', fa: 'گالری (حداقل ۱ عکس)', ar: 'معرض (صورة واحدة على الأقل)' },
+  license_url: { en: 'License Uploaded',        fa: 'مجوز آپلود شده',      ar: 'تم رفع الرخصة' },
 };
 
 export default function ProfileCompletionChecklist({ profile }) {
