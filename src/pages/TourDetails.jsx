@@ -523,7 +523,7 @@ export default function TourDetails() {
                     {bookLoading && <Loader2 className="w-4 h-4 animate-spin" />}
                     {lang === 'fa' ? 'رزرو / تماس با راهنما'
                       : lang === 'ar' ? 'احجز / تواصل مع المرشد'
-                      : 'Book / Contact Guide'}
+                      : 'Book'}
                   </button>
                   {bookError && (
                     <p className="font-body text-xs text-red-500">{bookError}</p>
