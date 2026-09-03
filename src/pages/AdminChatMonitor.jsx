@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/supabaseClient';
-import { MessageSquare, Search, AlertTriangle, Loader2, ShieldAlert } from 'lucide-react';
+import { MessageSquare, AlertTriangle, Loader2, ShieldAlert } from 'lucide-react';
 
 const CARD = 'bg-white/[0.03] border border-white/[0.07] rounded-2xl';
 
@@ -28,7 +28,7 @@ export default function AdminChatMonitor() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeKey, setActiveKey] = useState(null);
-  const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState('newest');
   const [onlyFlagged, setOnlyFlagged] = useState(false);
 
   useEffect(() => {
@@ -81,13 +81,15 @@ export default function AdminChatMonitor() {
   }, [messages]);
 
   const visibleThreads = useMemo(() => {
-    let list = threads;
+    let list = [...threads];
     if (onlyFlagged) list = list.filter(t => t.flaggedCount > 0);
-    const q = search.trim().toLowerCase();
-    if (q) list = list.filter(t => nameOf(t.a).toLowerCase().includes(q) || nameOf(t.b).toLowerCase().includes(q));
+    if (sortBy === 'oldest') list.sort((a, b) => new Date(a.last.created_at) - new Date(b.last.created_at));
+    if (sortBy === 'messages') list.sort((a, b) => b.count - a.count);
+    if (sortBy === 'flagged') list.sort((a, b) => b.flaggedCount - a.flaggedCount);
+    if (sortBy === 'participants') list.sort((a, b) => `${nameOf(a.a)} ${nameOf(a.b)}`.localeCompare(`${nameOf(b.a)} ${nameOf(b.b)}`));
     return list;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [threads, onlyFlagged, search, profiles]);
+  }, [threads, onlyFlagged, sortBy, profiles]);
 
   const active = threads.find(t => t.key === activeKey) || null;
   const totalFlagged = threads.reduce((s, t) => s + t.flaggedCount, 0);
@@ -122,15 +124,18 @@ export default function AdminChatMonitor() {
       )}
 
       <div className="flex items-center gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="w-4 h-4 text-white/30 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by participant name…"
-            className="w-full pl-9 pr-3 py-2 rounded-xl bg-white/[0.05] border border-white/10 text-white text-sm placeholder:text-white/30 focus:outline-none focus:border-[hsl(178,85%,32%)] transition"
-          />
-        </div>
+        <select
+          value={sortBy}
+          onChange={event => setSortBy(event.target.value)}
+          aria-label="Sort conversations"
+          className="flex-1 min-w-[220px] px-3 py-2 rounded-xl bg-[hsl(222,45%,14%)] border border-white/10 text-white text-sm focus:outline-none focus:border-[hsl(178,85%,32%)] transition [color-scheme:dark]"
+        >
+          <option value="newest" className="bg-[hsl(222,45%,14%)] text-white">Sort by: Newest activity</option>
+          <option value="oldest" className="bg-[hsl(222,45%,14%)] text-white">Sort by: Oldest activity</option>
+          <option value="messages" className="bg-[hsl(222,45%,14%)] text-white">Sort by: Most messages</option>
+          <option value="flagged" className="bg-[hsl(222,45%,14%)] text-white">Sort by: Most flagged</option>
+          <option value="participants" className="bg-[hsl(222,45%,14%)] text-white">Sort by: Participant name</option>
+        </select>
         <button
           onClick={() => setOnlyFlagged(v => !v)}
           className={`px-3 py-2 rounded-xl text-xs font-medium border transition flex items-center gap-1.5 ${

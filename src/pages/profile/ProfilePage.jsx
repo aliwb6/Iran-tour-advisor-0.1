@@ -13,6 +13,7 @@ import { supabase } from '@/supabaseClient';
 import UserAvatar from '@/components/profile/UserAvatar';
 import VerificationBadge from '@/components/profile/VerificationBadge';
 import EditableField from '@/components/profile/EditableField';
+import { parseLanguages } from '@/data/languages';
 
 // Cinematic Iranian backdrop used behind the profile hero. Stored on the
 // project's existing base44 CDN, blurred + tinted at render time so it never
@@ -41,6 +42,8 @@ export default function ProfilePage() {
   const [localProfile, setLocalProfile] = useState(profile);
   const [reviewCount, setReviewCount] = useState(0);
   const [requestCount, setRequestCount] = useState(0);
+  const profileRole = localProfile?.role || profile?.role || user?.user_metadata?.role;
+  const isTourist = profileRole === 'tourist' || profileRole === 'traveler';
 
   // Bounce signed-out visitors to login.
   useEffect(() => {
@@ -97,16 +100,38 @@ export default function ProfilePage() {
     return d.toLocaleDateString(lang === 'fa' ? 'fa-IR' : lang === 'ar' ? 'ar' : 'en', { month: 'long', year: 'numeric' });
   })();
 
-  const saveField = (key) => async (value) => {
+  const saveProfileValue = async (key, storedValue) => {
     if (!user?.id) return;
-    const trimmed = typeof value === 'string' ? value.trim() : value;
     const { error } = await supabase
       .from('profiles')
-      .update({ [key]: trimmed || null })
+      .update({ [key]: storedValue })
       .eq('id', user.id);
     if (error) throw error;
-    setLocalProfile((p) => ({ ...(p || {}), [key]: trimmed || null }));
+    setLocalProfile((p) => ({ ...(p || {}), [key]: storedValue }));
     fetchProfile?.(user.id);
+  };
+
+  const saveField = (key) => async (value) => {
+    const trimmed = typeof value === 'string' ? value.trim() : value;
+    await saveProfileValue(key, trimmed || null);
+  };
+
+  const saveAge = async (value) => {
+    const trimmed = String(value ?? '').trim();
+    if (!trimmed) {
+      await saveProfileValue('age', null);
+      return;
+    }
+    const age = Number(trimmed);
+    if (!Number.isInteger(age) || age < 1 || age > 120) {
+      throw new Error(lang === 'fa' ? 'سن باید عددی بین ۱ تا ۱۲۰ باشد.' : lang === 'ar' ? 'يجب أن يكون العمر رقماً بين 1 و120.' : 'Age must be a whole number between 1 and 120.');
+    }
+    await saveProfileValue('age', age);
+  };
+
+  const saveLanguages = async (value) => {
+    const languages = parseLanguages(value);
+    await saveProfileValue('languages', languages.length ? languages.join(', ') : null);
   };
 
   const tx = {
@@ -115,6 +140,14 @@ export default function ProfilePage() {
     aboutPh:        lang === 'fa' ? 'داستان سفر خود را بنویس...' : lang === 'ar' ? 'شارك قصة سفرك...' : 'Share your story — what draws you to travel?',
     city:           lang === 'fa' ? 'شهر' : lang === 'ar' ? 'المدينة' : 'City',
     cityPh:         lang === 'fa' ? 'مثلاً: لندن، بریتانیا' : lang === 'ar' ? 'مثل: لندن، المملكة المتحدة' : 'e.g. London, UK',
+    homeCity:       lang === 'fa' ? 'شهر اصلی' : lang === 'ar' ? 'المدينة الأصلية' : 'Home city',
+    homeCityPh:     lang === 'fa' ? 'مثلاً: پاریس' : lang === 'ar' ? 'مثال: باريس' : 'e.g. Paris',
+    nationality:    lang === 'fa' ? 'ملیت / اصالت' : lang === 'ar' ? 'الجنسية / الأصل' : 'Nationality / origin',
+    nationalityPh:  lang === 'fa' ? 'مثلاً: فرانسوی' : lang === 'ar' ? 'مثال: فرنسي' : 'e.g. French',
+    age:            lang === 'fa' ? 'سن' : lang === 'ar' ? 'العمر' : 'Age',
+    agePh:          lang === 'fa' ? 'مثلاً: ۳۲' : lang === 'ar' ? 'مثال: 32' : 'e.g. 32',
+    languages:      lang === 'fa' ? 'زبان‌هایی که صحبت می‌کنم' : lang === 'ar' ? 'اللغات التي أتحدث بها' : 'Languages I speak',
+    languagesPh:    lang === 'fa' ? 'مثلاً: انگلیسی، فرانسوی' : lang === 'ar' ? 'مثال: الإنجليزية، الفرنسية' : 'e.g. English, French',
     verification:   lang === 'fa' ? 'وضعیت تأیید' : lang === 'ar' ? 'حالة التحقق' : 'Verification',
     phone:          lang === 'fa' ? 'موبایل' : lang === 'ar' ? 'الهاتف' : 'Phone',
     email:          lang === 'fa' ? 'ایمیل' : lang === 'ar' ? 'البريد' : 'Email',
@@ -211,6 +244,11 @@ export default function ProfilePage() {
                   {localProfile.city}
                 </p>
               )}
+              {isTourist && (localProfile?.nationality || localProfile?.age) && (
+                <p className="font-body text-xs text-white/60 mt-1.5">
+                  {[localProfile?.nationality, localProfile?.age ? `${localProfile.age} ${lang === 'fa' ? 'سال' : lang === 'ar' ? 'سنة' : 'years old'}` : null].filter(Boolean).join(' · ')}
+                </p>
+              )}
             </div>
           </div>
         </motion.div>
@@ -219,14 +257,16 @@ export default function ProfilePage() {
       {/* ── Pending approval / incomplete profile banner (guide / agency only) ── */}
       {(localProfile?.role === 'guide' || localProfile?.role === 'agency') && !localProfile?.is_approved && (
         <div className="max-w-6xl mx-auto px-5 sm:px-8 lg:px-10 mt-6">
-          <div className="flex items-start gap-3 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30">
-            <Clock className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+          <div className={`flex items-start gap-3 p-4 rounded-2xl border ${localProfile.approval_rejection_reason ? 'bg-red-500/10 border-red-500/30' : 'bg-amber-500/10 border-amber-500/30'}`}>
+            <Clock className={`w-5 h-5 shrink-0 mt-0.5 ${localProfile.approval_rejection_reason ? 'text-red-500' : 'text-amber-500'}`} />
             <div>
-              <p className="font-heading text-sm font-semibold text-amber-700 dark:text-amber-400">
-                {t('profile_pending_title')}
+              <p className={`font-heading text-sm font-semibold ${localProfile.approval_rejection_reason ? 'text-red-700 dark:text-red-400' : 'text-amber-700 dark:text-amber-400'}`}>
+                {localProfile.approval_rejection_reason
+                  ? (lang === 'fa' ? 'پروفایل شما رد شد' : lang === 'ar' ? 'تم رفض ملفك الشخصي' : 'Your profile was rejected')
+                  : t('profile_pending_title')}
               </p>
-              <p className="font-body text-sm text-amber-700/80 dark:text-amber-400/80 mt-0.5">
-                {t('profile_pending_desc')}
+              <p className={`font-body text-sm mt-0.5 ${localProfile.approval_rejection_reason ? 'text-red-700/80 dark:text-red-400/80' : 'text-amber-700/80 dark:text-amber-400/80'}`}>
+                {localProfile.approval_rejection_reason || t('profile_pending_desc')}
               </p>
             </div>
           </div>
@@ -260,18 +300,46 @@ export default function ProfilePage() {
             className="bg-card/60 backdrop-blur-xl border border-border/40 rounded-3xl p-6"
           >
             <EditableField
-              label={tx.city}
+              label={isTourist ? tx.homeCity : tx.city}
               value={localProfile?.city || ''}
-              placeholder={tx.cityPh}
+              placeholder={isTourist ? tx.homeCityPh : tx.cityPh}
               onSave={saveField('city')}
             />
-            <EditableField
-              label={tx.aboutMe}
-              value={localProfile?.bio || ''}
-              placeholder={tx.aboutPh}
-              type="textarea"
-              onSave={saveField('bio')}
-            />
+            {isTourist && (
+              <>
+                <EditableField
+                  label={tx.nationality}
+                  value={localProfile?.nationality || ''}
+                  placeholder={tx.nationalityPh}
+                  onSave={saveField('nationality')}
+                />
+                <EditableField
+                  label={tx.age}
+                  value={localProfile?.age ?? ''}
+                  placeholder={tx.agePh}
+                  type="number"
+                  min={1}
+                  max={120}
+                  onSave={saveAge}
+                />
+                <EditableField
+                  label={tx.languages}
+                  value={parseLanguages(localProfile?.languages).join(', ')}
+                  placeholder={tx.languagesPh}
+                  helperText={lang === 'fa' ? 'زبان‌ها را با ویرگول از هم جدا کنید.' : lang === 'ar' ? 'افصل بين اللغات بفاصلة.' : 'Separate multiple languages with commas.'}
+                  onSave={saveLanguages}
+                />
+              </>
+            )}
+            {!isTourist && (
+              <EditableField
+                label={tx.aboutMe}
+                value={localProfile?.bio || ''}
+                placeholder={tx.aboutPh}
+                type="textarea"
+                onSave={saveField('bio')}
+              />
+            )}
           </motion.div>
 
           {/* Verification badges */}

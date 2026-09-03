@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Clock, Briefcase, Users, MessageSquare, Shield,
   Loader2, LogOut, CheckCircle2, XCircle, Edit2, Trash2, X, MapPin,
   DollarSign, Star, AlertTriangle, Send, Image as ImageIcon,
-  Search, Sparkles, PlusCircle, BookOpen,
+  Sparkles, PlusCircle, BookOpen, FileText, ExternalLink,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { avatarFor } from '@/lib/avatar';
@@ -473,10 +473,10 @@ function TourEditModal({ tour, onSave, onClose }) {
           </div>
           <div>
             <label className={lc}>Status</label>
-            <select className={`${ic} cursor-pointer`} value={form.status}
+            <select className={`${ic} cursor-pointer [color-scheme:dark]`} value={form.status}
               onChange={e => setForm(p => ({ ...p, status: e.target.value }))}>
               {Object.entries(STATUS_CFG).map(([v, c]) => (
-                <option key={v} value={v}>{c.label}</option>
+                <option key={v} value={v} className="bg-[hsl(222,45%,14%)] text-white">{c.label}</option>
               ))}
             </select>
           </div>
@@ -634,11 +634,11 @@ function AllToursView({ tours, loading, onApprove, onReject, onEdit, busyId }) {
         <select
           value={filter}
           onChange={e => setFilter(e.target.value)}
-          className="px-3 py-1.5 rounded-xl border border-white/10 bg-white/[0.05] text-white text-xs focus:outline-none focus:border-[hsl(178,85%,32%)]/60 cursor-pointer"
+          className="px-3 py-1.5 rounded-xl border border-white/10 bg-[hsl(222,45%,14%)] text-white text-xs focus:outline-none focus:border-[hsl(178,85%,32%)]/60 cursor-pointer [color-scheme:dark]"
         >
-          <option value="all">All Statuses</option>
+          <option value="all" className="bg-[hsl(222,45%,14%)] text-white">All Statuses</option>
           {Object.entries(STATUS_CFG).map(([v, c]) => (
-            <option key={v} value={v}>{c.label}</option>
+            <option key={v} value={v} className="bg-[hsl(222,45%,14%)] text-white">{c.label}</option>
           ))}
         </select>
       </div>
@@ -665,18 +665,22 @@ function AllToursView({ tours, loading, onApprove, onReject, onEdit, busyId }) {
 
 // ─── Guides View ─────────────────────────────────────────────────────────────
 
-function GuidesView({ guides, loading, onToggleApproval, busyId }) {
-  const [query, setQuery] = useState('');
+function GuidesView({ guides, loading, onReviewProfile, busyId }) {
+  const [sortBy, setSortBy] = useState('newest');
 
   if (loading) return <SectionLoader />;
 
-  const filtered = query
-    ? guides.filter(g =>
-        (g.full_name || '').toLowerCase().includes(query.toLowerCase()) ||
-        (g.email || '').toLowerCase().includes(query.toLowerCase()) ||
-        (g.city || '').toLowerCase().includes(query.toLowerCase())
-      )
-    : guides;
+  const sorted = [...guides].sort((a, b) => {
+    if (sortBy === 'oldest') return new Date(a.created_at || 0) - new Date(b.created_at || 0);
+    if (sortBy === 'name') return (a.full_name || '').localeCompare(b.full_name || '');
+    if (sortBy === 'city') return (a.city || '').localeCompare(b.city || '');
+    if (sortBy === 'role') return (a.role || '').localeCompare(b.role || '');
+    if (sortBy === 'status') {
+      const rank = (guide) => guide.is_approved ? 0 : guide.approval_rejection_reason ? 2 : 1;
+      return rank(a) - rank(b);
+    }
+    return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+  });
 
   return (
     <div>
@@ -685,22 +689,26 @@ function GuidesView({ guides, loading, onToggleApproval, busyId }) {
           <h2 className="text-white font-bold text-lg">All Guides</h2>
           <span className="text-white/40 text-xs">{guides.length} total</span>
         </div>
-        <div className="relative">
-          <Search className="w-3.5 h-3.5 text-white/30 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            placeholder="Search guides..."
-            className="pl-9 pr-3 py-1.5 rounded-xl border border-white/10 bg-white/[0.05] text-white text-xs placeholder:text-white/30 focus:outline-none focus:border-[hsl(178,85%,32%)]/60 w-56"
-          />
-        </div>
+        <select
+          value={sortBy}
+          onChange={event => setSortBy(event.target.value)}
+          aria-label="Sort guides"
+          className="px-3 py-2 rounded-xl border border-white/10 bg-[hsl(222,45%,14%)] text-white text-xs focus:outline-none focus:border-[hsl(178,85%,32%)]/60 min-w-48 [color-scheme:dark]"
+        >
+          <option value="newest" className="bg-[hsl(222,45%,14%)] text-white">Sort by: Newest</option>
+          <option value="oldest" className="bg-[hsl(222,45%,14%)] text-white">Sort by: Oldest</option>
+          <option value="name" className="bg-[hsl(222,45%,14%)] text-white">Sort by: Name A–Z</option>
+          <option value="city" className="bg-[hsl(222,45%,14%)] text-white">Sort by: City</option>
+          <option value="role" className="bg-[hsl(222,45%,14%)] text-white">Sort by: Guide / Agency</option>
+          <option value="status" className="bg-[hsl(222,45%,14%)] text-white">Sort by: Approval status</option>
+        </select>
       </div>
 
-      {filtered.length === 0 ? (
-        <EmptyState Icon={Users} title="No guides found" desc="No guides match your search." />
+      {sorted.length === 0 ? (
+        <EmptyState Icon={Users} title="No profiles found" desc="Guide and agency profiles will appear here." />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filtered.map(guide => {
+          {sorted.map(guide => {
             const busy = busyId === guide.id;
             const comp = checkProfileCompletion(guide);
             return (
@@ -716,9 +724,11 @@ function GuidesView({ guides, loading, onToggleApproval, busyId }) {
                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium border flex-shrink-0 ${
                     guide.is_approved
                       ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25'
-                      : 'bg-gray-500/15 text-gray-400 border-gray-500/25'
+                      : guide.approval_rejection_reason
+                        ? 'bg-red-500/15 text-red-400 border-red-500/25'
+                        : 'bg-gray-500/15 text-gray-400 border-gray-500/25'
                   }`}>
-                    {guide.is_approved ? 'Approved' : 'Pending'}
+                    {guide.is_approved ? 'Approved' : guide.approval_rejection_reason ? 'Rejected' : 'Pending'}
                   </span>
                 </div>
 
@@ -751,30 +761,157 @@ function GuidesView({ guides, loading, onToggleApproval, busyId }) {
                 </div>
 
                 <button
-                  onClick={() => onToggleApproval(guide)}
-                  disabled={busy || (!guide.is_approved && !comp.completed)}
-                  title={!guide.is_approved && !comp.completed ? 'Cannot approve: profile is incomplete' : ''}
-                  className={`w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-medium transition border disabled:opacity-50 ${
-                    guide.is_approved
-                      ? 'bg-red-500/10 border-red-500/20 text-red-400 hover:bg-red-500/20'
-                      : comp.completed
-                        ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20'
-                        : 'bg-gray-500/10 border-gray-500/20 text-gray-400 cursor-not-allowed'
-                  }`}
+                  onClick={() => onReviewProfile(guide)}
+                  disabled={busy}
+                  className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-medium transition border bg-[hsl(178,85%,32%)]/10 border-[hsl(178,85%,32%)]/25 text-[hsl(178,85%,55%)] hover:bg-[hsl(178,85%,32%)]/20 disabled:opacity-50"
                 >
-                  {busy
-                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    : guide.is_approved
-                      ? <XCircle className="w-3.5 h-3.5" />
-                      : <CheckCircle2 className="w-3.5 h-3.5" />
-                  }
-                  {guide.is_approved ? 'Suspend' : 'Approve Guide'}
+                  {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Edit2 className="w-3.5 h-3.5" />}
+                  View &amp; review profile
                 </button>
               </div>
             );
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+function GuideProfileReviewModal({ guide, busy, onClose, onSave }) {
+  const [form, setForm] = useState({
+    full_name: guide.full_name || '',
+    email: guide.email || '',
+    phone: guide.phone || '',
+    city: guide.city || '',
+    bio: guide.bio || '',
+    languages: Array.isArray(guide.languages) ? guide.languages.join(', ') : guide.languages || '',
+    specialty: guide.specialty || '',
+    avatar_url: guide.avatar_url || '',
+    license_status: guide.license_status || 'not_uploaded',
+  });
+  const [rejectionReason, setRejectionReason] = useState(guide.approval_rejection_reason || '');
+  const [localError, setLocalError] = useState('');
+  const [openingLicense, setOpeningLicense] = useState(false);
+  const hasLicense = Boolean(guide.license_url?.trim());
+  const completion = checkProfileCompletion({ ...guide, ...form });
+  const profileHref = guide.role === 'agency' ? `/agencies/${guide.id}` : `/guides/${guide.id}`;
+  const inputClass = 'w-full px-3 py-2 rounded-xl border border-white/10 bg-white/[0.05] text-white text-sm placeholder:text-white/25 focus:outline-none focus:border-[hsl(178,85%,32%)]/60';
+
+  const set = (field, value) => setForm(current => ({ ...current, [field]: value }));
+  const viewLicense = async () => {
+    if (!hasLicense || openingLicense) return;
+    setOpeningLicense(true);
+    setLocalError('');
+    try {
+      if (/^https?:\/\//i.test(guide.license_url)) {
+        window.open(guide.license_url, '_blank', 'noopener,noreferrer');
+        return;
+      }
+      const { data, error } = await supabase.storage
+        .from('licenses')
+        .createSignedUrl(guide.license_url, 60);
+      if (error) throw error;
+      window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
+    } catch (error) {
+      setLocalError(error.message || 'The license document could not be opened.');
+    } finally {
+      setOpeningLicense(false);
+    }
+  };
+  const submit = async (decision) => {
+    const reason = rejectionReason.trim();
+    if (decision === 'reject' && !reason) {
+      setLocalError('A rejection reason is required.');
+      return;
+    }
+    if (form.license_status === 'verified' && !hasLicense) {
+      setLocalError('A license document must be uploaded before it can be marked as verified.');
+      return;
+    }
+    setLocalError('');
+    const saved = await onSave(guide, {
+      ...form,
+      is_approved: decision === 'approve' ? true : decision === 'reject' ? false : guide.is_approved,
+      approval_rejection_reason: decision === 'approve' ? null : decision === 'reject' ? reason : guide.approval_rejection_reason || null,
+      approval_reviewed_at: decision === 'save' ? guide.approval_reviewed_at || null : new Date().toISOString(),
+      review_requested: decision === 'save' ? guide.review_requested : false,
+    }, decision);
+    if (saved) onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4" onMouseDown={event => { if (event.target === event.currentTarget) onClose(); }}>
+      <div className="w-full max-w-3xl max-h-[92vh] overflow-y-auto rounded-2xl bg-[hsl(222,45%,12%)] border border-white/10 shadow-2xl">
+        <div className="sticky top-0 z-10 flex items-center justify-between gap-4 px-5 py-4 bg-[hsl(222,45%,12%)] border-b border-white/10">
+          <div className="flex items-center gap-3 min-w-0">
+            <img src={avatarFor({ ...guide, ...form })} alt="" className="w-11 h-11 rounded-xl object-cover bg-white/5" />
+            <div className="min-w-0">
+              <h3 className="text-white font-semibold truncate">{form.full_name || 'Unnamed profile'}</h3>
+              <p className="text-white/40 text-xs capitalize">{guide.role}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="w-9 h-9 rounded-xl bg-white/5 text-white/50 hover:text-white flex items-center justify-center"><X className="w-4 h-4" /></button>
+        </div>
+
+        <div className="p-5 space-y-5">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="text-xs text-white/50">Profile completion: <span className={completion.completed ? 'text-emerald-400' : 'text-amber-400'}>{completion.percentage}%</span></div>
+            <Link to={profileHref} target="_blank" rel="noreferrer" className="text-xs text-[hsl(178,85%,55%)] hover:underline">Open public profile</Link>
+          </div>
+
+          <div className="grid sm:grid-cols-2 gap-4">
+            <label className="text-xs text-white/50">Full name<input value={form.full_name} onChange={e => set('full_name', e.target.value)} className={`${inputClass} mt-1.5`} /></label>
+            <label className="text-xs text-white/50">Email<input value={form.email} onChange={e => set('email', e.target.value)} className={`${inputClass} mt-1.5`} dir="ltr" /></label>
+            <label className="text-xs text-white/50">Phone<input value={form.phone} onChange={e => set('phone', e.target.value)} className={`${inputClass} mt-1.5`} dir="ltr" /></label>
+            <label className="text-xs text-white/50">City<input value={form.city} onChange={e => set('city', e.target.value)} className={`${inputClass} mt-1.5`} /></label>
+            <label className="text-xs text-white/50">Languages<input value={form.languages} onChange={e => set('languages', e.target.value)} className={`${inputClass} mt-1.5`} placeholder="English, Persian" /></label>
+            <label className="text-xs text-white/50">{guide.role === 'agency' ? 'Tour types / specialty' : 'Specialty'}<input value={form.specialty} onChange={e => set('specialty', e.target.value)} className={`${inputClass} mt-1.5`} /></label>
+            <label className="text-xs text-white/50 sm:col-span-2">Avatar URL<input value={form.avatar_url} onChange={e => set('avatar_url', e.target.value)} className={`${inputClass} mt-1.5`} dir="ltr" /></label>
+            <label className="text-xs text-white/50">License status
+              <select value={form.license_status} onChange={e => set('license_status', e.target.value)} className={`${inputClass} mt-1.5 [color-scheme:dark]`}>
+                <option value="not_uploaded" className="bg-[hsl(222,45%,14%)] text-white">Not uploaded</option><option value="pending_review" className="bg-[hsl(222,45%,14%)] text-white">Pending review</option><option value="verified" disabled={!hasLicense} className="bg-[hsl(222,45%,14%)] text-white">Verified</option><option value="rejected" className="bg-[hsl(222,45%,14%)] text-white">Rejected</option>
+              </select>
+            </label>
+
+            <div className={`sm:col-span-2 rounded-xl border p-4 ${hasLicense ? 'bg-emerald-500/[0.06] border-emerald-500/20' : 'bg-white/[0.03] border-white/10'}`}>
+              <div className="flex items-center justify-between gap-4 flex-wrap">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${hasLicense ? 'bg-emerald-500/15 text-emerald-400' : 'bg-white/[0.06] text-white/35'}`}>
+                    <FileText className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-white text-sm font-medium">License document</p>
+                    <p className={`text-xs mt-0.5 ${hasLicense ? 'text-emerald-400' : 'text-amber-400'}`}>
+                      {hasLicense ? 'Uploaded — ready for admin review' : 'No license document has been uploaded'}
+                    </p>
+                  </div>
+                </div>
+                {hasLicense && (
+                  <button type="button" onClick={viewLicense} disabled={openingLicense} className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[hsl(178,85%,32%)]/15 border border-[hsl(178,85%,32%)]/30 text-[hsl(178,85%,55%)] text-xs font-medium hover:bg-[hsl(178,85%,32%)]/25 disabled:opacity-50">
+                    {openingLicense ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ExternalLink className="w-3.5 h-3.5" />}
+                    {openingLicense ? 'Opening…' : 'View uploaded license'}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <label className="block text-xs text-white/50">Bio<textarea rows={5} value={form.bio} onChange={e => set('bio', e.target.value)} className={`${inputClass} mt-1.5 resize-y`} /></label>
+
+          <div className="p-4 rounded-xl bg-red-500/5 border border-red-500/20">
+            <label className="block text-xs text-red-300">Rejection reason (required when rejecting)
+              <textarea rows={3} value={rejectionReason} onChange={e => setRejectionReason(e.target.value)} className={`${inputClass} mt-1.5 border-red-500/20`} placeholder="Explain what must be corrected before resubmission…" />
+            </label>
+          </div>
+          {localError && <p className="text-red-400 text-xs">{localError}</p>}
+
+          <div className="flex items-center justify-end gap-2 flex-wrap pt-2 border-t border-white/10">
+            <button disabled={busy} onClick={() => submit('save')} className="px-4 py-2 rounded-xl bg-white/8 text-white/70 text-xs hover:bg-white/12 disabled:opacity-50">Save changes</button>
+            <button disabled={busy} onClick={() => submit('reject')} className="px-4 py-2 rounded-xl bg-red-500/15 border border-red-500/25 text-red-400 text-xs hover:bg-red-500/25 disabled:opacity-50">Reject profile</button>
+            <button disabled={busy || !completion.completed} onClick={() => submit('approve')} title={!completion.completed ? 'Complete and verify all required profile fields first.' : ''} className="px-4 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 text-xs hover:bg-emerald-500/25 disabled:opacity-40">{busy ? 'Saving…' : 'Approve profile'}</button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -877,20 +1014,31 @@ function CommentCard({ review, onReply, onDelete, busy }) {
 }
 
 function CommentsView({ reviews, loading, onReply, onDelete, busyId }) {
+  const [sortBy, setSortBy] = useState('newest');
   if (loading) return <SectionLoader />;
+
+  const sorted = [...reviews].sort((a, b) => {
+    if (sortBy === 'oldest') return new Date(a.created_at || 0) - new Date(b.created_at || 0);
+    if (sortBy === 'rating-high') return Number(b.rating || 0) - Number(a.rating || 0);
+    if (sortBy === 'rating-low') return Number(a.rating || 0) - Number(b.rating || 0);
+    if (sortBy === 'unreplied') return Number(Boolean(a.admin_reply)) - Number(Boolean(b.admin_reply));
+    return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+  });
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-5">
-        <h2 className="text-white font-bold text-lg">Comments</h2>
-        <span className="text-white/40 text-xs">{reviews.length} total</span>
+      <div className="flex items-center justify-between gap-3 flex-wrap mb-5">
+        <div className="flex items-center gap-3"><h2 className="text-white font-bold text-lg">Comments</h2><span className="text-white/40 text-xs">{reviews.length} total</span></div>
+        <select value={sortBy} onChange={event => setSortBy(event.target.value)} aria-label="Sort comments" className="px-3 py-2 rounded-xl border border-white/10 bg-[hsl(222,45%,14%)] text-white text-xs focus:outline-none focus:border-[hsl(178,85%,32%)]/60 [color-scheme:dark]">
+          <option value="newest" className="bg-[hsl(222,45%,14%)] text-white">Sort by: Newest</option><option value="oldest" className="bg-[hsl(222,45%,14%)] text-white">Sort by: Oldest</option><option value="rating-high" className="bg-[hsl(222,45%,14%)] text-white">Sort by: Highest rating</option><option value="rating-low" className="bg-[hsl(222,45%,14%)] text-white">Sort by: Lowest rating</option><option value="unreplied" className="bg-[hsl(222,45%,14%)] text-white">Sort by: Unreplied first</option>
+        </select>
       </div>
 
       {reviews.length === 0 ? (
         <EmptyState Icon={MessageSquare} title="No comments yet" desc="Reviews from travelers will appear here." />
       ) : (
         <div className="space-y-4">
-          {reviews.map(review => (
+          {sorted.map(review => (
             <CommentCard
               key={review.id}
               review={review}
@@ -1120,6 +1268,7 @@ export default function AdminDashboard() {
   const [error, setError]   = useState('');
   const [busyId, setBusyId] = useState(null);
   const [editingTour, setEditingTour] = useState(null);
+  const [reviewingGuide, setReviewingGuide] = useState(null);
 
   // ── Auth guard ──
   useEffect(() => {
@@ -1228,18 +1377,21 @@ export default function AdminDashboard() {
     setEditingTour(null);
   };
 
-  const toggleGuideApproval = async (guide) => {
+  const saveGuideReview = async (guide, updates, decision) => {
     setBusyId(guide.id);
     setError('');
     try {
       const { error: err } = await supabase
         .from('profiles')
-        .update({ is_approved: !guide.is_approved })
+        .update(updates)
         .eq('id', guide.id);
       if (err) throw err;
       await fetchGuides();
+      toast.success(decision === 'approve' ? 'Profile approved.' : decision === 'reject' ? 'Profile rejected with reason.' : 'Profile changes saved.');
+      return true;
     } catch (err) {
       setError(err.message);
+      return false;
     } finally {
       setBusyId(null);
     }
@@ -1364,7 +1516,7 @@ export default function AdminDashboard() {
             guides={guides}
             loading={loadingGuides}
             busyId={busyId}
-            onToggleApproval={toggleGuideApproval}
+            onReviewProfile={setReviewingGuide}
           />
         );
       case 'comments':
@@ -1417,6 +1569,15 @@ export default function AdminDashboard() {
           tour={editingTour}
           onSave={handleTourEdit}
           onClose={() => setEditingTour(null)}
+        />
+      )}
+      {reviewingGuide && (
+        <GuideProfileReviewModal
+          key={reviewingGuide.id}
+          guide={reviewingGuide}
+          busy={busyId === reviewingGuide.id}
+          onClose={() => setReviewingGuide(null)}
+          onSave={saveGuideReview}
         />
       )}
     </div>

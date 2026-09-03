@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Loader2, Star, MapPin } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { Loader2, Star, MapPin, XCircle } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/supabaseClient';
 import { useI18n } from '@/lib/i18n.jsx';
+import { toast } from 'sonner';
 import {
   Dialog,
   DialogContent,
@@ -87,6 +88,7 @@ function ProposalDetailModal({ slot, onClose }) {
   const guide = slot.guide || {};
   const path  = profilePath(guide);
   const submitted = hasSubmittedDetails(slot);
+  const rejected = slot.status === 'rejected';
 
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
@@ -101,6 +103,11 @@ function ProposalDetailModal({ slot, onClose }) {
         </DialogHeader>
 
         <div className="space-y-4 mt-2">
+          {rejected && (
+            <div className="rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-800/60 px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
+              {lang === 'fa' ? 'این پیشنهاد رد شده و فقط برای سابقه نگه‌داری می‌شود.' : lang === 'ar' ? 'تم رفض هذا العرض وهو محفوظ للرجوع إليه.' : 'This proposal was rejected and is kept for your records.'}
+            </div>
+          )}
           {/* Guide header — always shown */}
           <Link to={path} className="flex items-center gap-3 hover:opacity-80 transition-opacity w-fit">
             <GuideAvatar guide={guide} size="lg" />
@@ -223,21 +230,27 @@ function ProposalDetailModal({ slot, onClose }) {
 
 // ── Level 2: single proposal row ─────────────────────────────────────────────
 
-function ProposalRow({ slot }) {
+function ProposalRow({ slot, onReject, rejecting }) {
   const { t, lang, dir } = useI18n();
   const [showDetail, setShowDetail] = useState(false);
   const guide = slot.guide || {};
   const path  = profilePath(guide);
+  const rejected = slot.status === 'rejected';
 
   return (
     <>
-      <div className="flex items-center gap-3 p-3 rounded-xl bg-background/30 border border-border/20 hover:border-border/50 transition-colors">
+      <div className={`flex items-center gap-3 p-3 rounded-xl border transition-colors ${rejected ? 'bg-gray-100/80 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 grayscale opacity-70' : 'bg-background/30 border-border/20 hover:border-border/50'}`}>
         <Link to={path} className="flex items-center gap-2.5 min-w-0 flex-1 hover:opacity-80 transition-opacity">
           <GuideAvatar guide={guide} />
           <div className="min-w-0">
             <p className="text-sm font-semibold text-foreground truncate">{guide.full_name}</p>
             <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
               <RoleBadge role={guide.role} t={t} />
+              {rejected && (
+                <span className="px-2 py-0.5 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[10px] font-semibold">
+                  {lang === 'fa' ? 'رد شده' : lang === 'ar' ? 'مرفوض' : 'Rejected'}
+                </span>
+              )}
               {guide.rating > 0 && (
                 <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
                   <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
@@ -266,6 +279,16 @@ function ProposalRow({ slot }) {
         >
           {t('proposal_see_details')}
         </button>
+        {!rejected && (
+          <button
+            onClick={() => onReject(slot)}
+            disabled={rejecting}
+            className="shrink-0 inline-flex items-center gap-1 text-xs font-medium text-red-500 hover:text-red-600 disabled:opacity-50"
+          >
+            {rejecting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-3.5 h-3.5" />}
+            {lang === 'fa' ? 'رد' : lang === 'ar' ? 'رفض' : 'Reject'}
+          </button>
+        )}
       </div>
 
       {showDetail && (
@@ -279,6 +302,8 @@ function ProposalRow({ slot }) {
 
 export default function ProposalsPanel({ requestId }) {
   const { t, lang, dir } = useI18n();
+  const queryClient = useQueryClient();
+  const [rejectingId, setRejectingId] = useState(null);
 
   const { data: slots = [], isLoading } = useQuery({
     queryKey: ['trip_slots_proposals', requestId],
@@ -287,7 +312,6 @@ export default function ProposalsPanel({ requestId }) {
         .from('trip_slots')
         .select('*, guide:profiles!trip_slots_guide_id_fkey(id, full_name, avatar_url, rating, role, city)')
         .eq('trip_request_id', requestId)
-        .neq('status', 'rejected')
         .order('accepted_at', { ascending: false });
       if (error) throw error;
       return data ?? [];
@@ -295,6 +319,23 @@ export default function ProposalsPanel({ requestId }) {
     enabled: !!requestId,
     staleTime: 30_000,
   });
+
+  const rejectProposal = async (slot) => {
+    const confirmed = window.confirm(lang === 'fa' ? 'این پیشنهاد رد شود؟ پیشنهاد در فهرست باقی می‌ماند.' : lang === 'ar' ? 'هل تريد رفض هذا العرض؟ سيبقى ظاهراً في القائمة.' : 'Reject this proposal? It will remain visible in your list.');
+    if (!confirmed) return;
+    setRejectingId(slot.id);
+    const { data: rejected, error } = await supabase.rpc('reject_trip_proposal', { proposal_id: slot.id });
+    setRejectingId(null);
+    if (error || !rejected) {
+      toast.error(error?.message || 'Could not reject the proposal.');
+      return;
+    }
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['trip_slots_proposals', requestId] }),
+      queryClient.invalidateQueries({ queryKey: ['trip_slots_counts'] }),
+    ]);
+    toast.success(lang === 'fa' ? 'پیشنهاد رد شد و در فهرست باقی ماند.' : lang === 'ar' ? 'تم رفض العرض وسيبقى في القائمة.' : 'Proposal rejected and kept in the list.');
+  };
 
   return (
     <div className="pt-4 border-t border-border/30" dir={dir}>
@@ -313,7 +354,7 @@ export default function ProposalsPanel({ requestId }) {
       ) : (
         <div className="space-y-2">
           {slots.map(slot => (
-            <ProposalRow key={slot.id} slot={slot} />
+            <ProposalRow key={slot.id} slot={slot} onReject={rejectProposal} rejecting={rejectingId === slot.id} />
           ))}
         </div>
       )}

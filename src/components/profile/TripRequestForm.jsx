@@ -1,19 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  X, ChevronLeft, ChevronRight, Check, Plus, Package,
-  MapPin, Car, Hotel, ChevronDown, Loader2,
+  X, ChevronLeft, ChevronRight, Check, Plus,
+  MapPin, Car, Hotel, Loader2,
 } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { useI18n } from '@/lib/i18n';
 import { supabase } from '@/supabaseClient';
 import { iranianCities as IRANIAN_CITIES } from '@/data/iranianCities';
+import { allLanguages, mergeLanguages, popularLanguages } from '@/data/languages';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-
-const GUIDE_LANGUAGES = [
-  'English', 'Persian', 'Arabic', 'French', 'German', 'Chinese', 'Spanish',
-];
 
 const HOLIDAY_TYPES = [
   { id: 'Active',       label: 'Active',       emoji: '🏃' },
@@ -64,6 +61,7 @@ const HOW_IT_WORKS = [
 
 const HOURS   = Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0'));
 const MINUTES = ['00', '15', '30', '45'];
+const GUIDE_LANGUAGE_OPTIONS = mergeLanguages(popularLanguages, allLanguages);
 
 const INITIAL_FORM = {
   destinations: [],
@@ -349,6 +347,86 @@ function CityMultiSelect({ values, onChange }) {
   );
 }
 
+function LanguageMultiSelect({ values, onChange }) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const wrapRef = useRef(null);
+  const inputRef = useRef(null);
+  const normalizedSearch = search.trim().toLocaleLowerCase();
+
+  useEffect(() => {
+    if (!open) return;
+    const closeOutside = (event) => {
+      if (wrapRef.current && !wrapRef.current.contains(event.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', closeOutside);
+    return () => document.removeEventListener('mousedown', closeOutside);
+  }, [open]);
+
+  const hasValue = (language) => values.some(value => value.toLocaleLowerCase() === language.toLocaleLowerCase());
+  const filtered = GUIDE_LANGUAGE_OPTIONS.filter(language => !hasValue(language) && language.toLocaleLowerCase().includes(normalizedSearch));
+  const exactOptionExists = GUIDE_LANGUAGE_OPTIONS.some(language => language.toLocaleLowerCase() === normalizedSearch) || hasValue(search.trim());
+
+  const add = (language) => {
+    const clean = language.trim();
+    if (!clean || hasValue(clean)) return;
+    onChange([...values, clean]);
+    setSearch('');
+    setOpen(true);
+    inputRef.current?.focus();
+  };
+
+  return (
+    <div className="relative" ref={wrapRef}>
+      <div
+        className={`min-h-[42px] px-3 py-2 bg-background/50 border rounded-xl flex flex-wrap gap-1.5 cursor-text transition-colors ${open ? 'border-accent' : 'border-border/40'}`}
+        onClick={() => { setOpen(true); setTimeout(() => inputRef.current?.focus(), 0); }}
+      >
+        {values.map(language => (
+          <span key={language} className="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full text-xs font-medium bg-accent/10 text-accent border border-accent/25">
+            {language}
+            <button type="button" aria-label={`Remove ${language}`} onClick={event => { event.stopPropagation(); onChange(values.filter(value => value !== language)); }} className="w-4 h-4 rounded-full hover:bg-accent/20 flex items-center justify-center">
+              <X className="w-2.5 h-2.5" />
+            </button>
+          </span>
+        ))}
+        <input
+          ref={inputRef}
+          value={search}
+          onChange={event => { setSearch(event.target.value); setOpen(true); }}
+          onFocus={() => setOpen(true)}
+          onKeyDown={event => {
+            if (event.key === 'Escape') setOpen(false);
+            if (event.key === 'Enter') {
+              event.preventDefault();
+              add(filtered[0] || search);
+            }
+          }}
+          placeholder={values.length ? 'Search or add another language…' : 'Search or add a language…'}
+          className="flex-1 min-w-[190px] bg-transparent text-sm outline-none text-foreground placeholder:text-muted-foreground/50 py-0.5"
+        />
+      </div>
+
+      <AnimatePresence>
+        {open && (filtered.length > 0 || (search.trim() && !exactOptionExists)) && (
+          <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.13 }} className="absolute left-0 top-full mt-1.5 z-50 w-full bg-card border border-border/60 rounded-xl shadow-xl max-h-56 overflow-y-auto py-1">
+            {filtered.slice(0, 20).map(language => (
+              <button key={language} type="button" onMouseDown={event => { event.preventDefault(); add(language); }} className="flex items-center gap-2 w-full px-3 py-2 text-sm text-foreground hover:bg-accent/10 hover:text-accent text-start">
+                {language}
+              </button>
+            ))}
+            {search.trim() && !exactOptionExists && (
+              <button type="button" onMouseDown={event => { event.preventDefault(); add(search); }} className="flex items-center gap-2 w-full px-3 py-2 text-sm font-medium text-accent hover:bg-accent/10 text-start border-t border-border/30">
+                <Plus className="w-4 h-4" /> Add “{search.trim()}”
+              </button>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 // ── Shared sub-components ──────────────────────────────────────────────────
 
 function FieldLabel({ children }) {
@@ -608,17 +686,7 @@ function Step1({ form, set, toggle, toggleAssistance, errors }) {
       {/* Guide languages */}
       <div>
         <FieldLabel>I need a guide who speaks</FieldLabel>
-        <div className="flex flex-wrap gap-2">
-          {GUIDE_LANGUAGES.map(lang => (
-            <ToggleChip
-              key={lang}
-              selected={form.guide_languages.includes(lang)}
-              onClick={() => toggle('guide_languages', lang)}
-            >
-              {lang}
-            </ToggleChip>
-          ))}
-        </div>
+        <LanguageMultiSelect values={form.guide_languages} onChange={languages => set('guide_languages', languages)} />
         <FieldError msg={errors?.guide_languages} />
       </div>
 

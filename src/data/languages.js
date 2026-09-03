@@ -79,7 +79,7 @@ export const allLanguages = [
 export function parseLanguages(value) {
   const raw = Array.isArray(value)
     ? value
-    : String(value || '').split(/[,;·]/);
+    : String(value || '').split(/[,،;؛·]/);
 
   const seen = new Set();
   return raw

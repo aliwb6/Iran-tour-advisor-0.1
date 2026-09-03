@@ -23,6 +23,8 @@ export default function EditableField({
   rightSlot = null,
   helperText = '',
   rtlValue = false,
+  min,
+  max,
 }) {
   const { lang, dir } = useI18n();
   const [editing, setEditing] = useState(false);
@@ -87,6 +89,8 @@ export default function EditableField({
     return (
       <input
         type={type}
+        min={min}
+        max={max}
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
         placeholder={placeholder}
