@@ -2402,21 +2402,6 @@ export default function Dashboard() {
     setProfile(updated);
   };
 
-  const handleSubmitForReview = async () => {
-    if (!authUser?.id) return;
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ review_requested: true })
-        .eq('id', authUser.id);
-      if (error) throw error;
-      setProfile(p => ({ ...p, review_requested: true }));
-      toast.success(_t('profile_review_request_sent'));
-    } catch (err) {
-      toast.error(err.message);
-    }
-  };
-
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate('/');
@@ -2518,25 +2503,18 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* Submit for Review */}
+          {/* Uploading a license automatically places the profile in the admin review queue. */}
           {isGuideOrAgency && profileCheck?.completed && !profile?.is_approved && (
             <div className="mb-5 flex items-start gap-3 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl px-4 py-3">
               <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
               <div className="flex-1 min-w-0">
                 <p className="text-emerald-300 font-semibold text-sm mb-0.5">
-                  {profile?.review_requested
-                    ? _t('profile_review_requested')
-                    : _t('profile_submit_for_review')}
+                  {_t('profile_review_requested')}
+                </p>
+                <p className="text-emerald-200/60 text-xs">
+                  {lang === 'fa' ? 'پروفایل و لایسنس شما به‌صورت خودکار برای ادمین ارسال شده است.' : lang === 'ar' ? 'تم إرسال ملفك ورخصتك تلقائياً إلى المسؤول للمراجعة.' : 'Your completed profile and uploaded license were automatically sent for admin review.'}
                 </p>
               </div>
-              {!profile?.review_requested && (
-                <button
-                  onClick={handleSubmitForReview}
-                  className="shrink-0 px-3 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-xs font-medium transition-colors"
-                >
-                  {_t('profile_submit_for_review')}
-                </button>
-              )}
             </div>
           )}
 

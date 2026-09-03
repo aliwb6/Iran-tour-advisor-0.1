@@ -753,7 +753,7 @@ function GuidesView({ guides, loading, onReviewProfile, busyId }) {
                   }`}>
                     {comp.completed ? 'Profile Complete' : `Incomplete — ${comp.passed}/${comp.total}`}
                   </span>
-                  {guide.review_requested && !guide.is_approved && (
+                  {guide.license_status === 'pending_review' && !guide.is_approved && !guide.approval_rejection_reason && (
                     <span className="px-2 py-0.5 rounded-full font-medium border bg-blue-500/15 text-blue-400 border-blue-500/25">
                       Review Requested
                     </span>
@@ -778,6 +778,13 @@ function GuidesView({ guides, loading, onReviewProfile, busyId }) {
 }
 
 function GuideProfileReviewModal({ guide, busy, onClose, onSave }) {
+  const initialTourTypes = Array.isArray(guide.tour_types)
+    ? guide.tour_types
+    : Array.isArray(guide.specialties)
+      ? guide.specialties
+      : guide.specialty
+        ? [guide.specialty]
+        : [];
   const [form, setForm] = useState({
     full_name: guide.full_name || '',
     email: guide.email || '',
@@ -785,15 +792,21 @@ function GuideProfileReviewModal({ guide, busy, onClose, onSave }) {
     city: guide.city || '',
     bio: guide.bio || '',
     languages: Array.isArray(guide.languages) ? guide.languages.join(', ') : guide.languages || '',
-    specialty: guide.specialty || '',
-    avatar_url: guide.avatar_url || '',
+    tourTypes: initialTourTypes.join(', '),
     license_status: guide.license_status || 'not_uploaded',
   });
   const [rejectionReason, setRejectionReason] = useState(guide.approval_rejection_reason || '');
   const [localError, setLocalError] = useState('');
   const [openingLicense, setOpeningLicense] = useState(false);
   const hasLicense = Boolean(guide.license_url?.trim());
-  const completion = checkProfileCompletion({ ...guide, ...form });
+  const parsedTourTypes = form.tourTypes.split(/[,،;]/).map(value => value.trim()).filter(Boolean);
+  const completion = checkProfileCompletion({
+    ...guide,
+    ...form,
+    specialty: parsedTourTypes[0] || '',
+    specialties: guide.role === 'guide' ? parsedTourTypes : guide.specialties,
+    tour_types: guide.role === 'agency' ? parsedTourTypes : guide.tour_types,
+  });
   const canApprove = completion.completed && hasLicense && form.license_status === 'verified';
   const profileHref = guide.role === 'agency' ? `/agencies/${guide.id}` : `/guides/${guide.id}`;
   const inputClass = 'w-full px-3 py-2 rounded-xl border border-white/10 bg-white/[0.05] text-white text-sm placeholder:text-white/25 focus:outline-none focus:border-[hsl(178,85%,32%)]/60';
@@ -830,12 +843,14 @@ function GuideProfileReviewModal({ guide, busy, onClose, onSave }) {
       return;
     }
     setLocalError('');
+    const { tourTypes, ...profileFields } = form;
     const saved = await onSave(guide, {
-      ...form,
+      ...profileFields,
+      specialty: parsedTourTypes[0] || null,
+      ...(guide.role === 'agency' ? { tour_types: parsedTourTypes } : { specialties: parsedTourTypes }),
       is_approved: decision === 'approve' ? true : decision === 'reject' ? false : guide.is_approved,
       approval_rejection_reason: decision === 'approve' ? null : decision === 'reject' ? reason : guide.approval_rejection_reason || null,
       approval_reviewed_at: decision === 'save' ? guide.approval_reviewed_at || null : new Date().toISOString(),
-      review_requested: decision === 'save' ? guide.review_requested : false,
     }, decision);
     if (saved) onClose();
   };
@@ -845,7 +860,7 @@ function GuideProfileReviewModal({ guide, busy, onClose, onSave }) {
       <div className="w-full max-w-3xl max-h-[92vh] overflow-y-auto rounded-2xl bg-[hsl(222,45%,12%)] border border-white/10 shadow-2xl">
         <div className="sticky top-0 z-10 flex items-center justify-between gap-4 px-5 py-4 bg-[hsl(222,45%,12%)] border-b border-white/10">
           <div className="flex items-center gap-3 min-w-0">
-            <img src={avatarFor({ ...guide, ...form })} alt="" className="w-11 h-11 rounded-xl object-cover bg-white/5" />
+            <img src={avatarFor(guide)} alt="" className="w-11 h-11 rounded-xl object-cover bg-white/5" />
             <div className="min-w-0">
               <h3 className="text-white font-semibold truncate">{form.full_name || 'Unnamed profile'}</h3>
               <p className="text-white/40 text-xs capitalize">{guide.role}</p>
@@ -866,8 +881,7 @@ function GuideProfileReviewModal({ guide, busy, onClose, onSave }) {
             <label className="text-xs text-white/50">Phone<input value={form.phone} onChange={e => set('phone', e.target.value)} className={`${inputClass} mt-1.5`} dir="ltr" /></label>
             <label className="text-xs text-white/50">City<input value={form.city} onChange={e => set('city', e.target.value)} className={`${inputClass} mt-1.5`} /></label>
             <label className="text-xs text-white/50">Languages<input value={form.languages} onChange={e => set('languages', e.target.value)} className={`${inputClass} mt-1.5`} placeholder="English, Persian" /></label>
-            <label className="text-xs text-white/50">{guide.role === 'agency' ? 'Tour types / specialty' : 'Specialty'}<input value={form.specialty} onChange={e => set('specialty', e.target.value)} className={`${inputClass} mt-1.5`} /></label>
-            <label className="text-xs text-white/50 sm:col-span-2">Avatar URL<input value={form.avatar_url} onChange={e => set('avatar_url', e.target.value)} className={`${inputClass} mt-1.5`} dir="ltr" /></label>
+            <label className="text-xs text-white/50">{guide.role === 'agency' ? 'Tour types' : 'Tour types / specialties'}<input value={form.tourTypes} onChange={e => set('tourTypes', e.target.value)} className={`${inputClass} mt-1.5`} placeholder="Cultural, Nature, Photography" /></label>
             <label className="text-xs text-white/50">License status
               <select value={form.license_status} onChange={e => set('license_status', e.target.value)} className={`${inputClass} mt-1.5 [color-scheme:dark]`}>
                 <option value="not_uploaded" className="bg-[hsl(222,45%,14%)] text-white">Not uploaded</option><option value="pending_review" className="bg-[hsl(222,45%,14%)] text-white">Pending review</option><option value="verified" disabled={!hasLicense} className="bg-[hsl(222,45%,14%)] text-white">Verified</option><option value="rejected" className="bg-[hsl(222,45%,14%)] text-white">Rejected</option>
