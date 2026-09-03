@@ -28,19 +28,21 @@ export const THEMES = [
   { value: 'rural',     en: 'Rural & Eco 🏡',              fa: 'روستایی و بوم‌گردی 🏡',     ar: 'ريفي وبيئي 🏡' },
   { value: 'luxury',    en: 'Luxury & VIP 👑',             fa: 'لاکچری و VIP 👑',           ar: 'فاخر و VIP 👑' },
   { value: 'budget',    en: 'Budget & Backpacking 🎒',     fa: 'اقتصادی و کوله‌گردی 🎒',   ar: 'اقتصادي وحقيبة ظهر 🎒' },
+  { value: 'adventure',    en: 'Adventure & Trekking 🧗',     fa: 'ماجراجویی و طبیعت‌پیمایی 🧗', ar: 'مغامرة ورحلات 🧗' },
+  { value: 'culinary',     en: 'Food & Culinary 🍽️',         fa: 'غذا و آشپزی ایرانی 🍽️',     ar: 'الطعام وفنون الطهي 🍽️' },
+  { value: 'desert',       en: 'Desert & Stargazing 🏜️',      fa: 'کویر و رصد ستارگان 🏜️',     ar: 'الصحراء ومراقبة النجوم 🏜️' },
+  { value: 'photography',  en: 'Photography 📸',              fa: 'عکاسی 📸',                    ar: 'التصوير 📸' },
+  { value: 'pilgrimage',   en: 'Religious & Pilgrimage 🕌',   fa: 'زیارتی و مذهبی 🕌',          ar: 'ديني وزيارات 🕌' },
+  { value: 'wellness',     en: 'Wellness & Medical 🌿',       fa: 'سلامت و درمانی 🌿',           ar: 'الصحة والعلاج 🌿' },
+  { value: 'family',       en: 'Family Friendly 👨‍👩‍👧‍👦',          fa: 'خانوادگی 👨‍👩‍👧‍👦',                ar: 'عائلي 👨‍👩‍👧‍👦' },
+  { value: 'architecture', en: 'Architecture & Archaeology 🏰', fa: 'معماری و باستان‌شناسی 🏰', ar: 'العمارة والآثار 🏰' },
 ];
 
-export const PURPOSES = [
-  { value: 'leisure',      en: 'Leisure & Relaxation 🌅',    fa: 'تفریحی و استراحت 🌅',      ar: 'ترفيه واسترخاء 🌅' },
-  { value: 'adventure',    en: 'Adventure & Thrill 🧗',       fa: 'ماجراجویی و هیجان 🧗',     ar: 'مغامرة وإثارة 🧗' },
-  { value: 'religious',    en: 'Religious & Pilgrimage 🕌',   fa: 'زیارتی و مذهبی 🕌',        ar: 'ديني وزيارات 🕌' },
-  { value: 'educational',  en: 'Educational & Research 📚',   fa: 'آموزشی و پژوهشی 📚',       ar: 'تعليمي وبحثي 📚' },
-  { value: 'medical',      en: 'Medical Tourism 🏥',          fa: 'سلامت و درمانی 🏥',         ar: 'سياحة علاجية 🏥' },
-  { value: 'business',     en: 'Business & Exhibition 💼',    fa: 'تجاری و نمایشگاهی 💼',     ar: 'تجاري ومعارض 💼' },
-  { value: 'honeymoon',    en: 'Honeymoon 💑',                fa: 'ماه عسل 💑',                ar: 'شهر عسل 💑' },
-  { value: 'sports',       en: 'Sports ⚽',                   fa: 'ورزشی ⚽',                  ar: 'رياضي ⚽' },
-  { value: 'photography',  en: 'Photography 📸',              fa: 'عکاسی 📸',                  ar: 'تصوير 📸' },
-  { value: 'architecture', en: 'Architecture 🏰',             fa: 'معماری 🏰',                 ar: 'عمارة 🏰' },
+const TITLE_EXAMPLES = [
+  '7-Day Persian Heritage Journey: Tehran, Kashan, Isfahan & Yazd',
+  'Northern Iran Nature Escape: Forests, Villages & Caspian Coast',
+  'Taste of Iran: A 5-Day Culinary Tour',
+  'Desert Stars & Ancient Cities Adventure',
 ];
 
 export const DIFFICULTY_OPTIONS = [
@@ -51,7 +53,6 @@ export const DIFFICULTY_OPTIONS = [
 
 export const EMPTY_TOUR = {
   title: '', slug: '', description: '', duration: '', price: '',
-  location: '', city: '', purpose: '', theme: '',
   highlights: '', itinerary: '',
   image_url: '', gallery: '', status: 'draft', difficulty: '',
 };
@@ -71,8 +72,6 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
       description: editing.description || '',
       duration:    editing.duration != null ? String(editing.duration) : '',
       price:       editing.price != null ? String(editing.price) : '',
-      location:    editing.location || '',
-      city:        editing.city || '',
       highlights:  Array.isArray(editing.highlights) ? editing.highlights.join('\n') : (editing.highlights || ''),
       itinerary:   editing.itinerary || '',
       status:      editing.status || initialStatus,
@@ -122,12 +121,6 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
     if (Array.isArray(editing.theme)) return editing.theme;
     return editing.theme ? [editing.theme] : [];
   });
-  const [selectedPurposes, setSelectedPurposes] = useState(() => {
-    if (!editing) return [];
-    if (Array.isArray(editing.purpose)) return editing.purpose;
-    return editing.purpose ? [editing.purpose] : [];
-  });
-
   const [imageUrl,     setImageUrl]     = useState(editing?.image_url || '');
   const [mainImageCaption, setMainImageCaption] = useState(editing?.main_image_caption || '');
   const [galleryUrls,  setGalleryUrls]  = useState(() => {
@@ -146,7 +139,8 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
   const [success,  setSuccess]  = useState(false);
   const [error,    setError]    = useState('');
   const [customTheme,   setCustomTheme]   = useState('');
-  const [customPurpose, setCustomPurpose] = useState('');
+  const [customTransportation, setCustomTransportation] = useState('');
+  const [customOther, setCustomOther] = useState('');
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -159,8 +153,7 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
     });
   };
 
-  const toggleTheme   = (v) => setSelectedThemes(p => p.includes(v) ? p.filter(x => x !== v) : [...p, v]);
-  const togglePurpose = (v) => setSelectedPurposes(p => p.includes(v) ? p.filter(x => x !== v) : [...p, v]);
+  const toggleTheme = (v) => setSelectedThemes(p => p.includes(v) ? p.filter(x => x !== v) : [...p, v]);
 
   // Cities chip input — Enter / comma adds a chip, X removes it.
   const addCity = () => {
@@ -184,9 +177,26 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
     const v = customTheme.trim();
     if (v) { setSelectedThemes(p => p.includes(v) ? p : [...p, v]); setCustomTheme(''); }
   };
-  const addCustomPurpose = () => {
-    const v = customPurpose.trim();
-    if (v) { setSelectedPurposes(p => p.includes(v) ? p : [...p, v]); setCustomPurpose(''); }
+  const addCustomTransportation = () => {
+    const value = customTransportation.trim();
+    if (!value) return;
+    setIncluded(prev => ({
+      ...prev,
+      transportation: prev.transportation.includes(value)
+        ? prev.transportation
+        : [...prev.transportation, value],
+    }));
+    setCustomTransportation('');
+  };
+
+  const addCustomOther = () => {
+    const value = customOther.trim();
+    if (!value) return;
+    setIncluded(prev => ({
+      ...prev,
+      other: prev.other.includes(value) ? prev.other : [...prev.other, value],
+    }));
+    setCustomOther('');
   };
 
   const uploadFile = async (file) => {
@@ -287,11 +297,12 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
         description: form.description,
         duration:    form.duration ? Number(form.duration) : null,
         price:       form.price ? Number(form.price) : null,
-        location:    form.location,
-        city:        form.city,
+        // Keep the legacy single-value fields in sync for older listing/detail
+        // consumers while Cities remains the only editable source of truth.
+        location:    cities.join(', ') || null,
+        city:        cities[0] || null,
         cities,
         theme:       selectedThemes,
-        purpose:     selectedPurposes,
         difficulty:  form.difficulty,
         highlights:  form.highlights.split('\n').filter(Boolean),
         itinerary:   form.itinerary,
@@ -332,7 +343,6 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
           setSuccess(false);
           setForm({ ...EMPTY_TOUR, status: initialStatus, difficulty: '' });
           setSelectedThemes([]);
-          setSelectedPurposes([]);
           setCities([]);
           setCityInput('');
           setIncluded({ ...DEFAULT_INCLUDED_STATE });
@@ -384,17 +394,49 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
         {/* Title */}
         <div>
           <label className={labelClass}>Title *</label>
-          <input name="title" required value={form.title} onChange={handleChange} className={inputClass} placeholder="Tour title" />
+          <input
+            name="title"
+            required
+            list="tour-title-examples"
+            value={form.title}
+            onChange={handleChange}
+            className={inputClass}
+            placeholder="e.g. 7-Day Persian Heritage Journey: Tehran, Kashan, Isfahan & Yazd"
+          />
+          <datalist id="tour-title-examples">
+            {TITLE_EXAMPLES.map(example => <option key={example} value={example} />)}
+          </datalist>
+          <p className="text-white/30 text-[10px] mt-1.5">
+            {lang === 'fa'
+              ? 'نمونه‌ها: سفر میراث پارسی ۷ روزه · طبیعت‌گردی شمال ایران · تور خوراک ایران'
+              : lang === 'ar'
+              ? 'أمثلة: رحلة التراث الفارسي لمدة 7 أيام · مغامرة طبيعية في شمال إيران · جولة طعام إيرانية'
+              : 'Examples: 7-Day Persian Heritage Journey · Northern Iran Nature Escape · Taste of Iran Culinary Tour'}
+          </p>
         </div>
 
         {/* Description */}
         <div>
           <label className={labelClass}>Description</label>
-          <textarea name="description" value={form.description} onChange={handleChange} rows={4} className={`${inputClass} resize-none`} placeholder="Describe the tour experience..." />
+          <textarea
+            name="description"
+            value={form.description}
+            onChange={handleChange}
+            rows={5}
+            className={`${inputClass} resize-none`}
+            placeholder={lang === 'fa'
+              ? 'مثال: در این سفر ۷ روزه، مهمانان از تهران تا یزد با معماری، غذا و زندگی محلی ایران آشنا می‌شوند. برنامه شامل بازدیدهای روزانه، زمان آزاد و همراهی راهنمای محلی است. این تور برای علاقه‌مندان به فرهنگ و تاریخ مناسب است.'
+              : lang === 'ar'
+              ? 'مثال: في هذه الرحلة التي تستغرق 7 أيام، يكتشف الضيوف العمارة والطعام والحياة المحلية من طهران إلى يزد. تشمل الجولة زيارات يومية ووقتاً حراً ودليلاً محلياً.'
+              : 'Example: On this 7-day journey from Tehran to Yazd, guests discover Iran’s architecture, food, and local life. The plan includes guided daily visits, free time, and local support. Ideal for culture and history lovers.'}
+          />
+          <p className="text-white/30 text-[10px] mt-1.5">
+            {lang === 'fa' ? 'مسیر سفر، تجربه‌های اصلی، خدمات و مناسب‌بودن تور برای مخاطب را کوتاه و روشن توضیح دهید.' : 'Briefly cover the route, key experiences, included support, and who the tour is best for.'}
+          </p>
         </div>
 
-        {/* Duration / Price / Location / City */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {/* Duration / Price */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className={labelClass}>Duration (days)</label>
             <input name="duration" type="number" min="1" value={form.duration} onChange={handleChange} className={inputClass} placeholder="7" />
@@ -402,14 +444,6 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
           <div>
             <label className={labelClass}>Price (USD)</label>
             <input name="price" type="number" min="0" value={form.price} onChange={handleChange} className={inputClass} placeholder="1200" />
-          </div>
-          <div>
-            <label className={labelClass}>Locations</label>
-            <input name="location" value={form.location} onChange={handleChange} className={inputClass} placeholder="Isfahan, Iran" />
-          </div>
-          <div>
-            <label className={labelClass}>City</label>
-            <input name="city" list="iran-destinations" value={form.city} onChange={handleChange} className={inputClass} placeholder="Isfahan" />
           </div>
         </div>
 
@@ -489,31 +523,6 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
               onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addCustomTheme())}
               className={inputClass} placeholder="+ Add custom theme..." />
             <button type="button" onClick={addCustomTheme}
-              className="px-4 py-2.5 rounded-xl border border-white/20 text-white/70 text-sm hover:border-teal-400 hover:text-white transition whitespace-nowrap">
-              Add
-            </button>
-          </div>
-        </div>
-
-        {/* Purpose tag chips */}
-        <div>
-          <label className={labelClass}>Purpose (select multiple)</label>
-          <div className="flex flex-wrap gap-2 mb-2">
-            {PURPOSES.map(pu => (
-              <button type="button" key={pu.value} onClick={() => togglePurpose(pu.value)}
-                className={selectedPurposes.includes(pu.value) ? tagOn : tagOff}>
-                {pu[lang] || pu.en}
-              </button>
-            ))}
-            {selectedPurposes.filter(v => !PURPOSES.find(pu => pu.value === v)).map(v => (
-              <button type="button" key={v} onClick={() => togglePurpose(v)} className={tagOn}>✏️ {v}</button>
-            ))}
-          </div>
-          <div className="flex gap-2">
-            <input type="text" value={customPurpose} onChange={e => setCustomPurpose(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addCustomPurpose())}
-              className={inputClass} placeholder="+ Add custom purpose..." />
-            <button type="button" onClick={addCustomPurpose}
               className="px-4 py-2.5 rounded-xl border border-white/20 text-white/70 text-sm hover:border-teal-400 hover:text-white transition whitespace-nowrap">
               Add
             </button>
@@ -606,7 +615,7 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
                       </div>
 
                       <AnimatePresence initial={false}>
-                        {included.accommodationType === 'hotel' && (
+                        {['hotel', 'traditional'].includes(included.accommodationType) && (
                           <motion.div
                             initial={{ height: 0, opacity: 0 }}
                             animate={{ height: 'auto', opacity: 1 }}
@@ -616,7 +625,9 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
                           >
                             <div>
                               <Label className="text-white/50 text-xs mb-1.5 block">
-                                {lang === 'fa' ? 'ستاره هتل' : lang === 'ar' ? 'تصنيف الفندق' : 'Star rating'}
+                                {included.accommodationType === 'traditional'
+                                  ? (lang === 'fa' ? 'درجه خانه سنتی' : lang === 'ar' ? 'تصنيف المنزل التقليدي' : 'Traditional house rating')
+                                  : (lang === 'fa' ? 'ستاره هتل' : lang === 'ar' ? 'تصنيف الفندق' : 'Hotel star rating')}
                               </Label>
                               <Select
                                 value={String(included.hotelStars)}
@@ -667,6 +678,47 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
                     </div>
                   );
                 })}
+              </div>
+              {included.transportation.some(value => !TRANSPORTATION_OPTIONS.some(opt => opt.value === value)) && (
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {included.transportation
+                    .filter(value => !TRANSPORTATION_OPTIONS.some(opt => opt.value === value))
+                    .map(value => (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => toggleTransport(value)}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-teal-400/40 bg-teal-400/15 text-white text-xs"
+                        title={lang === 'fa' ? 'حذف' : 'Remove'}
+                      >
+                        {value}<X className="w-3 h-3" />
+                      </button>
+                    ))}
+                </div>
+              )}
+              <div className="flex gap-2 mt-3">
+                <input
+                  type="text"
+                  value={customTransportation}
+                  onChange={event => setCustomTransportation(event.target.value)}
+                  onKeyDown={event => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault();
+                      addCustomTransportation();
+                    }
+                  }}
+                  className={inputClass}
+                  maxLength={80}
+                  placeholder={lang === 'fa' ? 'سایر وسایل حمل‌ونقل…' : lang === 'ar' ? 'وسيلة نقل أخرى…' : 'Other transportation…'}
+                />
+                <button
+                  type="button"
+                  onClick={addCustomTransportation}
+                  disabled={!customTransportation.trim()}
+                  className="px-4 py-2.5 rounded-xl border border-white/20 text-white/70 text-sm hover:border-teal-400 hover:text-white transition whitespace-nowrap disabled:opacity-40"
+                >
+                  {lang === 'fa' ? 'افزودن' : lang === 'ar' ? 'إضافة' : 'Add'}
+                </button>
               </div>
             </div>
 
@@ -720,6 +772,47 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
                     </div>
                   );
                 })}
+              </div>
+              {included.other.some(value => !OTHER_OPTIONS.some(opt => opt.value === value)) && (
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {included.other
+                    .filter(value => !OTHER_OPTIONS.some(opt => opt.value === value))
+                    .map(value => (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => toggleOther(value)}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-teal-400/40 bg-teal-400/15 text-white text-xs"
+                        title={lang === 'fa' ? 'حذف' : 'Remove'}
+                      >
+                        {value}<X className="w-3 h-3" />
+                      </button>
+                    ))}
+                </div>
+              )}
+              <div className="flex gap-2 mt-3">
+                <input
+                  type="text"
+                  value={customOther}
+                  onChange={event => setCustomOther(event.target.value)}
+                  onKeyDown={event => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault();
+                      addCustomOther();
+                    }
+                  }}
+                  className={inputClass}
+                  maxLength={100}
+                  placeholder={lang === 'fa' ? 'خدمت یا مورد دیگری اضافه کنید…' : lang === 'ar' ? 'أضف خدمة أو عنصراً آخر…' : 'Add another included item…'}
+                />
+                <button
+                  type="button"
+                  onClick={addCustomOther}
+                  disabled={!customOther.trim()}
+                  className="px-4 py-2.5 rounded-xl border border-white/20 text-white/70 text-sm hover:border-teal-400 hover:text-white transition whitespace-nowrap disabled:opacity-40"
+                >
+                  {lang === 'fa' ? 'بیشتر اضافه کن' : lang === 'ar' ? 'إضافة المزيد' : 'Add More'}
+                </button>
               </div>
             </div>
           </div>

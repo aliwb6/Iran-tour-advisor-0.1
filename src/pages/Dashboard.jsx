@@ -1216,27 +1216,90 @@ function ProfileView({ profile, userId, onSave }) {
 // ─── GalleryView ─────────────────────────────────────────────────────────────
 
 function GalleryView({ profile, userId, onSave }) {
-  const { t, lang, dir } = useI18n();
+  const { t, lang } = useI18n();
   const [gallery, setGallery] = useState(profile?.gallery_images || []);
   const [showModal, setShowModal] = useState(false);
   const [newUrl, setNewUrl] = useState('');
   const [adding, setAdding] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState('');
+  const galleryFileRef = useRef(null);
+
+  const persistGallery = async (nextGallery) => {
+    const { error: updateErr } = await supabase
+      .from('profiles')
+      .update({ gallery_images: nextGallery })
+      .eq('id', userId);
+    if (updateErr) throw updateErr;
+    setGallery(nextGallery);
+    onSave({ ...profile, gallery_images: nextGallery });
+  };
+
+  const loadLatestGallery = async () => {
+    const { data, error: fetchErr } = await supabase
+      .from('profiles')
+      .select('gallery_images')
+      .eq('id', userId)
+      .single();
+    if (fetchErr) throw fetchErr;
+    return Array.isArray(data.gallery_images) ? data.gallery_images : [];
+  };
+
+  const handleUploadPhotos = async (fileList) => {
+    const files = Array.from(fileList || []);
+    if (!files.length || !userId) return;
+
+    setError('');
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    const invalidType = files.find(file => !allowedTypes.includes(file.type));
+    const oversized = files.find(file => file.size > 5 * 1024 * 1024);
+    if (invalidType) {
+      setError(lang === 'fa' ? 'فقط تصاویر JPG، PNG یا WEBP مجاز هستند.' : 'Only JPG, PNG or WEBP images are allowed.');
+      return;
+    }
+    if (oversized) {
+      setError(lang === 'fa' ? 'حجم هر تصویر باید کمتر از ۵ مگابایت باشد.' : 'Each image must be smaller than 5 MB.');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const currentGallery = await loadLatestGallery();
+      const acceptedFiles = files.slice(0, Math.max(0, 20 - currentGallery.length));
+      if (!acceptedFiles.length) throw new Error(lang === 'fa' ? 'حداکثر ۲۰ عکس مجاز است.' : 'Maximum of 20 photos allowed.');
+
+      const urls = await Promise.all(acceptedFiles.map(async (file, index) => {
+        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const path = `${userId}/${Date.now()}-${index}-${safeName}`;
+        const { error: uploadError } = await supabase.storage
+          .from('profile-gallery')
+          .upload(path, file, { cacheControl: '3600', upsert: false });
+        if (uploadError) throw uploadError;
+        const { data } = supabase.storage.from('profile-gallery').getPublicUrl(path);
+        return data.publicUrl;
+      }));
+
+      await persistGallery([...currentGallery, ...urls]);
+      toast.success(lang === 'fa' ? 'عکس‌های گالری بارگذاری شدند.' : 'Gallery photos uploaded.');
+      setShowModal(false);
+    } catch (err) {
+      setError(err.message || 'Failed to upload gallery photos');
+    } finally {
+      setUploading(false);
+      setDragActive(false);
+      if (galleryFileRef.current) galleryFileRef.current.value = '';
+    }
+  };
 
   const handleAddPhoto = async () => {
     if (!newUrl.trim() || gallery.length >= 20) return;
     setAdding(true);
     setError('');
     try {
-      const { data, error: fetchErr } = await supabase
-        .from('profiles').select('gallery_images').eq('id', userId).single();
-      if (fetchErr) throw fetchErr;
-      const newGallery = [...(data.gallery_images || []), newUrl.trim()];
-      const { error: updateErr } = await supabase
-        .from('profiles').update({ gallery_images: newGallery }).eq('id', userId);
-      if (updateErr) throw updateErr;
-      setGallery(newGallery);
-      onSave({ ...profile, gallery_images: newGallery });
+      const currentGallery = await loadLatestGallery();
+      if (currentGallery.length >= 20) throw new Error(lang === 'fa' ? 'حداکثر ۲۰ عکس مجاز است.' : 'Maximum of 20 photos allowed.');
+      await persistGallery([...currentGallery, newUrl.trim()]);
       setNewUrl('');
       setShowModal(false);
     } catch (err) {
@@ -1250,13 +1313,17 @@ function GalleryView({ profile, userId, onSave }) {
     if (!window.confirm(t('gallery_delete_confirm'))) return;
     const filtered = gallery.filter(img => img !== imageUrl);
     try {
-      const { error: err } = await supabase
-        .from('profiles').update({ gallery_images: filtered }).eq('id', userId);
-      if (err) throw err;
-      setGallery(filtered);
-      onSave({ ...profile, gallery_images: filtered });
+      await persistGallery(filtered);
+
+      const marker = '/storage/v1/object/public/profile-gallery/';
+      const markerIndex = imageUrl.indexOf(marker);
+      if (markerIndex >= 0) {
+        const objectPath = decodeURIComponent(imageUrl.slice(markerIndex + marker.length));
+        const { error: removeError } = await supabase.storage.from('profile-gallery').remove([objectPath]);
+        if (removeError) console.error('Failed to remove gallery object:', removeError);
+      }
     } catch (err) {
-      console.error(err);
+      setError(err.message || 'Failed to delete gallery photo');
     }
   };
 
@@ -1329,6 +1396,60 @@ function GalleryView({ profile, userId, onSave }) {
                 <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/25 text-red-400 text-sm">{error}</div>
               )}
 
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={() => !uploading && galleryFileRef.current?.click()}
+                onKeyDown={event => {
+                  if ((event.key === 'Enter' || event.key === ' ') && !uploading) {
+                    event.preventDefault();
+                    galleryFileRef.current?.click();
+                  }
+                }}
+                onDragEnter={event => { event.preventDefault(); setDragActive(true); }}
+                onDragOver={event => { event.preventDefault(); setDragActive(true); }}
+                onDragLeave={event => {
+                  event.preventDefault();
+                  if (!event.currentTarget.contains(event.relatedTarget)) setDragActive(false);
+                }}
+                onDrop={event => {
+                  event.preventDefault();
+                  setDragActive(false);
+                  handleUploadPhotos(event.dataTransfer.files);
+                }}
+                className={`mb-5 p-6 rounded-xl border-2 border-dashed text-center cursor-pointer transition ${dragActive
+                  ? 'border-teal-400 bg-teal-400/10'
+                  : 'border-white/15 bg-white/[0.03] hover:border-teal-400/60'
+                }`}
+              >
+                {uploading ? (
+                  <div className="flex flex-col items-center gap-2 text-teal-300">
+                    <Loader2 className="w-6 h-6 animate-spin" />
+                    <p className="text-sm">{lang === 'fa' ? 'در حال بارگذاری…' : 'Uploading…'}</p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-2 text-white/45">
+                    <Upload className="w-7 h-7" />
+                    <p className="text-sm">{lang === 'fa' ? 'عکس‌ها را اینجا رها کنید یا برای انتخاب کلیک کنید' : 'Drop photos here or click to choose'}</p>
+                    <p className="text-[10px] text-white/25">JPG, PNG, WEBP · max 5 MB each · up to {20 - gallery.length}</p>
+                  </div>
+                )}
+              </div>
+              <input
+                ref={galleryFileRef}
+                type="file"
+                multiple
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={event => handleUploadPhotos(event.target.files)}
+              />
+
+              <div className="flex items-center gap-3 mb-4">
+                <div className="h-px flex-1 bg-white/10" />
+                <span className="text-white/30 text-[10px] uppercase">{lang === 'fa' ? 'یا لینک عکس' : 'or image URL'}</span>
+                <div className="h-px flex-1 bg-white/10" />
+              </div>
+
               <input
                 type="url"
                 value={newUrl}
@@ -1336,7 +1457,6 @@ function GalleryView({ profile, userId, onSave }) {
                 placeholder={t('gallery_add_url')}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-white/10 bg-white/[0.05] text-white text-sm placeholder:text-white/25 focus:outline-none focus:border-[hsl(178,85%,32%)] focus:ring-1 focus:ring-[hsl(178,85%,32%)]/50 transition mb-4"
                 onKeyDown={e => e.key === 'Enter' && handleAddPhoto()}
-                autoFocus
               />
 
               {newUrl && (
@@ -1354,7 +1474,7 @@ function GalleryView({ profile, userId, onSave }) {
                 </button>
                 <button
                   onClick={handleAddPhoto}
-                  disabled={!newUrl.trim() || adding}
+                  disabled={!newUrl.trim() || adding || uploading}
                   className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[hsl(178,85%,32%)] text-white text-sm font-semibold hover:bg-[hsl(178,85%,28%)] disabled:opacity-50 transition"
                 >
                   {adding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}

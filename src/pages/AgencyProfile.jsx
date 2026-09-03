@@ -15,6 +15,7 @@ import { useAuth } from '@/lib/AuthContext';
 import TourCard from '@/components/tours/TourCard';
 import { FALLBACK_IMAGE } from '@/hooks/useSupabase';
 import { iranianDestinations } from '@/data/iranianCities';
+import PublicProfileGallery from '@/components/profile/PublicProfileGallery';
 
 const pickTourImage = (tour) =>
   tour.cover_image || tour.image_url || tour.image ||
@@ -38,19 +39,24 @@ function StarRow({ rating, size = 'sm' }) {
 
 function BookingWidget({ agency, lang }) {
   const [destination, setDestination] = useState('');
-  const [date, setDate] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [adults, setAdults] = useState(1);
   const [children, setChildren] = useState(0);
   const navigate = useNavigate();
 
   const handleRequest = () => {
+    if (!startDate || !endDate) {
+      toast.error(lang === 'fa' ? 'لطفاً تاریخ شروع و پایان سفر را انتخاب کنید.' : lang === 'ar' ? 'يرجى اختيار تاريخ بداية الرحلة ونهايتها.' : 'Please select both the start and end dates.');
+      return;
+    }
     navigate(`/request-trip/agency/${agency?.id}`, {
-      state: { destination, date, adults, children, guide: agency },
+      state: { destination, startDate, endDate, adults, children, guide: agency },
     });
   };
 
   return (
-    <div className="p-6 rounded-2xl bg-card border border-border/50 shadow-md sticky top-24">
+    <div className="p-6 rounded-2xl bg-card border border-border/50 shadow-md">
       <h3 className="font-heading text-xl font-semibold text-foreground mb-5">
         {lang === 'fa' ? 'درخواست تور' : lang === 'ar' ? 'طلب جولة' : 'Request A Trip'}
       </h3>
@@ -77,13 +83,32 @@ function BookingWidget({ agency, lang }) {
           <label className="block font-body text-xs text-muted-foreground mb-1.5">
             {lang === 'fa' ? 'تاریخ سفر' : 'Travel Date'}
           </label>
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            min={new Date().toISOString().split('T')[0]}
-            className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-background font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-gold/40"
-          />
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <span className="block text-[10px] text-muted-foreground mb-1">{lang === 'fa' ? 'از' : lang === 'ar' ? 'من' : 'From'}</span>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  setStartDate(next);
+                  if (endDate && endDate < next) setEndDate('');
+                }}
+                min={new Date().toISOString().split('T')[0]}
+                className="w-full px-2.5 py-2.5 rounded-xl border border-border bg-background font-body text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-gold/40"
+              />
+            </div>
+            <div>
+              <span className="block text-[10px] text-muted-foreground mb-1">{lang === 'fa' ? 'تا' : lang === 'ar' ? 'إلى' : 'To'}</span>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                min={startDate || new Date().toISOString().split('T')[0]}
+                className="w-full px-2.5 py-2.5 rounded-xl border border-border bg-background font-body text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-gold/40"
+              />
+            </div>
+          </div>
         </div>
 
         <div className="flex items-center justify-between p-3 rounded-xl border border-border bg-background">
@@ -567,8 +592,9 @@ export default function AgencyProfile() {
           </div>
 
           {/* RIGHT: Booking Widget */}
-          <div>
+          <div className="self-start space-y-6">
             <BookingWidget agency={agency} lang={lang} />
+            <PublicProfileGallery images={agency.gallery_images} lang={lang} />
           </div>
         </div>
       </div>

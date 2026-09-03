@@ -15,7 +15,7 @@ export const ACCOMMODATION_TYPES = [
   { value: 'traditional', en: 'Traditional House / Eco-lodge',    fa: 'خانه سنتی / اقامتگاه بوم‌گردی',    ar: 'منزل تقليدي / نزل بيئي' },
 ];
 
-export const HOTEL_STAR_LEVELS = [2, 3, 4, 5];
+export const HOTEL_STAR_LEVELS = [1, 2, 3, 4, 5];
 
 export const TRANSPORTATION_OPTIONS = [
   { value: 'private_car',      en: 'Private Car / Van',      fa: 'خودرو / ون اختصاصی', ar: 'سيارة / فان خاص' },
@@ -54,6 +54,7 @@ export const DEFAULT_INCLUDED_STATE = Object.freeze({
 
 const accommodationLabel = (type, stars) => {
   if (type === 'hotel') return `Hotel (${stars}★)`;
+  if (type === 'traditional') return `Traditional House / Eco-lodge (${stars}★)`;
   const def = ACCOMMODATION_TYPES.find(a => a.value === type);
   return def?.en || '';
 };
@@ -70,6 +71,7 @@ export function serializeIncluded(state) {
   for (const value of state.transportation || []) {
     const opt = TRANSPORTATION_OPTIONS.find(o => o.value === value);
     if (opt) out.push(opt.en);
+    else if (String(value || '').trim()) out.push(`Other transportation: ${String(value).trim()}`);
   }
 
   if (state.meals && state.meals !== 'none') {
@@ -80,6 +82,7 @@ export function serializeIncluded(state) {
   for (const value of state.other || []) {
     const opt = OTHER_OPTIONS.find(o => o.value === value);
     if (opt) out.push(opt.en);
+    else if (String(value || '').trim()) out.push(`Other: ${String(value).trim()}`);
   }
 
   return out;
@@ -118,6 +121,7 @@ OTHER_LOOKUP.set('tour_guide_en', 'guide_en');
 
 const HOTEL_RE = /^hotel\s*\(\s*(\d)\s*[★*]\s*\)\s*$/i;
 const HOTEL_SLUG_RE = /^hotel_(\d)star$/i;
+const TRADITIONAL_RE = /^traditional house \/ eco-lodge\s*\(\s*(\d)\s*[★*]\s*\)\s*$/i;
 
 export function parseIncluded(items) {
   const state = {
@@ -144,6 +148,13 @@ export function parseIncluded(items) {
       state.hotelStars = Number(hotelMatch[1]) || state.hotelStars;
       continue;
     }
+    const traditionalMatch = item.match(TRADITIONAL_RE);
+    if (traditionalMatch) {
+      state.accommodationEnabled = true;
+      state.accommodationType = 'traditional';
+      state.hotelStars = Number(traditionalMatch[1]) || state.hotelStars;
+      continue;
+    }
     if (key === 'hostel / guesthouse' || key === 'hostel') {
       state.accommodationEnabled = true;
       state.accommodationType = 'hostel';
@@ -167,6 +178,20 @@ export function parseIncluded(items) {
     const o = OTHER_LOOKUP.get(key);
     if (o) { if (!state.other.includes(o)) state.other.push(o); continue; }
 
+    if (key.startsWith('other transportation:')) {
+      const customTransport = item.slice(item.indexOf(':') + 1).trim();
+      if (customTransport && !state.transportation.includes(customTransport)) {
+        state.transportation.push(customTransport);
+      }
+      continue;
+    }
+
+    if (key.startsWith('other:')) {
+      const customOther = item.slice(item.indexOf(':') + 1).trim();
+      if (customOther && !state.other.includes(customOther)) state.other.push(customOther);
+      continue;
+    }
+
     // Unknown — silently ignore. Detail page lookupInclusionLabel still
     // renders the raw string for legacy data.
   }
@@ -189,6 +214,11 @@ for (const a of ACCOMMODATION_TYPES) {
 
 // Hotel star variants don't have a static label entry — we localise inline.
 const HOTEL_BASE_LABEL = { en: 'Hotel', fa: 'هتل', ar: 'فندق' };
+const TRADITIONAL_BASE_LABEL = {
+  en: 'Traditional House / Eco-lodge',
+  fa: 'خانه سنتی / اقامتگاه بوم‌گردی',
+  ar: 'منزل تقليدي / نزل بيئي',
+};
 
 // Generic category labels used by the "Not Included" derivation when an entire
 // group (accommodation / transport / meals) wasn't selected at all.
@@ -247,6 +277,12 @@ export function lookupInclusionLabel(item, lang = 'en') {
     const stars = hotelMatch[1];
     const base = HOTEL_BASE_LABEL[lang] || HOTEL_BASE_LABEL.en;
     return `${base} (${stars}★)`;
+  }
+
+  const traditionalMatch = raw.match(TRADITIONAL_RE);
+  if (traditionalMatch) {
+    const base = TRADITIONAL_BASE_LABEL[lang] || TRADITIONAL_BASE_LABEL.en;
+    return `${base} (${traditionalMatch[1]}★)`;
   }
 
   const entry = LABEL_INDEX.get(key);

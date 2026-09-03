@@ -14,6 +14,7 @@ import { useAuth } from '@/lib/AuthContext';
 import TourCard from '@/components/tours/TourCard';
 import { FALLBACK_IMAGE } from '@/hooks/useSupabase';
 import { iranianDestinations } from '@/data/iranianCities';
+import PublicProfileGallery from '@/components/profile/PublicProfileGallery';
 
 const FALLBACK_IMG = 'https://images.unsplash.com/photo-1589562784072-9ede7d082e5e?w=800&h=1000&fit=crop';
 
@@ -41,7 +42,8 @@ function StarRow({ rating, size = 'sm' }) {
 
 function BookingWidget({ guide, lang }) {
   const [destination, setDestination] = useState('');
-  const [date, setDate] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [adults, setAdults] = useState(1);
   const [children, setChildren] = useState(0);
   const navigate = useNavigate();
@@ -49,13 +51,17 @@ function BookingWidget({ guide, lang }) {
   const guideName = guide?.full_name || 'Guide';
 
   const handleRequest = () => {
+    if (!startDate || !endDate) {
+      toast.error(lang === 'fa' ? 'لطفاً تاریخ شروع و پایان سفر را انتخاب کنید.' : lang === 'ar' ? 'يرجى اختيار تاريخ بداية الرحلة ونهايتها.' : 'Please select both the start and end dates.');
+      return;
+    }
     navigate(`/request-trip/${guide?.id}`, {
-      state: { destination, date, adults, children, guide },
+      state: { destination, startDate, endDate, adults, children, guide },
     });
   };
 
   return (
-    <div className="p-6 rounded-2xl bg-card border border-border/50 shadow-md sticky top-24">
+    <div className="p-6 rounded-2xl bg-card border border-border/50 shadow-md">
       <h3 className="font-heading text-xl font-semibold text-foreground mb-5">
         {lang === 'fa' ? 'درخواست سفر' : lang === 'ar' ? 'طلب رحلة' : 'Request A Trip'}
       </h3>
@@ -79,18 +85,37 @@ function BookingWidget({ guide, lang }) {
           </div>
         </div>
 
-        {/* Date */}
+        {/* Date range */}
         <div>
           <label className="block font-body text-xs text-muted-foreground mb-1.5">
             {lang === 'fa' ? 'تاریخ سفر' : lang === 'ar' ? 'تاريخ السفر' : 'Travel Date'}
           </label>
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            min={new Date().toISOString().split('T')[0]}
-            className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-background font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-gold/40"
-          />
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <span className="block text-[10px] text-muted-foreground mb-1">{lang === 'fa' ? 'از' : lang === 'ar' ? 'من' : 'From'}</span>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  setStartDate(next);
+                  if (endDate && endDate < next) setEndDate('');
+                }}
+                min={new Date().toISOString().split('T')[0]}
+                className="w-full px-2.5 py-2.5 rounded-xl border border-border bg-background font-body text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-gold/40"
+              />
+            </div>
+            <div>
+              <span className="block text-[10px] text-muted-foreground mb-1">{lang === 'fa' ? 'تا' : lang === 'ar' ? 'إلى' : 'To'}</span>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                min={startDate || new Date().toISOString().split('T')[0]}
+                className="w-full px-2.5 py-2.5 rounded-xl border border-border bg-background font-body text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-gold/40"
+              />
+            </div>
+          </div>
         </div>
 
         {/* Adults */}
@@ -609,8 +634,9 @@ export default function GuideDetails() {
           </div>
 
           {/* RIGHT COLUMN — Booking Widget */}
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1 self-start space-y-6">
             <BookingWidget guide={guide} lang={lang} />
+            <PublicProfileGallery images={guide.gallery_images} lang={lang} />
           </div>
         </div>
       </div>
