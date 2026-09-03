@@ -5,6 +5,7 @@ import { CheckCircle2, Loader2, Upload, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { iranianCities } from '@/data/iranianCities';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
@@ -396,7 +397,7 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
           </div>
           <div>
             <label className={labelClass}>City</label>
-            <input name="city" value={form.city} onChange={handleChange} className={inputClass} placeholder="Isfahan" />
+            <input name="city" list="iran-destinations" value={form.city} onChange={handleChange} className={inputClass} placeholder="Isfahan" />
           </div>
         </div>
 
@@ -422,6 +423,7 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
             ))}
             <input
               type="text"
+              list="iran-destinations"
               value={cityInput}
               onChange={e => setCityInput(e.target.value)}
               onKeyDown={onCityKeyDown}
@@ -431,6 +433,9 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
             />
           </div>
           <p className="text-white/30 text-[10px] mt-1">Press Enter or comma to add. Click ✕ to remove.</p>
+          <datalist id="iran-destinations">
+            {iranianCities.map(city => <option key={city} value={city} />)}
+          </datalist>
         </div>
 
         {/* Difficulty (required) */}

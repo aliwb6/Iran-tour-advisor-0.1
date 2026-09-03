@@ -4,7 +4,7 @@ import { useI18n } from '@/lib/i18n.jsx';
 import { motion } from 'framer-motion';
 import {
   CheckCircle, XCircle,
-  ArrowRight, ArrowLeft, Star, Lock, Instagram, Loader2, Send, ChevronLeft, ChevronRight,
+  ArrowRight, ArrowLeft, Star, Lock, Loader2, ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { useTourBySlug, FALLBACK_IMAGE } from '@/hooks/useSupabase';
 import { supabase } from '@/supabaseClient';
@@ -54,6 +54,28 @@ const pickHeroImage = (tour) => {
   return tour?.cover_image || tour?.image_url || tour?.image || FALLBACK_IMAGE;
 };
 
+const parseDestinationList = (value, lang) => {
+  const localized = pickLang(value, lang);
+  if (Array.isArray(localized)) return localized.map(String).map(item => item.trim()).filter(Boolean);
+  if (typeof localized !== 'string' || !localized.trim()) return [];
+
+  const trimmed = localized.trim();
+  if (trimmed.startsWith('[')) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) return parsed.map(String).map(item => item.trim()).filter(Boolean);
+    } catch {
+      // Fall through to delimiter parsing for malformed legacy values.
+    }
+  }
+
+  return trimmed
+    .replace(/^\{?|\}?$/g, '')
+    .split(/[,،·;|]/)
+    .map(item => item.replace(/^['"]|['"]$/g, '').trim())
+    .filter(item => item && !/^iran$/i.test(item));
+};
+
 // The dashboard TourForm currently stores `itinerary` as a free-text string
 // like "Day 1: Arrival…\nDay 2: …". Parse that into structured days so the
 // detail page can render it the same way as the fixture data.
@@ -86,11 +108,7 @@ export default function TourDetails() {
   const { isAuthenticated } = useAuth();
   const Arrow = dir === 'rtl' ? ArrowLeft : ArrowRight;
   const { tour, loading, error } = useTourBySlug(slug);
-  const [bookLoading, setBookLoading] = useState(false);
-  const [bookError, setBookError] = useState('');
-
   const [requestOpen, setRequestOpen] = useState(false);
-  const [reqUsername, setReqUsername] = useState('');
   const [reqMessage, setReqMessage] = useState('');
   const [reqDate, setReqDate] = useState('');
   const [reqEndDate, setReqEndDate] = useState('');
@@ -102,7 +120,6 @@ export default function TourDetails() {
   const [lightboxIndex, setLightboxIndex] = useState(null);
 
   const resetRequestForm = () => {
-    setReqUsername('');
     setReqMessage('');
     setReqDate('');
     setReqEndDate('');
@@ -164,27 +181,26 @@ export default function TourDetails() {
       return;
     }
 
-    const trimmedUsername = reqUsername.trim();
-    if (!trimmedUsername) {
-      toast.error(t('request_not_found'));
-      return;
-    }
-
     setReqLoading(true);
     try {
-      const { data: guide } = await supabase
-        .from('profiles')
-        .select('id, role, username')
-        .eq('username', trimmedUsername)
-        .in('role', ['guide', 'agency'])
-        .maybeSingle();
+      let recipientId = tour.owner_id || null;
+      if (!recipientId) {
+        const { data: admin, error: adminError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('is_admin', true)
+          .limit(1)
+          .maybeSingle();
+        if (adminError) throw adminError;
+        recipientId = admin?.id || null;
+      }
 
-      if (!guide) {
+      if (!recipientId) {
         toast.error(t('request_not_found'));
         return;
       }
 
-      if (guide.id === user.id) {
+      if (recipientId === user.id) {
         toast.error(t('request_self_error'));
         return;
       }
@@ -192,7 +208,7 @@ export default function TourDetails() {
       const { error: insertErr } = await supabase.from('tour_requests').insert({
         tour_id: tour.id,
         tourist_id: user.id,
-        guide_id: guide.id,
+        guide_id: recipientId,
         message: reqMessage || null,
         preferred_date: reqDate || null,
         preferred_end_date: reqEndDate || null,
@@ -219,11 +235,13 @@ export default function TourDetails() {
   const desc = pickLang(tour.desc ?? tour.description, lang);
 
   // Location for the hero badge — prefer explicit `location`, else cities array, else single city.
-  const citiesArr = Array.isArray(tour.cities)
-    ? tour.cities
-    : (typeof tour.cities === 'string' && tour.cities
-        ? tour.cities.split(/[,·]/).map(s => s.trim()).filter(Boolean)
-        : []);
+  // Use the same destination source shown on TourCard: the dashboard `cities`
+  // field first, then legacy `city`/`location` fields.
+  const citiesArr = [...new Set([
+    parseDestinationList(tour.cities, lang),
+    parseDestinationList(tour.city, lang),
+    parseDestinationList(tour.location, lang),
+  ].find(list => list.length > 0) || [])];
   const location = pickLang(tour.location, lang)
     || (citiesArr.length ? citiesArr.join(' · ') : '')
     || tour.city
@@ -239,7 +257,7 @@ export default function TourDetails() {
     : (typeof tour.itinerary === 'string' ? parseItineraryString(tour.itinerary) : []);
 
   // City count — compute from the cities array when present, else fall back.
-  const cityCount = citiesArr.length || tour.cityCount || tour.city_count || (tour.city ? 1 : 0);
+  const cityCount = citiesArr.length;
 
   // Price — accept fixture `priceFrom`, normalised `price_from`, DB `price_usd` or `price`.
   const priceFrom = tour.priceFrom ?? tour.price_from ?? tour.price_usd ?? tour.price ?? null;
@@ -252,43 +270,13 @@ export default function TourDetails() {
 
   const heroImage = pickHeroImage(tour);
 
-  // "Book Now" routes the traveller into a chat with whichever person owns
-  // the tour. For platform tours (owner_id null / is_platform_tour true) we
-  // resolve a fallback admin so the traveller always lands on a real thread.
-  const handleBookNow = async () => {
+  // Booking a package starts the package-specific request form.
+  const handleBookNow = () => {
     if (!isAuthenticated) {
       navigate('/login');
       return;
     }
-    setBookError('');
-
-    if (tour.owner_id && !tour.is_platform_tour) {
-      navigate(`/chat/${tour.owner_id}`);
-      return;
-    }
-
-    setBookLoading(true);
-    try {
-      const { data: admin, error: adminErr } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('is_admin', true)
-        .limit(1)
-        .maybeSingle();
-      if (adminErr) throw adminErr;
-      if (!admin?.id) {
-        throw new Error(
-          lang === 'fa' ? 'در حال حاضر هیچ پشتیبانی در دسترس نیست. لطفاً بعداً تلاش کنید.'
-          : lang === 'ar' ? 'لا يوجد دعم متاح حالياً. يرجى المحاولة لاحقاً.'
-          : 'No support agent is available right now. Please try again later.'
-        );
-      }
-      navigate(`/chat/${admin.id}`);
-    } catch (err) {
-      setBookError(err.message || 'Failed to open chat');
-    } finally {
-      setBookLoading(false);
-    }
+    setRequestOpen(true);
   };
 
   return (
@@ -517,23 +505,9 @@ export default function TourDetails() {
                 <div className="space-y-3 mb-6">
                   <button
                     onClick={handleBookNow}
-                    disabled={bookLoading}
-                    className="w-full py-3 rounded-xl bg-accent text-white font-body font-semibold hover:bg-accent/90 transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    className="w-full py-3 rounded-xl bg-accent text-white font-body font-semibold hover:bg-accent/90 transition-colors flex items-center justify-center gap-2"
                   >
-                    {bookLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-                    {lang === 'fa' ? 'رزرو / تماس با راهنما'
-                      : lang === 'ar' ? 'احجز / تواصل مع المرشد'
-                      : 'Book'}
-                  </button>
-                  {bookError && (
-                    <p className="font-body text-xs text-red-500">{bookError}</p>
-                  )}
-                  <button
-                    onClick={() => setRequestOpen(true)}
-                    className="w-full py-3 rounded-xl border border-accent text-accent font-body font-semibold hover:bg-accent/10 transition-colors flex items-center justify-center gap-2"
-                  >
-                    <Send className="w-4 h-4" />
-                    {t('request_cta')}
+                    {lang === 'fa' ? 'درخواست رزرو' : lang === 'ar' ? 'طلب الحجز' : 'Request Booking'}
                   </button>
                 </div>
 
@@ -549,18 +523,6 @@ export default function TourDetails() {
                         : 'Contact details will be shared after booking confirmation.'}
                     </p>
                   </div>
-                </div>
-              </div>
-
-              {/* Share */}
-              <div className="p-6 rounded-2xl bg-card border border-border/50">
-                <h3 className="font-heading text-lg font-semibold text-foreground mb-3">
-                  {lang === 'fa' ? 'به اشتراک بگذارید' : lang === 'ar' ? 'مشاركة' : 'Share'}
-                </h3>
-                <div className="flex gap-2">
-                  <button className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center hover:bg-accent/20 transition-colors">
-                    <Instagram className="w-4 h-4 text-muted-foreground" />
-                  </button>
                 </div>
               </div>
 
@@ -608,21 +570,6 @@ export default function TourDetails() {
           </DialogHeader>
 
           <div className="space-y-4 pt-2">
-            {/* Username */}
-            <div className="space-y-1.5">
-              <Label>{t('request_username_label')}</Label>
-              <div className="flex items-center rounded-md border border-input bg-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 overflow-hidden">
-                <span className="px-3 text-muted-foreground text-sm select-none">@</span>
-                <input
-                  value={reqUsername}
-                  onChange={(e) => setReqUsername(e.target.value)}
-                  placeholder={t('request_username_ph')}
-                  dir="ltr"
-                  className="flex-1 py-2 pe-3 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
-                />
-              </div>
-            </div>
-
             {/* Message */}
             <div className="space-y-1.5">
               <Label>{t('request_message_label')}</Label>

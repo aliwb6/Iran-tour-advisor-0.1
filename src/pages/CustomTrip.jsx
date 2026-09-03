@@ -5,6 +5,7 @@ import {
   Landmark, BookOpen, Trees, Sun, UtensilsCrossed, Camera, Crown,
   ChevronRight, ChevronLeft, Check, MapPin, Clock, Sparkles
 } from 'lucide-react';
+import { iranianDestinations as cityOptions } from '@/data/iranianCities';
 
 const goalOptions = [
   { key: 'architecture', icon: Landmark },
@@ -14,17 +15,6 @@ const goalOptions = [
   { key: 'food', icon: UtensilsCrossed },
   { key: 'photography', icon: Camera },
   { key: 'luxury', icon: Crown },
-];
-
-const cityOptions = [
-  { en: "Tehran", fa: "تهران", ar: "طهران" },
-  { en: "Isfahan", fa: "اصفهان", ar: "أصفهان" },
-  { en: "Shiraz", fa: "شیراز", ar: "شيراز" },
-  { en: "Yazd", fa: "یزد", ar: "يزد" },
-  { en: "Tabriz", fa: "تبریز", ar: "تبريز" },
-  { en: "Kerman", fa: "کرمان", ar: "كرمان" },
-  { en: "Rasht", fa: "رشت", ar: "رشت" },
-  { en: "Kashan", fa: "کاشان", ar: "كاشان" },
 ];
 
 export default function CustomTrip() {

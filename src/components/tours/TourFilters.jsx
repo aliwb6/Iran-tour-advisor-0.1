@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useI18n } from '@/lib/i18n.jsx';
-import { ChevronDown, X, MapPin } from 'lucide-react';
+import { ChevronDown, X, MapPin, Search } from 'lucide-react';
+import { iranianDestinationOptions } from '@/data/iranianCities';
 
 // ── Data ─────────────────────────────────────────────────────────────────────
 
@@ -21,39 +22,8 @@ const durationOptions = [
 ];
 
 const cityOptions = [
-  { key: 'all',          en: 'All Cities',   fa: 'همه شهرها',    ar: 'كل المدن' },
-  { key: 'Tehran',       en: 'Tehran',       fa: 'تهران',         ar: 'طهران' },
-  { key: 'Isfahan',      en: 'Isfahan',      fa: 'اصفهان',        ar: 'أصفهان' },
-  { key: 'Shiraz',       en: 'Shiraz',       fa: 'شیراز',         ar: 'شيراز' },
-  { key: 'Yazd',         en: 'Yazd',         fa: 'یزد',           ar: 'يزد' },
-  { key: 'Mashhad',      en: 'Mashhad',      fa: 'مشهد',          ar: 'مشهد' },
-  { key: 'Tabriz',       en: 'Tabriz',       fa: 'تبریز',         ar: 'تبريز' },
-  { key: 'Kerman',       en: 'Kerman',       fa: 'کرمان',         ar: 'كرمان' },
-  { key: 'Kashan',       en: 'Kashan',       fa: 'کاشان',         ar: 'كاشان' },
-  { key: 'Rasht',        en: 'Rasht',        fa: 'رشت',           ar: 'رشت' },
-  { key: 'Qom',          en: 'Qom',          fa: 'قم',            ar: 'قم' },
-  { key: 'Hamadan',      en: 'Hamadan',      fa: 'همدان',         ar: 'همدان' },
-  { key: 'Ahvaz',        en: 'Ahvaz',        fa: 'اهواز',         ar: 'الأهواز' },
-  { key: 'Urmia',        en: 'Urmia',        fa: 'ارومیه',        ar: 'أورمية' },
-  { key: 'Ardabil',      en: 'Ardabil',      fa: 'اردبیل',        ar: 'أردبيل' },
-  { key: 'Bandar Abbas', en: 'Bandar Abbas', fa: 'بندرعباس',     ar: 'بندر عباس' },
-  { key: 'Sari',         en: 'Sari',         fa: 'ساری',          ar: 'ساري' },
-  { key: 'Qazvin',       en: 'Qazvin',       fa: 'قزوین',         ar: 'قزوين' },
-  { key: 'Dezful',       en: 'Dezful',       fa: 'دزفول',         ar: 'دزفول' },
-  { key: 'Zanjan',       en: 'Zanjan',       fa: 'زنجان',         ar: 'زنجان' },
-  { key: 'Gorgan',       en: 'Gorgan',       fa: 'گرگان',         ar: 'گرگان' },
-  { key: 'Khorramabad',  en: 'Khorramabad',  fa: 'خرم‌آباد',      ar: 'خرم آباد' },
-  { key: 'Sanandaj',     en: 'Sanandaj',     fa: 'سنندج',         ar: 'سنندج' },
-  { key: 'Bushehr',      en: 'Bushehr',      fa: 'بوشهر',         ar: 'بوشهر' },
-  { key: 'Semnan',       en: 'Semnan',       fa: 'سمنان',         ar: 'سمنان' },
-  { key: 'Arak',         en: 'Arak',         fa: 'اراک',          ar: 'أراك' },
-  { key: 'Ilam',         en: 'Ilam',         fa: 'ایلام',         ar: 'إيلام' },
-  { key: 'Birjand',      en: 'Birjand',      fa: 'بیرجند',        ar: 'بيرجند' },
-  { key: 'Bojnord',      en: 'Bojnord',      fa: 'بجنورد',        ar: 'بجنورد' },
-  { key: 'Yasuj',        en: 'Yasuj',        fa: 'یاسوج',         ar: 'يسوج' },
-  { key: 'Zahedan',      en: 'Zahedan',      fa: 'زاهدان',        ar: 'زاهدان' },
-  { key: 'Karaj',        en: 'Karaj',        fa: 'کرج',           ar: 'كرج' },
-  { key: 'Pasargadae',   en: 'Pasargadae',   fa: 'پاسارگاد',      ar: 'باسارغاد' },
+  { key: 'all', en: 'All Destinations', fa: 'همه مقصدها', ar: 'كل الوجهات' },
+  ...iranianDestinationOptions,
 ];
 
 const priceOptions = [
@@ -76,14 +46,23 @@ const sortOptions = [
 
 // ── FilterDropdown sub-component ─────────────────────────────────────────────
 
-function FilterDropdown({ label, value, options, onChange, lang, icon: Icon, inactiveKey = 'all' }) {
+function FilterDropdown({ label, value, options, onChange, lang, icon: Icon, inactiveKey = 'all', searchable = false }) {
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
   const ref = useRef(null);
   const selected = options.find(o => o.key === value) || options[0];
   const isActive = value !== inactiveKey;
+  const normalizedQuery = query.trim().toLocaleLowerCase();
+  const visibleOptions = !normalizedQuery
+    ? options
+    : options.filter((option, index) => index === 0 || ['en', 'fa', 'ar', 'key'].some((field) =>
+        String(option[field] || '').toLocaleLowerCase().includes(normalizedQuery)
+      ));
+
+  const close = () => { setOpen(false); setQuery(''); };
 
   useEffect(() => {
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) close(); };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
@@ -109,17 +88,32 @@ function FilterDropdown({ label, value, options, onChange, lang, icon: Icon, ina
       </button>
 
       {open && (
-        <div className="absolute top-full mt-2 left-0 z-50 min-w-full w-max max-h-64 overflow-y-auto bg-card/95 backdrop-blur-xl border border-border/60 rounded-2xl shadow-2xl shadow-black/20 py-2">
+        <div className="absolute top-full mt-2 left-0 z-50 min-w-full w-72 bg-card/95 backdrop-blur-xl border border-border/60 rounded-2xl shadow-2xl shadow-black/20 py-2 overflow-hidden">
           {/* Persian ornament top accent */}
           <div className="px-4 pb-2 mb-1 border-b border-border/30">
             <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground/60 flex items-center gap-1.5">
               <span className="text-accent text-xs">❖</span> {label}
             </p>
           </div>
-          {options.map(opt => (
+          {searchable && (
+            <div className="px-3 pb-2 border-b border-border/30">
+              <div className="relative">
+                <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                <input
+                  autoFocus
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder={lang === 'fa' ? 'جستجوی شهر یا روستا…' : lang === 'ar' ? 'ابحث عن مدينة أو قرية…' : 'Search city or village…'}
+                  className="w-full ps-9 pe-3 py-2 rounded-lg border border-border/60 bg-background/80 text-sm text-foreground placeholder:text-muted-foreground/60 outline-none focus:border-accent/60 focus:ring-2 focus:ring-accent/10"
+                />
+              </div>
+            </div>
+          )}
+          <div className="max-h-64 overflow-y-auto py-1">
+          {visibleOptions.map(opt => (
             <button
               key={opt.key}
-              onClick={() => { onChange(opt.key); setOpen(false); }}
+              onClick={() => { onChange(opt.key); close(); }}
               className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm font-body text-left transition-colors
                 ${opt.key === value
                   ? 'text-accent bg-accent/10 font-semibold'
@@ -131,6 +125,12 @@ function FilterDropdown({ label, value, options, onChange, lang, icon: Icon, ina
               {opt.key === value && <span className="ml-auto text-accent text-xs">✓</span>}
             </button>
           ))}
+          {visibleOptions.length === 0 && (
+            <p className="px-4 py-5 text-center text-xs text-muted-foreground">
+              {lang === 'fa' ? 'مقصدی پیدا نشد' : lang === 'ar' ? 'لم يتم العثور على وجهة' : 'No destination found'}
+            </p>
+          )}
+          </div>
         </div>
       )}
     </div>
@@ -170,6 +170,7 @@ export default function TourFilters({ filters, onChange, resultCount, sortBy, on
             onChange={(v) => onChange({ ...filters, city: v })}
             lang={lang}
             icon={MapPin}
+            searchable
           />
           <FilterDropdown
             label={lang === 'fa' ? 'تم' : lang === 'ar' ? 'النوع' : 'Theme'}

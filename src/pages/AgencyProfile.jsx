@@ -14,8 +14,7 @@ import { transformImage, imgPresets } from '@/lib/imageTransform';
 import { useAuth } from '@/lib/AuthContext';
 import TourCard from '@/components/tours/TourCard';
 import { FALLBACK_IMAGE } from '@/hooks/useSupabase';
-
-const CITIES_LIST = ['Tehran', 'Isfahan', 'Shiraz', 'Yazd', 'Mashhad', 'Tabriz', 'Kerman', 'Rasht', 'Qom', 'Kashan'];
+import { iranianDestinations } from '@/data/iranianCities';
 
 const pickTourImage = (tour) =>
   tour.cover_image || tour.image_url || tour.image ||
@@ -68,7 +67,7 @@ function BookingWidget({ agency, lang }) {
               className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-background font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-gold/40 appearance-none cursor-pointer"
             >
               <option value="">{lang === 'fa' ? '-- مقصد را انتخاب کنید --' : '-- Select destination --'}</option>
-              {CITIES_LIST.map((c) => <option key={c} value={c}>{c}</option>)}
+              {iranianDestinations.map((c) => <option key={c.en} value={c.en}>{c[lang] || c.en}</option>)}
             </select>
             <ChevronDown className="absolute end-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
           </div>

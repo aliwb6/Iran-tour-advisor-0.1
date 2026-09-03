@@ -79,7 +79,10 @@ export default function Tours() {
   const tours = rawTours.filter(t => {
     if (filters.city && filters.city !== 'all') {
       const cities = t.cities || t.city || '';
-      const cityStr = typeof cities === 'object' ? (cities.en || '') : String(cities);
+      const localized = Array.isArray(cities)
+        ? cities
+        : (cities && typeof cities === 'object' ? (cities[lang] || cities.en || []) : cities);
+      const cityStr = Array.isArray(localized) ? localized.join(' ') : String(localized || '');
       if (!cityStr.toLowerCase().includes(filters.city.toLowerCase())) return false;
     }
     if (filters.price && filters.price !== 'all') {

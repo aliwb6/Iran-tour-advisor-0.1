@@ -6,30 +6,13 @@ import { useI18n } from '@/lib/i18n.jsx';
 import { useAgencies } from '@/hooks/useSupabase';
 import { avatarFor } from '@/lib/avatar';
 import FilterDropdown from '@/components/ui/FilterDropdown';
+import { iranianDestinationOptions } from '@/data/iranianCities';
 
 // ── Filter options ────────────────────────────────────────────────────────────
 
 const CITY_OPTIONS = [
-  { key: 'all', en: 'All Cities', fa: 'همه شهرها', ar: 'كل المدن' },
-  { key: 'Tehran', en: 'Tehran', fa: 'تهران', ar: 'طهران' },
-  { key: 'Isfahan', en: 'Isfahan', fa: 'اصفهان', ar: 'أصفهان' },
-  { key: 'Shiraz', en: 'Shiraz', fa: 'شیراز', ar: 'شيراز' },
-  { key: 'Yazd', en: 'Yazd', fa: 'یزد', ar: 'يزد' },
-  { key: 'Mashhad', en: 'Mashhad', fa: 'مشهد', ar: 'مشهد' },
-  { key: 'Tabriz', en: 'Tabriz', fa: 'تبریز', ar: 'تبريز' },
-  { key: 'Kerman', en: 'Kerman', fa: 'کرمان', ar: 'كرمان' },
-  { key: 'Kashan', en: 'Kashan', fa: 'کاشان', ar: 'كاشان' },
-  { key: 'Rasht', en: 'Rasht', fa: 'رشت', ar: 'رشت' },
-  { key: 'Qom', en: 'Qom', fa: 'قم', ar: 'قم' },
-  { key: 'Hamadan', en: 'Hamadan', fa: 'همدان', ar: 'همدان' },
-  { key: 'Ahvaz', en: 'Ahvaz', fa: 'اهواز', ar: 'الأهواز' },
-  { key: 'Urmia', en: 'Urmia', fa: 'ارومیه', ar: 'أورمية' },
-  { key: 'Ardabil', en: 'Ardabil', fa: 'اردبیل', ar: 'أردبيل' },
-  { key: 'Bandar Abbas', en: 'Bandar Abbas', fa: 'بندرعباس', ar: 'بندر عباس' },
-  { key: 'Sari', en: 'Sari', fa: 'ساری', ar: 'ساري' },
-  { key: 'Qazvin', en: 'Qazvin', fa: 'قزوین', ar: 'قزوين' },
-  { key: 'Zahedan', en: 'Zahedan', fa: 'زاهدان', ar: 'زاهدان' },
-  { key: 'Karaj', en: 'Karaj', fa: 'کرج', ar: 'كرج' },
+  { key: 'all', en: 'All Destinations', fa: 'همه مقصدها', ar: 'كل الوجهات' },
+  ...iranianDestinationOptions,
 ];
 
 const LANGUAGE_OPTIONS = [
@@ -263,6 +246,7 @@ export default function Agencies() {
                 onChange={(v) => setFilters(f => ({ ...f, city: v }))}
                 lang={lang}
                 icon={MapPin}
+                searchable
               />
               <FilterDropdown
                 label={lang === 'fa' ? 'زبان' : lang === 'ar' ? 'اللغة' : 'Language'}

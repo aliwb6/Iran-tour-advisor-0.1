@@ -3,15 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useI18n } from '@/lib/i18n.jsx';
 import { motion } from 'framer-motion';
 import { ArrowRight, ArrowLeft, Sparkles, Star, MapPin, Search } from 'lucide-react';
-
-const IRAN_CITIES = [
-  "Tehran", "Isfahan", "Shiraz", "Mashhad", "Tabriz", "Yazd", "Kerman",
-  "Ahvaz", "Rasht", "Qom", "Hamadan", "Kashan", "Bandar Abbas", "Urmia",
-  "Zahedan", "Ardabil", "Sari", "Semnan", "Arak", "Zanjan", "Gorgan",
-  "Birjand", "Ilam", "Khorramabad", "Bojnord", "Shahr-e Kord", "Sanandaj",
-  "Yasuj", "Bushehr", "Qazvin", "Dezful", "Abadan", "Borujerd", "Saveh",
-  "Karaj", "Rey", "Varamin", "Pasargadae", "Persepolis", "Natanz",
-];
+import { iranianCities as IRAN_CITIES } from '@/data/iranianCities';
 
 const HERO_IMAGES = [
   "https://media.base44.com/images/public/69fddcfab0730c36bda3631e/7a7bd2ab5_generated_847e20ff.png",

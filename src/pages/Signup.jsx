@@ -9,37 +9,12 @@ import {
   ArrowRight, ArrowLeft, Eye, EyeOff, Loader2,
   Star, Bookmark, Compass,
 } from 'lucide-react';
+import { iranianDestinations as IRAN_CITIES, popularIranianDestinations as POPULAR_CITIES } from '@/data/iranianCities';
 
 const BENEFITS = [
   { icon: Compass, titleKey: 'login_benefit1_title', descKey: 'login_benefit1_desc' },
   { icon: Bookmark, titleKey: 'login_benefit2_title', descKey: 'login_benefit2_desc' },
   { icon: Star,    titleKey: 'login_benefit3_title', descKey: 'login_benefit3_desc' },
-];
-
-const IRAN_CITIES = [
-  { en: 'Tehran',       fa: 'تهران',     ar: 'طهران' },
-  { en: 'Isfahan',      fa: 'اصفهان',    ar: 'أصفهان' },
-  { en: 'Shiraz',       fa: 'شیراز',     ar: 'شيراز' },
-  { en: 'Yazd',         fa: 'یزد',       ar: 'يزد' },
-  { en: 'Tabriz',       fa: 'تبریز',     ar: 'تبريز' },
-  { en: 'Mashhad',      fa: 'مشهد',      ar: 'مشهد' },
-  { en: 'Kerman',       fa: 'کرمان',     ar: 'كرمان' },
-  { en: 'Kashan',       fa: 'کاشان',     ar: 'كاشان' },
-  { en: 'Qom',          fa: 'قم',        ar: 'قم' },
-  { en: 'Kish',         fa: 'کیش',       ar: 'كيش' },
-  { en: 'Qeshm',        fa: 'قشم',       ar: 'قشم' },
-  { en: 'Rasht',        fa: 'رشت',       ar: 'رشت' },
-  { en: 'Hamadan',      fa: 'همدان',     ar: 'همدان' },
-  { en: 'Kermanshah',   fa: 'کرمانشاه',  ar: 'كرمانشاه' },
-  { en: 'Bandar Abbas', fa: 'بندرعباس',  ar: 'بندر عباس' },
-  { en: 'Ahvaz',        fa: 'اهواز',     ar: 'الأهواز' },
-];
-
-const POPULAR_CITIES = [
-  { en: 'Shiraz',  fa: 'شیراز',  ar: 'شيراز' },
-  { en: 'Isfahan', fa: 'اصفهان', ar: 'أصفهان' },
-  { en: 'Yazd',    fa: 'یزد',    ar: 'يزد' },
-  { en: 'Hamadan', fa: 'همدان',  ar: 'همدان' },
 ];
 
 export default function Signup() {

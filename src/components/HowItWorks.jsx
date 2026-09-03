@@ -15,21 +15,18 @@ const STEPS = [
       title: 'Tell the AI Your Dream Journey',
       desc:
         'Open our AI Travel Assistant and simply describe your trip — where you want to go in Iran, your travel dates, your interests (architecture, nature, food, history…), and your travel style. No long forms. Just a conversation.',
-      cta: 'Start chatting',
     },
     fa: {
       eyebrow: 'گام ۰۱',
       title: 'رؤیای سفرت را برای هوش مصنوعی تعریف کن',
       desc:
         'دستیار سفر هوشمند ما را باز کن و سفرت را به زبان خودت توضیح بده — کجاهای ایران، چه تاریخی، چه علاقه‌هایی (معماری، طبیعت، غذا، تاریخ…) و سبک سفرت. بدون فرم‌های طولانی — فقط یک گفتگو.',
-      cta: 'شروع گفتگو',
     },
     ar: {
       eyebrow: 'الخطوة 01',
       title: 'صف رحلة أحلامك للذكاء الاصطناعي',
       desc:
         'افتح مساعد السفر الذكي وصِف رحلتك بكلماتك — أين تريد الذهاب في إيران، تواريخ السفر، اهتماماتك (العمارة، الطبيعة، الطعام، التاريخ…)، وأسلوب سفرك. لا استمارات طويلة — مجرد محادثة.',
-      cta: 'ابدأ المحادثة',
     },
   },
   {
@@ -200,15 +197,6 @@ export default function HowItWorks() {
                     <p className="font-body text-sm text-white/60 leading-relaxed">
                       {copy.desc}
                     </p>
-                    {copy.cta && (
-                      <Link
-                        to="/ai-assistant"
-                        className="inline-flex items-center gap-1.5 mt-4 text-sm font-medium text-gold hover:text-gold-light transition group/cta"
-                      >
-                        {copy.cta}
-                        <Arrow className="w-3.5 h-3.5 group-hover/cta:translate-x-0.5 transition-transform" />
-                      </Link>
-                    )}
                   </div>
                 </motion.li>
               );
