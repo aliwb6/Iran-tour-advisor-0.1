@@ -140,6 +140,7 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
   const [error,    setError]    = useState('');
   const [customTheme,   setCustomTheme]   = useState('');
   const [customTransportation, setCustomTransportation] = useState('');
+  const [showCustomTransportation, setShowCustomTransportation] = useState(false);
   const [customOther, setCustomOther] = useState('');
 
   const handleChange = (e) => {
@@ -187,6 +188,19 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
         : [...prev.transportation, value],
     }));
     setCustomTransportation('');
+  };
+
+  const toggleCustomTransportation = (enabled) => {
+    setShowCustomTransportation(!!enabled);
+    if (enabled) return;
+
+    setCustomTransportation('');
+    setIncluded(prev => ({
+      ...prev,
+      transportation: prev.transportation.filter(value =>
+        TRANSPORTATION_OPTIONS.some(option => option.value === value)
+      ),
+    }));
   };
 
   const addCustomOther = () => {
@@ -365,6 +379,10 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
   const tagBase    = 'rounded-full px-3 py-1.5 text-sm cursor-pointer flex items-center gap-1.5 border transition';
   const tagOn      = `${tagBase} border-teal-400 bg-teal-400/20 text-white`;
   const tagOff     = `${tagBase} border-white/20 text-white/70 hover:border-teal-400`;
+  const customTransportationValues = included.transportation.filter(value =>
+    !TRANSPORTATION_OPTIONS.some(option => option.value === value)
+  );
+  const customTransportationEnabled = showCustomTransportation || customTransportationValues.length > 0;
 
   return (
     <div>
@@ -486,22 +504,42 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
 
         {/* Difficulty (required) */}
         <div>
-          <label className={labelClass}>
-            Difficulty <span className="text-red-400">*</span>
-            <span className="ml-1 text-white/40 text-[10px] font-normal">(Required)</span>
+          <label htmlFor="tour-difficulty" className={labelClass}>
+            {lang === 'fa' ? 'سطح دشواری' : lang === 'ar' ? 'مستوى الصعوبة' : 'Difficulty'} <span className="text-red-400">*</span>
+            <span className="ms-1 text-white/40 text-[10px] font-normal">
+              {lang === 'fa' ? '(الزامی)' : lang === 'ar' ? '(مطلوب)' : '(Required)'}
+            </span>
           </label>
-          <select
-            name="difficulty"
-            required
+          <Select
             value={form.difficulty}
-            onChange={handleChange}
-            className={`${inputClass} w-full md:w-72 appearance-none cursor-pointer`}
+            onValueChange={value => setForm(prev => ({ ...prev, difficulty: value }))}
+            dir={dir}
           >
-            <option value="" disabled>Select a difficulty level…</option>
-            {DIFFICULTY_OPTIONS.map(opt => (
-              <option key={opt.value} value={opt.value}>{opt[lang] || opt.en}</option>
-            ))}
-          </select>
+            <SelectTrigger
+              id="tour-difficulty"
+              aria-required="true"
+              className="w-full md:w-72 h-11 rounded-xl border-white/10 bg-white/[0.05] px-3.5 text-sm text-white shadow-none focus:border-[hsl(178,85%,32%)] focus:ring-1 focus:ring-[hsl(178,85%,32%)]/50 data-[placeholder]:text-white/35"
+            >
+              <SelectValue
+                placeholder={lang === 'fa'
+                  ? 'سطح دشواری را انتخاب کنید…'
+                  : lang === 'ar'
+                  ? 'اختر مستوى الصعوبة…'
+                  : 'Select a difficulty level…'}
+              />
+            </SelectTrigger>
+            <SelectContent className="border-white/15 bg-[hsl(222,45%,14%)] text-white shadow-xl">
+              {DIFFICULTY_OPTIONS.map(opt => (
+                <SelectItem
+                  key={opt.value}
+                  value={opt.value}
+                  className="cursor-pointer focus:bg-teal-400/20 focus:text-white"
+                >
+                  {opt[lang] || opt.en}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Theme tag chips */}
@@ -678,12 +716,21 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
                     </div>
                   );
                 })}
+                <div className="flex items-center gap-3">
+                  <Checkbox
+                    id="inc-t-other"
+                    checked={customTransportationEnabled}
+                    onCheckedChange={toggleCustomTransportation}
+                    className="border-white/40 data-[state=checked]:bg-teal-400 data-[state=checked]:text-[hsl(222,45%,14%)] data-[state=checked]:border-teal-400"
+                  />
+                  <Label htmlFor="inc-t-other" className="text-white/85 text-sm cursor-pointer m-0">
+                    {lang === 'fa' ? 'سایر' : lang === 'ar' ? 'أخرى' : 'Other'}
+                  </Label>
+                </div>
               </div>
-              {included.transportation.some(value => !TRANSPORTATION_OPTIONS.some(opt => opt.value === value)) && (
+              {customTransportationValues.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-3">
-                  {included.transportation
-                    .filter(value => !TRANSPORTATION_OPTIONS.some(opt => opt.value === value))
-                    .map(value => (
+                  {customTransportationValues.map(value => (
                       <button
                         key={value}
                         type="button"
@@ -696,30 +743,43 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
                     ))}
                 </div>
               )}
-              <div className="flex gap-2 mt-3">
-                <input
-                  type="text"
-                  value={customTransportation}
-                  onChange={event => setCustomTransportation(event.target.value)}
-                  onKeyDown={event => {
-                    if (event.key === 'Enter') {
-                      event.preventDefault();
-                      addCustomTransportation();
-                    }
-                  }}
-                  className={inputClass}
-                  maxLength={80}
-                  placeholder={lang === 'fa' ? 'سایر وسایل حمل‌ونقل…' : lang === 'ar' ? 'وسيلة نقل أخرى…' : 'Other transportation…'}
-                />
-                <button
-                  type="button"
-                  onClick={addCustomTransportation}
-                  disabled={!customTransportation.trim()}
-                  className="px-4 py-2.5 rounded-xl border border-white/20 text-white/70 text-sm hover:border-teal-400 hover:text-white transition whitespace-nowrap disabled:opacity-40"
-                >
-                  {lang === 'fa' ? 'افزودن' : lang === 'ar' ? 'إضافة' : 'Add'}
-                </button>
-              </div>
+              <AnimatePresence initial={false}>
+                {customTransportationEnabled && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+                    className="overflow-hidden"
+                  >
+                    <div className="flex gap-2 mt-3">
+                      <input
+                        type="text"
+                        value={customTransportation}
+                        onChange={event => setCustomTransportation(event.target.value)}
+                        onKeyDown={event => {
+                          if (event.key === 'Enter') {
+                            event.preventDefault();
+                            addCustomTransportation();
+                          }
+                        }}
+                        className={inputClass}
+                        maxLength={80}
+                        aria-label={lang === 'fa' ? 'نوع دیگر حمل‌ونقل' : lang === 'ar' ? 'وسيلة نقل أخرى' : 'Other transportation'}
+                        placeholder={lang === 'fa' ? 'مثلاً قایق، دوچرخه یا خودروی آفرود…' : lang === 'ar' ? 'مثلاً قارب أو دراجة أو سيارة دفع رباعي…' : 'e.g. boat, bicycle, or 4×4 vehicle…'}
+                      />
+                      <button
+                        type="button"
+                        onClick={addCustomTransportation}
+                        disabled={!customTransportation.trim()}
+                        className="px-4 py-2.5 rounded-xl border border-white/20 text-white/70 text-sm hover:border-teal-400 hover:text-white transition whitespace-nowrap disabled:opacity-40"
+                      >
+                        {lang === 'fa' ? 'افزودن' : lang === 'ar' ? 'إضافة' : 'Add'}
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
             <div className="h-px bg-white/[0.06]" />
