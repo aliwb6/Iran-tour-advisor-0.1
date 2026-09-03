@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useI18n } from '@/lib/i18n.jsx';
 import { motion } from 'framer-motion';
 import { MapPin, Clock, Loader2 } from 'lucide-react';
@@ -13,30 +13,19 @@ const FALLBACK_IMAGES = [
 
 export default function PopularPackages() {
   const { t, dir, lang } = useI18n();
-  const [tours, setTours] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
+  const { data: tours = [], isLoading: loading } = useQuery({
+    queryKey: ['homepage-popular-tours'],
+    queryFn: async () => {
         const { data, error } = await supabase
           .from('tours')
-          .select('*')
+          .select('id, slug, image_url, gallery, title, cities, location, city, duration, price')
           .eq('is_platform_tour', true)
           .order('created_at', { ascending: false })
           .limit(3);
-        if (cancelled) return;
         if (error) throw error;
-        setTours(data || []);
-      } catch (_err) {
-        if (!cancelled) setTours([]);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, []);
+        return data || [];
+    },
+  });
 
   const cityList = (tour) => {
     if (Array.isArray(tour.cities) && tour.cities.length) return tour.cities.join(' · ');

@@ -1,5 +1,4 @@
 import { useI18n } from '@/lib/i18n.jsx';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useRef, useEffect } from 'react';
 import { Globe } from 'lucide-react';
 
@@ -35,13 +34,8 @@ export default function LanguageSwitcher() {
         <span className="text-sm font-body font-medium">{current?.label}</span>
       </button>
 
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, y: -8, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -8, scale: 0.95 }}
-            transition={{ duration: 0.2 }}
+      {open && (
+          <div
             className="absolute top-full mt-2 end-0 bg-white dark:bg-gray-900 border border-border rounded-xl shadow-xl overflow-hidden min-w-[160px] z-50"
           >
             {languages.map((l) => (
@@ -56,9 +50,8 @@ export default function LanguageSwitcher() {
                 <span className="text-xs text-gray-500 dark:text-gray-400">{l.label}</span>
               </button>
             ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </div>
+      )}
     </div>
   );
 }

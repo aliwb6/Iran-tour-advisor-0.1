@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { lazy, Suspense, useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useI18n } from '@/lib/i18n.jsx';
 import { useAuth } from '@/lib/AuthContext';
@@ -6,9 +6,10 @@ import { supabase } from '@/supabaseClient';
 import LanguageSwitcher from './LanguageSwitcher';
 import ThemeToggle from './ThemeToggle';
 import NotificationBell from './NotificationBell';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, Compass, ArrowRight, LogOut, LayoutDashboard, Shield, User } from 'lucide-react';
-import UserDropdown from '@/components/navbar/UserDropdown';
+import { preloadRoute } from '@/lib/route-loaders';
+
+const UserDropdown = lazy(() => import('@/components/navbar/UserDropdown'));
 
 export default function Navbar() {
   const { t, lang, dir } = useI18n();
@@ -31,11 +32,6 @@ export default function Navbar() {
   const isAdmin = profile?.role === 'admin' || profile?.is_admin === true;
   const isGuideOrAgency = role === 'guide' || role === 'agency';
   const isTourist = role === 'tourist' || role === 'traveler';
-
-  // TEMP DEBUG — remove after confirming
-  useEffect(() => {
-    console.log('[Navbar] openRequestCount:', openRequestCount, 'isGuideOrAgency:', isGuideOrAgency);
-  }, [openRequestCount, isGuideOrAgency]);
 
   useEffect(() => {
     if (!isAuthenticated || !isGuideOrAgency) {
@@ -106,11 +102,8 @@ export default function Navbar() {
 
   return (
     <>
-      <motion.nav
+      <nav
         dir={dir}
-        initial={{ y: -80, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
         className={`fixed top-0 inset-x-0 z-50 transition-all duration-500 ${
           scrolled
             ? 'bg-background/85 backdrop-blur-2xl border-b border-border/40 shadow-warm py-0'
@@ -141,6 +134,8 @@ export default function Navbar() {
                 <Link
                   key={link.path}
                   to={link.path}
+                  onMouseEnter={() => preloadRoute(link.path)}
+                  onFocus={() => preloadRoute(link.path)}
                   className={`relative px-3.5 py-2 text-[13px] font-body font-medium rounded-full transition-all duration-300 ${
                     link.path === '/tours'
                       ? 'border border-border/70 bg-secondary/40 hover:bg-secondary/60 hover:border-border text-black hover:text-black'
@@ -153,10 +148,7 @@ export default function Navbar() {
                 >
                   {link.label}
                   {isActive(link.path) && (
-                    <motion.div
-                      layoutId="nav-dot"
-                      className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-accent rounded-full"
-                    />
+                    <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-accent rounded-full" />
                   )}
                 </Link>
               ))}
@@ -166,6 +158,8 @@ export default function Navbar() {
                 <div className="relative inline-flex" data-testid="find-jobs-wrapper">
                   <Link
                     to="/dashboard/requests"
+                    onMouseEnter={() => preloadRoute('/dashboard')}
+                    onFocus={() => preloadRoute('/dashboard')}
                     className={`flex items-center px-3.5 py-2 text-[13px] font-body font-bold rounded-lg transition-all duration-300 ${
                       isActive('/dashboard/requests')
                         ? 'bg-accent text-white'
@@ -222,6 +216,8 @@ export default function Navbar() {
                     {isAdmin && (
                       <Link
                         to="/admin"
+                        onMouseEnter={() => preloadRoute('/admin')}
+                        onFocus={() => preloadRoute('/admin')}
                         className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-body font-medium transition-all ${
                           isLight
                             ? 'bg-white/10 text-white hover:bg-white/20'
@@ -238,6 +234,8 @@ export default function Navbar() {
                         to="/dashboard"
                         target="_blank"
                         rel="noopener noreferrer"
+                        onMouseEnter={() => preloadRoute('/dashboard')}
+                        onFocus={() => preloadRoute('/dashboard')}
                         className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-body font-medium transition-all ${
                           isLight
                             ? 'bg-white/10 text-white hover:bg-white/20'
@@ -250,7 +248,11 @@ export default function Navbar() {
                     )}
 
                     {/* Traveler: avatar dropdown with Profile / Bookings / Requests / Settings / Sign out */}
-                    {isTourist && <UserDropdown isLight={isLight} />}
+                    {isTourist && (
+                      <Suspense fallback={null}>
+                        <UserDropdown isLight={isLight} />
+                      </Suspense>
+                    )}
 
                     {/* Admin/guide still need a quick sign-out */}
                     {!isTourist && (
@@ -271,6 +273,8 @@ export default function Navbar() {
                   <div className="hidden lg:flex items-center gap-2">
                     <Link
                       to="/login"
+                      onMouseEnter={() => preloadRoute('/login')}
+                      onFocus={() => preloadRoute('/login')}
                       className={`px-4 py-2 rounded-full text-xs font-body font-medium border transition-all ${
                         isLight
                           ? 'border-white/40 text-white hover:bg-white/10'
@@ -281,6 +285,8 @@ export default function Navbar() {
                     </Link>
                     <Link
                       to="/signup"
+                      onMouseEnter={() => preloadRoute('/signup')}
+                      onFocus={() => preloadRoute('/signup')}
                       className="px-4 py-2 rounded-full text-xs font-body font-semibold bg-accent text-white hover:bg-accent/90 transition-colors"
                     >
                       {t('auth_signup')}
@@ -304,28 +310,20 @@ export default function Navbar() {
             </div>
           </div>
         </div>
-      </motion.nav>
+      </nav>
 
       {/* Mobile Menu */}
-      <AnimatePresence>
-        {mobileOpen && (
-          <motion.div
+      {mobileOpen && (
+          <div
             dir={dir}
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
             className="fixed inset-0 z-40 bg-background/97 backdrop-blur-2xl lg:hidden overflow-y-auto"
           >
             <div className="pt-20 pb-10 px-6">
               {/* Nav links */}
               <div className="space-y-1 mb-8">
-                {[{ path: '/', label: t('nav_home') }, ...navLinks].map((link, i) => (
-                  <motion.div
+                {[{ path: '/', label: t('nav_home') }, ...navLinks].map((link) => (
+                  <div
                     key={link.path}
-                    initial={{ opacity: 0, x: dir === 'rtl' ? 20 : -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.045, ease: [0.22, 1, 0.36, 1] }}
                   >
                     <Link
                       to={link.path}
@@ -338,16 +336,13 @@ export default function Navbar() {
                         dir === 'rtl' ? 'rotate-180' : ''
                       } ${isActive(link.path) ? 'opacity-100 text-accent' : ''}`} />
                     </Link>
-                  </motion.div>
+                  </div>
                 ))}
 
                 {/* Find Jobs — mobile, guides/agencies only */}
                 {isGuideOrAgency && (
-                  <motion.div
+                  <div
                     className="relative"
-                    initial={{ opacity: 0, x: dir === 'rtl' ? 20 : -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: (navLinks.length + 1) * 0.045 }}
                   >
                     <Link
                       to="/dashboard/requests"
@@ -382,7 +377,7 @@ export default function Navbar() {
                         {openRequestCount > 99 ? '99+' : openRequestCount}
                       </span>
                     )}
-                  </motion.div>
+                  </div>
                 )}
               </div>
 
@@ -463,9 +458,8 @@ export default function Navbar() {
                 <LanguageSwitcher />
               </div>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </div>
+      )}
     </>
   );
 }

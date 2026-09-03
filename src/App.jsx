@@ -1,46 +1,64 @@
-import { lazy, Suspense } from 'react';
-import { Toaster } from "@/components/ui/toaster"
-import { Toaster as SonnerToaster } from "@/components/ui/sonner"
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
-import GuideOnboarding from '@/pages/GuideOnboarding';
 import { I18nProvider } from '@/lib/i18n.jsx';
 import { ThemeProvider } from '@/lib/ThemeContext.jsx';
+import { routeLoaders } from '@/lib/route-loaders';
 
 import Layout from '@/components/layout/Layout';
 // Home is the landing route — kept eager so first paint never waits on a chunk.
 import Home from '@/pages/Home';
 
 // Heavy / secondary routes are code-split so they don't bloat the initial bundle.
-const Tours = lazy(() => import('@/pages/Tours'));
-const TourDetails = lazy(() => import('@/pages/TourDetails'));
-const PackageDetails = lazy(() => import('@/pages/PackageDetails'));
-const Dashboard = lazy(() => import('@/pages/Dashboard'));
-const AdminDashboard = lazy(() => import('@/pages/AdminDashboard'));
-const Guides = lazy(() => import('@/pages/Guides'));
-const Agencies = lazy(() => import('@/pages/Agencies'));
-const GuideDetails = lazy(() => import('@/pages/GuideDetails'));
-const AgencyProfile = lazy(() => import('@/pages/AgencyProfile'));
-const TripRequest = lazy(() => import('@/pages/TripRequest'));
-const AIAssistant = lazy(() => import('@/pages/AIAssistant'));
-const About = lazy(() => import('@/pages/About'));
-const Blog = lazy(() => import('@/pages/Blog'));
-const ArticleDetails = lazy(() => import('@/pages/ArticleDetails'));
-const Chat = lazy(() => import('@/pages/Chat'));
-const ProfilePage = lazy(() => import('@/pages/profile/ProfilePage'));
-const SettingsPage = lazy(() => import('@/pages/profile/SettingsPage'));
-const RequestsPage = lazy(() => import('@/pages/profile/RequestsPage'));
-const CityPage = lazy(() => import('@/pages/CityPage'));
-const FindJobs = lazy(() => import('@/pages/FindJobs'));
-const MyTripRequests = lazy(() => import('@/pages/MyTripRequests'));
-const RequestDetailPage = lazy(() => import('@/pages/profile/RequestDetailPage'));
-const Signup = lazy(() => import('@/pages/Signup'));
-const Login = lazy(() => import('@/pages/Login'));
-const Destinations = lazy(() => import('@/pages/Destinations'));
-const Search = lazy(() => import('@/pages/Search'));
+const Tours = lazy(routeLoaders.tours);
+const TourDetails = lazy(routeLoaders.tourDetails);
+const PackageDetails = lazy(routeLoaders.packageDetails);
+const Dashboard = lazy(routeLoaders.dashboard);
+const AdminDashboard = lazy(routeLoaders.adminDashboard);
+const Guides = lazy(routeLoaders.guides);
+const Agencies = lazy(routeLoaders.agencies);
+const GuideDetails = lazy(routeLoaders.guideDetails);
+const AgencyProfile = lazy(routeLoaders.agencyProfile);
+const TripRequest = lazy(routeLoaders.tripRequest);
+const AIAssistant = lazy(routeLoaders.aiAssistant);
+const About = lazy(routeLoaders.about);
+const Blog = lazy(routeLoaders.blog);
+const ArticleDetails = lazy(routeLoaders.articleDetails);
+const Chat = lazy(routeLoaders.chat);
+const ProfilePage = lazy(routeLoaders.profile);
+const SettingsPage = lazy(routeLoaders.settings);
+const RequestsPage = lazy(routeLoaders.requests);
+const CityPage = lazy(routeLoaders.city);
+const FindJobs = lazy(routeLoaders.findJobs);
+const MyTripRequests = lazy(routeLoaders.myTrips);
+const RequestDetailPage = lazy(routeLoaders.requestDetails);
+const Signup = lazy(routeLoaders.signup);
+const Login = lazy(routeLoaders.login);
+const Destinations = lazy(routeLoaders.destinations);
+const Search = lazy(routeLoaders.search);
+const GuideOnboarding = lazy(routeLoaders.guideOnboarding);
+const Toaster = lazy(() => import('@/components/ui/toaster').then((module) => ({ default: module.Toaster })));
+const SonnerToaster = lazy(() => import('@/components/ui/sonner').then((module) => ({ default: module.Toaster })));
+
+function DeferredToasters() {
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => setReady(true), 1200);
+    return () => window.clearTimeout(timeoutId);
+  }, []);
+
+  if (!ready) return null;
+  return (
+    <Suspense fallback={null}>
+      <Toaster />
+      <SonnerToaster richColors position="top-right" />
+    </Suspense>
+  );
+}
 
 import { NotificationsProvider } from '@/lib/NotificationsContext';
 
@@ -71,21 +89,6 @@ function TripRequestsRedirect() {
 }
 
 const AuthenticatedApp = () => {
-  const { isLoadingAuth } = useAuth();
-
-  if (isLoadingAuth) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 rounded-full border-2 border-gold flex items-center justify-center">
-            <div className="w-3 h-3 bg-accent rounded-full animate-pulse" />
-          </div>
-          <span className="font-body text-sm text-muted-foreground">Iran Trip Advisor</span>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <Suspense fallback={<RouteFallback />}>
       <Routes>
@@ -143,8 +146,7 @@ function App() {
               <Router>
                 <AuthenticatedApp />
               </Router>
-              <Toaster />
-              <SonnerToaster richColors position="top-right" />
+              <DeferredToasters />
             </I18nProvider>
           </ThemeProvider>
         </QueryClientProvider>

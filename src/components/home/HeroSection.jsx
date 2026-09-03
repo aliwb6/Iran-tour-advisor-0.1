@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useI18n } from '@/lib/i18n.jsx';
-import { motion } from 'framer-motion';
 import { ArrowRight, ArrowLeft, Sparkles, Star, MapPin, Search } from 'lucide-react';
 import { iranianCities as IRAN_CITIES } from '@/data/iranianCities';
+import { preloadRoute } from '@/lib/route-loaders';
 
 const HERO_IMAGES = [
   "https://media.base44.com/images/public/69fddcfab0730c36bda3631e/7a7bd2ab5_generated_847e20ff.png",
@@ -25,6 +25,7 @@ export default function HeroSection() {
   const [searchValue, setSearchValue] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const searchRef = useRef(null);
+  const prefetchedImages = useRef(new Set([HERO_IMAGES[0]]));
 
   const filteredCities = searchValue.length >= 1
     ? IRAN_CITIES.filter(c => c.toLowerCase().includes(searchValue.toLowerCase())).slice(0, 6)
@@ -36,6 +37,20 @@ export default function HeroSection() {
     }, 5500);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    const preloadNext = () => {
+      const nextImage = HERO_IMAGES[(activeImg + 1) % HERO_IMAGES.length];
+      if (prefetchedImages.current.has(nextImage)) return;
+      const image = new Image();
+      image.decoding = 'async';
+      image.src = nextImage;
+      prefetchedImages.current.add(nextImage);
+    };
+
+    const timeoutId = window.setTimeout(preloadNext, activeImg === 0 ? 1800 : 300);
+    return () => window.clearTimeout(timeoutId);
+  }, [activeImg]);
 
   useEffect(() => {
     const handler = (e) => {
@@ -50,23 +65,19 @@ export default function HeroSection() {
   return (
     <section dir={dir} className="relative min-h-screen flex flex-col overflow-hidden">
       {/* Background images with crossfade */}
-      {HERO_IMAGES.map((img, i) => (
-        <motion.div
-          key={img}
-          animate={{ opacity: i === activeImg ? 1 : 0 }}
-          transition={{ duration: 1.8, ease: 'easeInOut' }}
-          className="absolute inset-0"
-        >
-          <img
-            src={img}
-            alt=""
-            className="w-full h-full object-cover"
-            loading="eager"
-            fetchPriority={i === 0 ? 'high' : 'auto'}
-            decoding="async"
-          />
-        </motion.div>
-      ))}
+      <div
+        key={HERO_IMAGES[activeImg]}
+        className="absolute inset-0 animate-in fade-in duration-700"
+      >
+        <img
+          src={HERO_IMAGES[activeImg]}
+          alt=""
+          className="w-full h-full object-cover"
+          loading={activeImg === 0 ? 'eager' : 'lazy'}
+          fetchPriority={activeImg === 0 ? 'high' : 'auto'}
+          decoding="async"
+        />
+      </div>
 
       {/* Cinematic layered overlay */}
       <div className="absolute inset-0 bg-gradient-to-b from-navy/30 via-navy/20 to-navy/80 z-[1]" />
@@ -76,10 +87,7 @@ export default function HeroSection() {
       <div className="relative z-10 flex flex-col justify-end flex-1 max-w-7xl mx-auto w-full px-5 sm:px-8 lg:px-10 pb-16 lg:pb-20 pt-28">
 
         {/* Trust badge */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3, duration: 0.7 }}
+        <div
           className="flex items-center gap-2 mb-6"
         >
           <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-3.5 py-1.5">
@@ -92,33 +100,24 @@ export default function HeroSection() {
               {t('hero_trust_badge')}
             </span>
           </div>
-        </motion.div>
+        </div>
 
         {/* Main headline */}
-        <motion.h1
-          initial={{ opacity: 0, y: 32 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.45, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+        <h1
           className="font-heading text-white mb-6 max-w-4xl text-balance"
           style={{ fontSize: 'clamp(2.6rem, 6.5vw, 6rem)', lineHeight: '1.06', letterSpacing: '-0.02em', wordSpacing: '0.15em' }}
         >
           {t('hero_title')}
-        </motion.h1>
+        </h1>
 
-        <motion.p
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6, duration: 0.7 }}
+        <p
           className="font-body text-white/70 text-base lg:text-lg leading-relaxed mb-10 max-w-xl"
         >
           {t('hero_subtitle')}
-        </motion.p>
+        </p>
 
         {/* Search bar with autocomplete */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.7, duration: 0.6 }}
+        <div
           className="mb-5 relative"
           ref={searchRef}
         >
@@ -141,6 +140,7 @@ export default function HeroSection() {
                 setShowSuggestions(true);
               }}
               onFocus={() => setShowSuggestions(true)}
+              onPointerEnter={() => preloadRoute('/tours')}
               placeholder={
                 lang === 'fa' ? 'کدام شهر را رویا می‌بینید؟'
                 : lang === 'ar' ? 'أي مدينة تحلم بها؟'
@@ -176,17 +176,16 @@ export default function HeroSection() {
               ))}
             </div>
           )}
-        </motion.div>
+        </div>
 
         {/* CTA row */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.82, duration: 0.6 }}
+        <div
           className="flex flex-wrap items-center gap-4 mb-14 lg:mb-16"
         >
           <Link
             to="/trip-requests"
+            onMouseEnter={() => preloadRoute('/trip-requests')}
+            onFocus={() => preloadRoute('/trip-requests')}
             className="inline-flex items-center gap-2.5 bg-accent hover:bg-accent/90 text-white px-7 py-3.5 rounded-full font-body font-semibold text-sm uppercase tracking-wide transition-all duration-300 hover:shadow-lg hover:shadow-accent/25 hover:-translate-y-0.5"
           >
             {t('hero_cta_request')}
@@ -194,6 +193,8 @@ export default function HeroSection() {
           </Link>
           <Link
             to="/ai-assistant"
+            onMouseEnter={() => preloadRoute('/ai-assistant')}
+            onFocus={() => preloadRoute('/ai-assistant')}
             className="relative inline-flex items-center gap-2.5 overflow-hidden bg-gold/20 hover:bg-gold/30 text-gold border border-gold/50 hover:border-gold/80 px-7 py-3.5 rounded-full font-body font-semibold text-sm uppercase tracking-wide transition-all duration-300 backdrop-blur-sm hover:shadow-lg hover:shadow-gold/25 hover:-translate-y-0.5"
             style={{ isolation: 'isolate' }}
           >
@@ -211,13 +212,10 @@ export default function HeroSection() {
               {lang === 'fa' ? 'با هوش مصنوعی برنامه‌ریزی کن' : lang === 'ar' ? 'خطط مع الذكاء الاصطناعي' : t('hero_cta_ai')}
             </span>
           </Link>
-        </motion.div>
+        </div>
 
         {/* Bottom row: stats */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.9, duration: 0.8 }}
+        <div
           className="flex flex-col sm:flex-row items-start sm:items-end justify-end gap-6"
         >
           {/* Stats */}
@@ -231,7 +229,7 @@ export default function HeroSection() {
               </div>
             ))}
           </div>
-        </motion.div>
+        </div>
       </div>
 
       {/* Image dots */}

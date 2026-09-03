@@ -4,6 +4,7 @@ import { MapPin, ArrowRight, ArrowLeft, ChevronLeft, ChevronRight } from 'lucide
 import { useI18n } from '@/lib/i18n.jsx';
 import { useState, useRef, useEffect } from 'react';
 import { supabase } from '@/supabaseClient';
+import { useQuery } from '@tanstack/react-query';
 
 // Single source of truth for the homepage spotlight grid.
 // Slugs match the keys in CityPage.jsx's cityData so the cards route correctly.
@@ -88,6 +89,15 @@ export const SPOTLIGHT_CITIES = [
   },
 ];
 
+const localImageSlug = (image) => image
+  .split('/').pop()
+  .replace(/\.[^.]+$/, '')
+  .toLowerCase()
+  .replace(/[^a-z0-9]+/g, '-');
+
+const responsiveLocalImage = (image, width) =>
+  `/images/optimized/${localImageSlug(image)}-${width}.webp`;
+
 export default function SpotlightDestinations() {
   const { lang, dir } = useI18n();
   const Arrow = dir === 'rtl' ? ArrowLeft : ArrowRight;
@@ -97,28 +107,28 @@ export default function SpotlightDestinations() {
   // so the width/translate math can account for it exactly.
   const [gapPx, setGapPx] = useState(24);
   const [isHovering, setIsHovering] = useState(false);
-  const [destinations, setDestinations] = useState(SPOTLIGHT_CITIES);
   const carouselRef = useRef(null);
 
-  useEffect(() => {
-    let active = true;
-    supabase
-      .from('homepage_destinations')
-      .select('*')
-      .eq('is_active', true)
-      .order('sort_order', { ascending: true })
-      .then(({ data, error }) => {
-        if (!active || error || !data?.length) return;
-        setDestinations(data.map(item => ({
+  const { data: destinations = SPOTLIGHT_CITIES } = useQuery({
+    queryKey: ['homepage-destinations'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('homepage_destinations')
+        .select('id, slug, image_url, name_en, name_fa, name_ar, category_en, category_fa, category_ar, sort_order')
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true });
+
+      if (error || !data?.length) return SPOTLIGHT_CITIES;
+      return data.map(item => ({
           id: item.id,
           slug: item.slug,
           image: item.image_url,
           name: { en: item.name_en, fa: item.name_fa || item.name_en, ar: item.name_ar || item.name_en },
           category: { en: item.category_en || '', fa: item.category_fa || item.category_en || '', ar: item.category_ar || item.category_en || '' },
-        })));
-      });
-    return () => { active = false; };
-  }, []);
+      }));
+    },
+    placeholderData: SPOTLIGHT_CITIES,
+  });
 
   useEffect(() => {
     const updateLayout = () => {
@@ -223,7 +233,9 @@ export default function SpotlightDestinations() {
                 >
               {/* Background image */}
               <img decoding="async"
-                src={city.image}
+                src={city.image.startsWith('/images/') ? responsiveLocalImage(city.image, 640) : city.image}
+                srcSet={city.image.startsWith('/images/') ? `${responsiveLocalImage(city.image, 640)} 640w, ${responsiveLocalImage(city.image, 1600)} 1600w` : undefined}
+                sizes="(max-width: 767px) 100vw, (max-width: 1023px) 50vw, 33vw"
                 alt={cityName}
                 loading="lazy"
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"

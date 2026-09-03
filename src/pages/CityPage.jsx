@@ -20,7 +20,7 @@ const cityData = {
     name: 'Isfahan',
     nameI18n: { fa: 'اصفهان', ar: 'أصفهان' },
     category: 'Architecture & History',
-    image: '/images/isfahan.jpg',
+    image: '/images/optimized/isfahan-1600.webp',
     description:
       "Known as 'Half of the World', Isfahan dazzles visitors with its stunning Islamic architecture, turquoise-domed mosques, and the magnificent Naqsh-e Jahan Square — a UNESCO World Heritage Site.",
     highlights: ['Naqsh-e Jahan Square', 'Sheikh Lotfollah Mosque', 'Si-o-Se Pol Bridge', 'Armenian Quarter'],
@@ -30,7 +30,7 @@ const cityData = {
     name: 'Shiraz',
     nameI18n: { fa: 'شیراز', ar: 'شيراز' },
     category: 'History & Poetry',
-    image: '/images/shiraz.jpg',
+    image: '/images/optimized/shiraz-1600.webp',
     description:
       "The city of poets, roses, and wine. Shiraz is home to Persepolis — the ancient capital of the Persian Empire — and the tombs of legendary Persian poets Hafez and Sa'di.",
     highlights: ['Persepolis', 'Tomb of Hafez', 'Nasir ol-Molk Mosque', 'Eram Garden'],
@@ -40,7 +40,7 @@ const cityData = {
     name: 'Yazd',
     nameI18n: { fa: 'یزد', ar: 'يزد' },
     category: 'Culture & Desert',
-    image: '/images/yazd.jpg',
+    image: '/images/optimized/yazd-1600.webp',
     description:
       "A living museum of Persian culture. Yazd's ancient mud-brick architecture, wind towers, and Zoroastrian fire temples make it one of the oldest continuously inhabited cities in the world.",
     highlights: ['Jameh Mosque of Yazd', 'Towers of Silence', 'Zoroastrian Fire Temple', 'Amir Chakhmaq Complex'],
@@ -50,7 +50,7 @@ const cityData = {
     name: 'Mashhad',
     nameI18n: { fa: 'مشهد', ar: 'مشهد' },
     category: 'Spiritual & Cultural',
-    image: '/images/mashhad.jpg',
+    image: '/images/optimized/mashhad-1600.webp',
     description:
       "Iran's holiest city and spiritual heart. The magnificent shrine of Imam Reza draws millions of pilgrims annually, surrounded by museums, bazaars, and beautiful gardens.",
     highlights: ['Imam Reza Shrine', 'Goharshad Mosque', 'Mellat Park', 'Khorasan Museum'],
@@ -60,7 +60,7 @@ const cityData = {
     name: 'Gilan',
     nameI18n: { fa: 'گیلان', ar: 'جيلان' },
     category: 'Nature & Forest',
-    image: '/images/Gilan.jpg',
+    image: '/images/optimized/gilan-1600.webp',
     description:
       "Iran's lush green paradise. Gilan's misty forests, rice paddies, and Caspian coastline offer a dramatic contrast to Iran's desert interior — perfect for nature lovers.",
     highlights: ['Masuleh Village', 'Anzali Lagoon', 'Rudkhan Castle', 'Rasht Bazaar'],
@@ -80,7 +80,7 @@ const cityData = {
     name: 'Tabriz',
     nameI18n: { fa: 'تبریز', ar: 'تبريز' },
     category: 'Culture & History',
-    image: '/images/destinations/tabriz.jpg',
+    image: '/images/optimized/tabriz-1600.webp',
     description:
       "One of Iran's oldest cities, Tabriz is a UNESCO-listed bazaar city with rich Azerbaijani culture, stunning architecture, and the famous Tabriz Historic Bazaar Complex — one of the world's largest covered bazaars.",
     highlights: ['Tabriz Historic Bazaar', 'Blue Mosque', 'St. Stepanos Church', 'Arg of Tabriz'],
@@ -90,7 +90,7 @@ const cityData = {
     name: 'Kerman',
     nameI18n: { fa: 'کرمان', ar: 'كرمان' },
     category: 'History & Desert',
-    image: '/images/destinations/kerman.jpg',
+    image: '/images/optimized/kerman-1600.webp',
     description:
       "Gateway to the Lut Desert, Kerman is home to the magnificent Ganjali Khan Complex, ancient bazaars, and some of Iran's finest Persian gardens with a landscape shaped by history and nature.",
     highlights: ['Ganjali Khan Complex', 'Arg of Bam', 'Lut Desert Gateway', 'Kerman Bazaar'],
@@ -100,7 +100,7 @@ const cityData = {
     name: 'Kashan',
     nameI18n: { fa: 'کاشان', ar: 'كاشان' },
     category: 'Architecture',
-    image: '/images/destinations/kashan.jpg',
+    image: '/images/optimized/kashan-1600.webp',
     description:
       "Famous for its stunning historic houses with intricate tilework, rose water production, and the ancient Fin Garden — one of Iran's oldest Persian gardens and a UNESCO World Heritage Site.",
     highlights: ['Fin Garden', 'Tabatabaei House', 'Borujerdi House', 'Kashan Bazaar'],
@@ -110,7 +110,7 @@ const cityData = {
     name: 'Qom',
     nameI18n: { fa: 'قم', ar: 'قم' },
     category: 'Spiritual',
-    image: '/images/destinations/qom.jpg',
+    image: '/images/optimized/qom-1600.webp',
     description:
       "Iran's most important religious city, home to the magnificent Fatima Masumeh Shrine with its turquoise dome, dozens of seminaries, and a deep insight into Persian Islamic culture and spirituality.",
     highlights: ['Fatima Masumeh Shrine', 'Qom Bazaar', 'Jamkaran Mosque', 'Holy Shrine Museums'],
@@ -120,7 +120,7 @@ const cityData = {
     name: 'Kish Island',
     nameI18n: { fa: 'جزیره کیش', ar: 'جزيرة كيش' },
     category: 'Nature & Leisure',
-    image: '/images/destinations/kish-island.jpg',
+    image: '/images/optimized/kish-island-1600.webp',
     description:
       "A free-trade island in the Persian Gulf with crystal-clear waters, pristine beaches, coral reefs, duty-free shopping, and water sports — Iran's premier leisure and beach destination.",
     highlights: ['Kish Beaches', 'Coral Reefs', 'Dolphin Watching', 'Shopping & Nightlife'],
@@ -130,7 +130,7 @@ const cityData = {
     name: 'Qeshm Island',
     nameI18n: { fa: 'جزیره قشم', ar: 'جزيرة قشم' },
     category: 'Nature',
-    image: '/images/destinations/qeshm-island.jpg',
+    image: '/images/optimized/qeshm-island-1600.webp',
     description:
       "Iran's largest island and a UNESCO Geopark with dramatic Star Valley formations, pristine mangrove forests, Persian Gulf coastlines, and unique geological wonders carved by nature.",
     highlights: ['Stars Valley', 'Mangrove Forests', 'Persian Gulf Beaches', 'Geologically Unique Sites'],
@@ -140,7 +140,7 @@ const cityData = {
     name: 'Hormuz Island',
     nameI18n: { fa: 'جزیره هرمز', ar: 'جزيرة هرمز' },
     category: 'Nature & Art',
-    image: '/images/destinations/hormuz-island.jpg',
+    image: '/images/optimized/hormuz-island-1600.webp',
     description:
       "Known as the Rainbow Island, Hormuz is famous for its multicolored soil, red beaches, vibrant rock formations, and unique geological features in the heart of the Persian Gulf.",
     highlights: ['Red Beach', 'Rainbow Valley', 'Portuguese Castle Ruins', 'Multicolored Rock Formations'],
@@ -150,7 +150,7 @@ const cityData = {
     name: 'Tehran',
     nameI18n: { fa: 'تهران', ar: 'طهران' },
     category: 'Urban & Modern',
-    image: 'https://images.unsplash.com/photo-1549880338-65ddcdfd017b?w=1200&h=800&fit=crop',
+    image: '/images/optimized/tehran-1600.webp',
     description:
       "Iran's vibrant capital and largest city. Tehran blends a cosmopolitan urban energy with world-class museums, the snow-capped Alborz Mountains as a backdrop, and a thriving food and arts scene that surprises every visitor.",
     highlights: ['Golestan Palace', 'National Museum of Iran', 'Milad Tower', 'Grand Bazaar of Tehran', 'Darband Mountain Trail', 'Sadabad Complex'],
@@ -160,7 +160,7 @@ const cityData = {
     name: 'Rasht',
     nameI18n: { fa: 'رشت', ar: 'رشت' },
     category: 'Food & Nature',
-    image: 'https://images.unsplash.com/photo-1587595431973-160d0d94add1?w=1200&h=800&fit=crop',
+    image: '/images/optimized/rasht-1600.webp',
     description:
       "The culinary capital of Iran and gateway to the lush Caspian coast. Rasht is a UNESCO Creative City of Gastronomy, famous for its hearty Gilaki cuisine, vibrant covered bazaar, and easy access to misty forest villages like Masuleh.",
     highlights: ['Rasht Grand Bazaar', 'Rasht Municipality Square', 'Gilaki Cuisine & Food Tour', 'Masuleh Village Day Trip', 'Anzali Lagoon', 'Saravan Forest Park'],
@@ -305,7 +305,16 @@ export default function CityPage() {
     <div dir={dir} className="min-h-screen bg-background">
       {/* ── Hero ────────────────────────────────────────────────────────────── */}
       <section className="relative h-[460px] sm:h-[520px] overflow-hidden">
-        <img decoding="async" loading="lazy" src={city.image} alt={localName} className="absolute inset-0 w-full h-full object-cover" />
+        <img
+          decoding="async"
+          loading="eager"
+          fetchPriority="high"
+          src={city.image}
+          srcSet={city.image.includes('/optimized/') ? `${city.image.replace('-1600.webp', '-640.webp')} 640w, ${city.image} 1600w` : undefined}
+          sizes="100vw"
+          alt={localName}
+          className="absolute inset-0 w-full h-full object-cover"
+        />
         <div className="absolute inset-0 bg-gradient-to-t from-background via-navy/70 to-navy/35" />
         <div className="absolute inset-0 carpet-texture opacity-25" />
 

@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
 import { Bell, X, Check, CheckCheck, Loader2 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useNotificationsContext } from '@/lib/NotificationsContext';
 import { useAuth } from '@/lib/AuthContext';
 
@@ -54,13 +53,8 @@ export default function NotificationBell({ isLight }) {
         )}
       </button>
 
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, y: 8, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 8, scale: 0.95 }}
-            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+      {open && (
+          <div
             className="absolute end-0 top-full mt-2 w-80 sm:w-96 bg-background border border-border/60 rounded-2xl shadow-2xl overflow-hidden z-50"
           >
             {/* Header */}
@@ -141,9 +135,8 @@ export default function NotificationBell({ isLight }) {
                 </div>
               ))}
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </div>
+      )}
     </div>
   );
 }

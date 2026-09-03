@@ -10,6 +10,7 @@
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc -p ./jsconfig.json",
     "preview": "vite preview",
+    "optimize:images": "node scripts/optimize-local-images.mjs",
     "translate": "node scripts/translate.js"
   },
   "dependencies": {
