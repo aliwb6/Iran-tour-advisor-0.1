@@ -11,9 +11,9 @@ export default function Home() {
       <HeroSection />
       <ExperiencePhilosophy />
       <HowItWorks />
+      <TestimonialsSection />
       <SpotlightDestinations />
       <PopularPackages />
-      <TestimonialsSection />
     </div>
   );
 }

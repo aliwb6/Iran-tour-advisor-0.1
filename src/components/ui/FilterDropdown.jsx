@@ -1,12 +1,27 @@
 import { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Search } from 'lucide-react';
 
-export default function FilterDropdown({ label, value, options, onChange, lang, icon: Icon, searchable = false }) {
+export default function FilterDropdown({ label, value, options, onChange, lang, icon: Icon = null, searchable = false, multiple = false, inactiveKey = 'all' }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const ref = useRef(null);
+  const selectedValues = multiple ? (Array.isArray(value) ? value : value && value !== inactiveKey ? [value] : []) : [];
   const selected = options.find(o => o.key === value) || options[0];
-  const isActive = value !== 'all';
+  const isActive = multiple ? selectedValues.length > 0 : value !== inactiveKey;
+  const selectedText = multiple
+    ? selectedValues.length === 0
+      ? (options[0]?.[lang] || options[0]?.en)
+      : selectedValues.length === 1
+        ? (() => {
+            const option = options.find(item => item.key === selectedValues[0]);
+            return option?.[lang] || option?.en || selectedValues[0];
+          })()
+        : lang === 'fa'
+          ? `${selectedValues.length} مقصد`
+          : lang === 'ar'
+            ? `${selectedValues.length} وجهات`
+            : `${selectedValues.length} destinations`
+    : `${selected.icon ? `${selected.icon} ` : ''}${selected[lang] || selected.en}`;
   const normalizedQuery = query.trim().toLocaleLowerCase();
   const visibleOptions = !normalizedQuery
     ? options
@@ -36,7 +51,7 @@ export default function FilterDropdown({ label, value, options, onChange, lang, 
           {Icon && <Icon className="w-3.5 h-3.5 flex-shrink-0 opacity-60" />}
           <span className="text-[11px] uppercase tracking-wider opacity-60 hidden sm:block">{label}</span>
           <span className={`font-medium truncate ${isActive ? 'text-accent' : ''}`}>
-            {selected.icon ? `${selected.icon} ` : ''}{selected[lang] || selected.en}
+            {selectedText}
           </span>
         </span>
         <ChevronDown className={`w-3.5 h-3.5 flex-shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
@@ -64,21 +79,38 @@ export default function FilterDropdown({ label, value, options, onChange, lang, 
             </div>
           )}
           <div className="max-h-64 overflow-y-auto py-1">
-          {visibleOptions.map(opt => (
+          {visibleOptions.map(opt => {
+            const checked = multiple
+              ? (opt.key === inactiveKey ? selectedValues.length === 0 : selectedValues.includes(opt.key))
+              : opt.key === value;
+            return (
             <button
               key={opt.key}
-              onClick={() => { onChange(opt.key); close(); }}
+              onClick={() => {
+                if (!multiple) {
+                  onChange(opt.key);
+                  close();
+                  return;
+                }
+                if (opt.key === inactiveKey) {
+                  onChange([]);
+                  return;
+                }
+                onChange(checked
+                  ? selectedValues.filter(item => item !== opt.key)
+                  : [...selectedValues, opt.key]);
+              }}
               className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm font-body text-left transition-colors
-                ${opt.key === value
+                ${checked
                   ? 'text-accent bg-accent/10 font-semibold'
                   : 'text-foreground/70 hover:bg-accent/5 hover:text-foreground'
                 }`}
             >
               {opt.icon && <span className="w-5 text-center text-base">{opt.icon}</span>}
               <span>{opt[lang] || opt.en}</span>
-              {opt.key === value && <span className="ml-auto text-accent text-xs">✓</span>}
+              {checked && <span className="ml-auto text-accent text-xs">✓</span>}
             </button>
-          ))}
+          )})}
           {visibleOptions.length === 0 && (
             <p className="px-4 py-5 text-center text-xs text-muted-foreground">
               {lang === 'fa' ? 'مقصدی پیدا نشد' : lang === 'ar' ? 'لم يتم العثور على وجهة' : 'No destination found'}

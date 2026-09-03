@@ -40,3 +40,7 @@ export const popularIranianDestinations = iranianDestinations.filter(({ en }) =>
   ['Shiraz', 'Isfahan', 'Yazd', 'Hamadan'].includes(en)
 );
 export const destinationLabel = (item, lang = 'en') => item?.[lang] || item?.en || '';
+export const destinationSelectionAliases = (selections = []) => selections.flatMap((selection) => {
+  const destination = iranianDestinations.find(item => item.en.toLocaleLowerCase() === String(selection).toLocaleLowerCase());
+  return destination ? [destination.en, destination.fa, destination.ar] : [selection];
+});

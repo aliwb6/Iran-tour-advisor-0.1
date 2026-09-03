@@ -172,6 +172,7 @@ export default function TourDetails() {
   }
 
   const gallery = (Array.isArray(tour?.gallery) ? tour.gallery : []).filter(Boolean);
+  const galleryCaptions = Array.isArray(tour?.gallery_captions) ? tour.gallery_captions : [];
 
   const handleSubmitRequest = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -322,6 +323,9 @@ export default function TourDetails() {
               >
                 {title}
               </h1>
+              {tour.main_image_caption && (
+                <p className="font-body text-sm text-white/80 max-w-2xl">{tour.main_image_caption}</p>
+              )}
             </motion.div>
           </div>
         </div>
@@ -539,7 +543,7 @@ export default function TourDetails() {
                         type="button"
                         onClick={() => setLightboxIndex(i)}
                         className="aspect-square rounded-lg overflow-hidden bg-secondary/40 hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-accent"
-                        aria-label={`${lang === 'fa' ? 'مشاهده تصویر' : lang === 'ar' ? 'عرض الصورة' : 'View image'} ${i + 1}`}
+                        aria-label={galleryCaptions[i] || `${lang === 'fa' ? 'مشاهده تصویر' : lang === 'ar' ? 'عرض الصورة' : 'View image'} ${i + 1}`}
                       >
                         <img decoding="async" loading="lazy" src={transformImage(img, imgPresets.card)} alt={`${title} ${i + 1}`} className="w-full h-full object-cover" />
                       </button>
@@ -645,7 +649,7 @@ export default function TourDetails() {
           className="max-w-3xl w-[92vw] bg-transparent border-0 p-0 shadow-none sm:rounded-none"
         >
           {lightboxIndex != null && gallery[lightboxIndex] && (
-            <div className="relative flex items-center justify-center">
+            <div className="relative flex flex-col items-center justify-center">
               {/* Prev */}
               <button
                 type="button"
@@ -675,6 +679,11 @@ export default function TourDetails() {
               <span className="absolute bottom-3 start-1/2 -translate-x-1/2 z-10 px-3 py-1 rounded-full bg-black/60 text-white font-body text-xs">
                 {lightboxIndex + 1} / {gallery.length}
               </span>
+              {galleryCaptions[lightboxIndex] && (
+                <p className="mt-3 max-w-2xl px-4 py-2 rounded-xl bg-black/70 text-white text-sm text-center font-body">
+                  {galleryCaptions[lightboxIndex]}
+                </p>
+              )}
             </div>
           )}
         </DialogContent>

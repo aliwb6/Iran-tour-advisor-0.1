@@ -3,10 +3,11 @@ import { motion } from 'framer-motion';
 import { MapPin, ArrowRight, ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useI18n } from '@/lib/i18n.jsx';
 import { useState, useRef, useEffect } from 'react';
+import { supabase } from '@/supabaseClient';
 
 // Single source of truth for the homepage spotlight grid.
 // Slugs match the keys in CityPage.jsx's cityData so the cards route correctly.
-const SPOTLIGHT_CITIES = [
+export const SPOTLIGHT_CITIES = [
   {
     slug: 'tehran',
     image: '/images/tehran.jpg',
@@ -96,7 +97,28 @@ export default function SpotlightDestinations() {
   // so the width/translate math can account for it exactly.
   const [gapPx, setGapPx] = useState(24);
   const [isHovering, setIsHovering] = useState(false);
+  const [destinations, setDestinations] = useState(SPOTLIGHT_CITIES);
   const carouselRef = useRef(null);
+
+  useEffect(() => {
+    let active = true;
+    supabase
+      .from('homepage_destinations')
+      .select('*')
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true })
+      .then(({ data, error }) => {
+        if (!active || error || !data?.length) return;
+        setDestinations(data.map(item => ({
+          id: item.id,
+          slug: item.slug,
+          image: item.image_url,
+          name: { en: item.name_en, fa: item.name_fa || item.name_en, ar: item.name_ar || item.name_en },
+          category: { en: item.category_en || '', fa: item.category_fa || item.category_en || '', ar: item.category_ar || item.category_en || '' },
+        })));
+      });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     const updateLayout = () => {
@@ -110,7 +132,7 @@ export default function SpotlightDestinations() {
     return () => window.removeEventListener('resize', updateLayout);
   }, []);
 
-  const maxSlide = Math.max(0, SPOTLIGHT_CITIES.length - visibleCards);
+  const maxSlide = Math.max(0, destinations.length - visibleCards);
   const canGoNext = currentSlide < maxSlide;
   const canGoPrev = currentSlide > 0;
 
@@ -180,7 +202,7 @@ export default function SpotlightDestinations() {
             }}
             transition={{ duration: 0.5, ease: 'easeInOut' }}
           >
-            {SPOTLIGHT_CITIES.map((city, i) => {
+            {destinations.map((city, i) => {
               const cityName = lang === 'fa' ? city.name.fa : lang === 'ar' ? city.name.ar : city.name.en;
               const cityCategory = lang === 'fa' ? city.category.fa : lang === 'ar' ? city.category.ar : city.category.en;
               const countryLabel = lang === 'fa' ? 'ایران' : lang === 'ar' ? 'إيران' : 'Iran';
@@ -255,7 +277,7 @@ export default function SpotlightDestinations() {
 
           {/* Dot indicators */}
           <div className="flex gap-2.5 px-4">
-            {SPOTLIGHT_CITIES.map((_, i) => (
+            {destinations.map((_, i) => (
               <button
                 key={i}
                 onClick={() => setCurrentSlide(Math.min(i, maxSlide))}

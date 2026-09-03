@@ -4,8 +4,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import TourFilters from '@/components/tours/TourFilters';
 import TourCard from '@/components/tours/TourCard';
 import { useTours, FALLBACK_IMAGE } from '@/hooks/useSupabase';
+import { matchesAnySelection, recommendedComparator } from '@/lib/listingFilters';
+import { destinationSelectionAliases } from '@/data/iranianCities';
 
-const DEFAULT_FILTERS = { purpose: 'all', theme: 'all', duration: 'all', city: 'all', price: 'all' };
+const DEFAULT_FILTERS = { purpose: 'all', theme: 'all', duration: 'all', city: [], price: 'all' };
 
 // TourCard expects multilingual objects ({ en, fa, ar }) for title/desc/cities/highlights.
 // Supabase stores flat strings, so we wrap them here without changing the TourCard UI.
@@ -53,10 +55,10 @@ const createdOf = (t) => {
   return v == null ? 0 : v;
 };
 
-// Sort AFTER filtering. `recommended` is a no-op (keeps the existing order
-// returned by the query). Each comparator pushes nulls/missing values toward
-// the end so a missing field never crashes or produces a confusing order.
+// Sort after filtering. Recommended prioritizes the average traveler rating,
+// positive reviews and review volume; the other comparators use tour fields.
 const SORTERS = {
+  recommended: recommendedComparator,
   price_asc: (a, b) => priceOf(a) - priceOf(b),
   price_desc: (a, b) => priceOf(b) - priceOf(a),
   duration_asc: (a, b) => durationOf(a) - durationOf(b),
@@ -76,15 +78,9 @@ export default function Tours() {
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [sortBy, setSortBy] = useState('recommended');
   const { tours: rawTours, loading, error } = useTours(filters);
+  const selectedCities = destinationSelectionAliases(filters.city);
   const tours = rawTours.filter(t => {
-    if (filters.city && filters.city !== 'all') {
-      const cities = t.cities || t.city || '';
-      const localized = Array.isArray(cities)
-        ? cities
-        : (cities && typeof cities === 'object' ? (cities[lang] || cities.en || []) : cities);
-      const cityStr = Array.isArray(localized) ? localized.join(' ') : String(localized || '');
-      if (!cityStr.toLowerCase().includes(filters.city.toLowerCase())) return false;
-    }
+    if (!matchesAnySelection([t.cities, t.city, t.location, t.destinations], selectedCities)) return false;
     if (filters.price && filters.price !== 'all') {
       const p = t.priceFrom || t.price_from || t.price || 0;
       if (filters.price === 'budget' && p >= 1200) return false;
@@ -94,10 +90,7 @@ export default function Tours() {
     return true;
   });
 
-  // Apply sorting to the filtered list (skip for the default "recommended").
-  const sortedTours = sortBy !== 'recommended' && SORTERS[sortBy]
-    ? [...tours].sort(SORTERS[sortBy])
-    : tours;
+  const sortedTours = SORTERS[sortBy] ? [...tours].sort(SORTERS[sortBy]) : tours;
 
   const loadingText = lang === 'fa' ? 'در حال بارگذاری تورها...' : lang === 'ar' ? 'جار تحميل الرحلات...' : 'Loading tours...';
   const errorTitle = lang === 'fa' ? 'بارگذاری تورها با خطا مواجه شد' : lang === 'ar' ? 'فشل تحميل الرحلات' : 'Failed to load tours';

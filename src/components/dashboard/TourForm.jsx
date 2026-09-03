@@ -129,10 +129,15 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
   });
 
   const [imageUrl,     setImageUrl]     = useState(editing?.image_url || '');
+  const [mainImageCaption, setMainImageCaption] = useState(editing?.main_image_caption || '');
   const [galleryUrls,  setGalleryUrls]  = useState(() => {
     if (!editing) return [];
     if (Array.isArray(editing.gallery)) return editing.gallery;
     return editing.gallery ? editing.gallery.split(',').map(s => s.trim()).filter(Boolean) : [];
+  });
+  const [galleryCaptions, setGalleryCaptions] = useState(() => {
+    if (!editing || !Array.isArray(editing.gallery_captions)) return [];
+    return editing.gallery_captions;
   });
   const [pasteUrl,     setPasteUrl]     = useState('');
   const [uploadingMain,    setUploadingMain]    = useState(false);
@@ -206,7 +211,9 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
     setUploadingGallery(true);
     try {
       const urls = await Promise.all(arr.map(uploadFile));
-      setGalleryUrls(prev => [...prev, ...urls.filter(Boolean)]);
+      const validUrls = urls.filter(Boolean);
+      setGalleryUrls(prev => [...prev, ...validUrls]);
+      setGalleryCaptions(prev => [...prev, ...validUrls.map(() => '')]);
     } catch (err) { setError(err.message); }
     finally { setUploadingGallery(false); }
   };
@@ -238,6 +245,7 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
 
     const verifyAndAdd = () => {
       setGalleryUrls(prev => [...prev, raw]);
+      setGalleryCaptions(prev => [...prev, '']);
       setPasteUrl('');
       setError('');
     };
@@ -293,7 +301,9 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
         // selected here is implicitly excluded.
         included:    serializeIncluded(included),
         image_url:   imageUrl,
+        main_image_caption: mainImageCaption.trim() || null,
         gallery:     galleryUrls,
+        gallery_captions: galleryUrls.map((_, index) => (galleryCaptions[index] || '').trim()),
       };
 
       if (editing) {
@@ -327,7 +337,9 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
           setCityInput('');
           setIncluded({ ...DEFAULT_INCLUDED_STATE });
           setImageUrl('');
+          setMainImageCaption('');
           setGalleryUrls([]);
+          setGalleryCaptions([]);
         }, 2000);
         onDone(created, true);
       }
@@ -730,7 +742,7 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
             ) : imageUrl ? (
               <div className="relative" onClick={e => e.stopPropagation()}>
                 <img decoding="async" loading="lazy" src={imageUrl} className="w-full h-48 object-cover rounded-lg" alt="main" />
-                <button type="button" onClick={() => setImageUrl('')}
+                <button type="button" onClick={() => { setImageUrl(''); setMainImageCaption(''); }}
                   className="absolute top-2 right-2 p-1.5 rounded-full bg-black/60 text-white hover:bg-red-500/80 transition">
                   <X className="w-4 h-4" />
                 </button>
@@ -745,21 +757,44 @@ export default function TourForm({ editing, onDone, onCancel, isPlatform = false
             <input ref={fileRef} type="file" accept="image/*" className="hidden"
               onChange={e => handleImageUpload(e.target.files[0])} />
           </div>
+          {imageUrl && (
+            <input
+              type="text"
+              maxLength={180}
+              value={mainImageCaption}
+              onChange={e => setMainImageCaption(e.target.value)}
+              className={`${inputClass} mt-2`}
+              placeholder={lang === 'fa' ? 'توضیح کوتاه عکس اصلی…' : lang === 'ar' ? 'وصف قصير للصورة الرئيسية…' : 'Short caption for the main image…'}
+            />
+          )}
         </div>
 
         {/* Gallery multi-image upload */}
         <div>
           <label className={labelClass}>Gallery Images ({galleryUrls.length}/10)</label>
           {galleryUrls.length > 0 && (
-            <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 mb-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
               {galleryUrls.map((url, i) => (
-                <div key={i} className="relative aspect-square rounded-xl overflow-hidden border border-white/10 group">
-                  <img decoding="async" loading="lazy" src={url} alt={`g${i}`} className="w-full h-full object-cover" />
-                  <button type="button"
-                    onClick={() => setGalleryUrls(prev => prev.filter((_, idx) => idx !== i))}
-                    className="absolute top-1 right-1 p-1 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition hover:bg-red-500/80">
-                    <X className="w-3 h-3" />
-                  </button>
+                <div key={`${url}-${i}`} className="rounded-xl overflow-hidden border border-white/10 bg-white/[0.03]">
+                  <div className="relative aspect-video group">
+                    <img decoding="async" loading="lazy" src={url} alt={`g${i}`} className="w-full h-full object-cover" />
+                    <button type="button"
+                      onClick={() => {
+                        setGalleryUrls(prev => prev.filter((_, idx) => idx !== i));
+                        setGalleryCaptions(prev => prev.filter((_, idx) => idx !== i));
+                      }}
+                      className="absolute top-1 right-1 p-1 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition hover:bg-red-500/80">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    maxLength={180}
+                    value={galleryCaptions[i] || ''}
+                    onChange={e => setGalleryCaptions(prev => galleryUrls.map((_, idx) => idx === i ? e.target.value : (prev[idx] || '')))}
+                    className="w-full px-3 py-2 bg-transparent text-white text-xs placeholder:text-white/25 outline-none border-t border-white/10"
+                    placeholder={lang === 'fa' ? 'این تصویر کجاست و چیست؟' : lang === 'ar' ? 'أين التقطت هذه الصورة وما هي؟' : 'Where is this and what does it show?'}
+                  />
                 </div>
               ))}
             </div>

@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import {
   Star, MapPin, Globe, Calendar, BadgeCheck, ChevronLeft, ChevronRight,
   ArrowRight, Map, PenLine, Plus, Minus, ChevronDown, Building2,
-  Lock, MessageCircle,
+  Lock, MessageCircle, Copy,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/supabaseClient';
@@ -345,6 +345,23 @@ export default function AgencyProfile() {
             <h1 className="font-heading text-4xl sm:text-5xl font-bold text-foreground mb-4 leading-tight">
               {name}
             </h1>
+
+            {agency.username && (
+              <div className="flex items-center gap-1.5 mb-4 -mt-2">
+                <span className="font-body text-sm text-muted-foreground">@{agency.username}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(agency.username);
+                    toast.success(lang === 'fa' ? 'نام کاربری کپی شد' : lang === 'ar' ? 'تم نسخ اسم المستخدم' : 'Username copied');
+                  }}
+                  className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-border/50 transition"
+                  aria-label={lang === 'fa' ? 'کپی نام کاربری' : 'Copy username'}
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
 
             {rating != null && (
               <div className="flex items-center gap-3 mb-4">

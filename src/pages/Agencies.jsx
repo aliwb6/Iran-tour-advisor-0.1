@@ -1,30 +1,20 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Search, Star, ShieldCheck, Building2, MapPin, Globe, SlidersHorizontal, X } from 'lucide-react';
+import { Star, ShieldCheck, Building2, MapPin, Globe, SlidersHorizontal, X, ArrowUpDown } from 'lucide-react';
 import { useI18n } from '@/lib/i18n.jsx';
-import { useAgencies } from '@/hooks/useSupabase';
+import { useAgencies, useAvailableProfileLanguages } from '@/hooks/useSupabase';
 import { avatarFor } from '@/lib/avatar';
 import FilterDropdown from '@/components/ui/FilterDropdown';
-import { iranianDestinationOptions } from '@/data/iranianCities';
+import { destinationSelectionAliases, iranianDestinationOptions } from '@/data/iranianCities';
+import { toLanguageOptions } from '@/data/languages';
+import { matchesAnySelection, newestComparator, recommendedComparator, reviewCountOf } from '@/lib/listingFilters';
 
 // ── Filter options ────────────────────────────────────────────────────────────
 
 const CITY_OPTIONS = [
   { key: 'all', en: 'All Destinations', fa: 'همه مقصدها', ar: 'كل الوجهات' },
   ...iranianDestinationOptions,
-];
-
-const LANGUAGE_OPTIONS = [
-  { key: 'all', en: 'All Languages', fa: 'همه زبان‌ها', ar: 'كل اللغات' },
-  { key: 'English', en: 'English', fa: 'انگلیسی', ar: 'الإنجليزية' },
-  { key: 'Arabic', en: 'Arabic', fa: 'عربی', ar: 'العربية' },
-  { key: 'French', en: 'French', fa: 'فرانسوی', ar: 'الفرنسية' },
-  { key: 'German', en: 'German', fa: 'آلمانی', ar: 'الألمانية' },
-  { key: 'Spanish', en: 'Spanish', fa: 'اسپانیایی', ar: 'الإسبانية' },
-  { key: 'Italian', en: 'Italian', fa: 'ایتالیایی', ar: 'الإيطالية' },
-  { key: 'Chinese', en: 'Chinese', fa: 'چینی', ar: 'الصينية' },
-  { key: 'Russian', en: 'Russian', fa: 'روسی', ar: 'الروسية' },
 ];
 
 const TOUR_TYPE_OPTIONS = [
@@ -39,7 +29,14 @@ const TOUR_TYPE_OPTIONS = [
   { key: 'Nature', en: 'Nature & Eco', fa: 'طبیعت', ar: 'الطبيعة' },
 ];
 
-const DEFAULT_FILTERS = { city: 'all', language: 'all', tourType: 'all' };
+const SORT_OPTIONS = [
+  { key: 'recommended', en: 'Recommended', fa: 'پیشنهاد شده', ar: 'موصى به' },
+  { key: 'newest', en: 'Newest First', fa: 'جدیدترین اول', ar: 'الأحدث أولاً' },
+  { key: 'rating', en: 'Highest Rated', fa: 'بالاترین امتیاز', ar: 'الأعلى تقييماً' },
+  { key: 'reviews', en: 'Most Reviewed', fa: 'بیشترین نظر', ar: 'الأكثر تقييماً' },
+];
+
+const DEFAULT_FILTERS = { city: [], language: 'all', tourType: 'all' };
 
 function parseList(val) {
   if (!val) return [];
@@ -164,35 +161,43 @@ export default function Agencies() {
   const navigate = useNavigate();
   // useAgencies() already filters is_approved: true from Supabase.
   const { agencies, loading, error } = useAgencies();
-  const [search, setSearch] = useState('');
+  const availableLanguages = useAvailableProfileLanguages();
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  const [sortBy, setSortBy] = useState('recommended');
 
-  const hasActive = filters.city !== 'all' || filters.language !== 'all' || filters.tourType !== 'all';
+  const languageOptions = useMemo(() => [
+    { key: 'all', en: 'All Languages', fa: 'همه زبان‌ها', ar: 'كل اللغات' },
+    ...toLanguageOptions(availableLanguages),
+  ], [availableLanguages]);
+
+  const hasActive = filters.city.length > 0 || filters.language !== 'all' || filters.tourType !== 'all';
   const reset = () => setFilters(DEFAULT_FILTERS);
 
   const filtered = useMemo(() => {
+    const selectedCities = destinationSelectionAliases(filters.city);
     return agencies.filter(a => {
-      const hay = `${a.full_name || ''} ${a.city || ''} ${a.bio || ''}`.toLowerCase();
-      if (search && !hay.includes(search.toLowerCase())) return false;
-
-      if (filters.city !== 'all') {
-        const city = (a.city || '').toLowerCase();
-        if (!city.includes(filters.city.toLowerCase())) return false;
-      }
+      if (!matchesAnySelection([a.city, a.primary_city, a.other_cities, a.cities], selectedCities)) return false;
 
       if (filters.language !== 'all') {
         const langs = parseList(a.languages ?? a.support_languages);
-        if (langs.length && !langs.some(l => l.includes(filters.language.toLowerCase()))) return false;
+        if (!langs.some(l => l === filters.language.toLowerCase())) return false;
       }
 
       if (filters.tourType !== 'all') {
         const types = parseList(a.tour_types ?? a.specialties);
-        if (types.length && !types.some(t => t.includes(filters.tourType.toLowerCase()))) return false;
+        if (!types.some(t => t.includes(filters.tourType.toLowerCase()))) return false;
       }
 
       return true;
     });
-  }, [agencies, search, filters]);
+  }, [agencies, filters]);
+
+  const sorted = useMemo(() => [...filtered].sort((a, b) => {
+    if (sortBy === 'newest') return newestComparator(a, b);
+    if (sortBy === 'rating') return (Number(b.rating) || 0) - (Number(a.rating) || 0);
+    if (sortBy === 'reviews') return reviewCountOf(b) - reviewCountOf(a);
+    return recommendedComparator(a, b);
+  }), [filtered, sortBy]);
 
   const tx = {
     title:    lang === 'fa' ? 'آژانس‌های مسافرتی' : lang === 'ar' ? 'وكالات السفر'         : 'Travel Agencies',
@@ -211,21 +216,9 @@ export default function Agencies() {
           <h1 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-light text-foreground mb-4">
             {tx.title}
           </h1>
-          <p className="font-body text-muted-foreground max-w-xl text-lg mb-8">
+          <p className="font-body text-muted-foreground max-w-xl text-lg">
             {tx.subtitle}
           </p>
-
-          {/* Search bar */}
-          <div className="relative max-w-lg">
-            <Search className="absolute start-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={lang === 'fa' ? 'جستجو در آژانس‌ها...' : lang === 'ar' ? 'ابحث في الوكالات...' : 'Search agencies by name, city, tour type...'}
-              className="w-full ps-11 pe-4 py-3 rounded-2xl border border-border bg-card font-body text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-gold/40 focus:border-gold/40 transition shadow-sm"
-            />
-          </div>
         </motion.div>
 
         {/* Filter bar */}
@@ -247,11 +240,12 @@ export default function Agencies() {
                 lang={lang}
                 icon={MapPin}
                 searchable
+                multiple
               />
               <FilterDropdown
                 label={lang === 'fa' ? 'زبان' : lang === 'ar' ? 'اللغة' : 'Language'}
                 value={filters.language}
-                options={LANGUAGE_OPTIONS}
+                options={languageOptions}
                 onChange={(v) => setFilters(f => ({ ...f, language: v }))}
                 lang={lang}
                 icon={Globe}
@@ -263,6 +257,16 @@ export default function Agencies() {
                 onChange={(v) => setFilters(f => ({ ...f, tourType: v }))}
                 lang={lang}
                 icon={SlidersHorizontal}
+              />
+              <div className="w-px self-stretch bg-border/40 mx-1 hidden sm:block" />
+              <FilterDropdown
+                label={lang === 'fa' ? 'مرتب‌سازی' : lang === 'ar' ? 'ترتيب' : 'Sort by'}
+                value={sortBy}
+                options={SORT_OPTIONS}
+                onChange={setSortBy}
+                lang={lang}
+                icon={ArrowUpDown}
+                inactiveKey="recommended"
               />
               <div className="flex items-center gap-3 ms-auto self-center px-2">
                 <span className="font-body text-sm text-muted-foreground whitespace-nowrap">
@@ -298,7 +302,7 @@ export default function Agencies() {
             <p className="font-body text-destructive mb-2">{tx.error}</p>
             <p className="font-body text-xs text-muted-foreground">{error}</p>
           </div>
-        ) : filtered.length === 0 ? (
+        ) : sorted.length === 0 ? (
           <div className="text-center py-24">
             <div className="w-20 h-20 mx-auto mb-6 rounded-full border-2 border-border flex items-center justify-center">
               <span className="text-3xl text-accent/40">❋</span>
@@ -310,7 +314,7 @@ export default function Agencies() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-            {filtered.map((agency) => (
+            {sorted.map((agency) => (
               <AgencyCard key={agency.id} agency={agency} lang={lang} onNavigate={navigate} />
             ))}
           </div>

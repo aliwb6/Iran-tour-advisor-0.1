@@ -9,7 +9,7 @@ import {
   ChevronDown, ChevronRight, LogOut, Edit2, Trash2, ExternalLink,
   Loader2, Clock, MapPin, DollarSign, Upload, Shield, TrendingUp,
   MessageSquare, Package, CheckCircle2, X, Plus, Globe, AlertTriangle,
-  BookOpen, Copy, Send,
+  BookOpen, Send,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -23,6 +23,7 @@ import NotificationsView from '@/components/dashboard/NotificationsView';
 import TripRequestForm from '@/components/profile/TripRequestForm';
 import ProfileCompletionChecklist from '@/components/dashboard/ProfileCompletionChecklist';
 import { checkProfileCompletion } from '@/lib/profileCompletion';
+import { parseLanguages, popularLanguages } from '@/data/languages';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -218,8 +219,8 @@ function Sidebar({ section, onNavigate, profileExpanded, setProfileExpanded, use
 
 // ─── LicenseCard ──────────────────────────────────────────────────────────────
 
-function LicenseCard({ profile }) {
-  const { t } = useI18n();
+function LicenseCard({ profile, onSave }) {
+  const { t, lang } = useI18n();
   const fileRef = useRef(null);
   const userId = profile?.id;
 
@@ -227,6 +228,7 @@ function LicenseCard({ profile }) {
   const [status, setStatus] = useState(profile?.license_status || '');
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
+  const [dragActive, setDragActive] = useState(false);
 
   const openPicker = () => { if (!uploading) fileRef.current?.click(); };
 
@@ -249,12 +251,14 @@ function LicenseCard({ profile }) {
 
       const { error: dbErr } = await supabase
         .from('profiles')
-        .update({ license_url: path, license_status: 'pending' })
+        .update({ license_url: path, license_status: 'pending_review' })
         .eq('id', userId);
       if (dbErr) throw dbErr;
 
       setLicensePath(path);
-      setStatus('pending');
+      setStatus('pending_review');
+      onSave?.({ ...profile, license_url: path, license_status: 'pending_review' });
+      toast.success(t('dashboard_license_pending'));
     } catch (err) {
       setError(err.message || 'Upload failed');
     } finally {
@@ -276,8 +280,23 @@ function LicenseCard({ profile }) {
     : status === 'rejected' ? t('dashboard_license_rejected')
     : t('dashboard_license_pending');
 
+  const handleDrop = (event) => {
+    event.preventDefault();
+    setDragActive(false);
+    handleUpload(event.dataTransfer.files?.[0]);
+  };
+
   return (
-    <>
+    <div
+      onDragEnter={(event) => { event.preventDefault(); setDragActive(true); }}
+      onDragOver={(event) => { event.preventDefault(); setDragActive(true); }}
+      onDragLeave={(event) => {
+        event.preventDefault();
+        if (!event.currentTarget.contains(event.relatedTarget)) setDragActive(false);
+      }}
+      onDrop={handleDrop}
+      className={`flex-1 flex flex-col rounded-xl transition ${dragActive ? 'bg-[hsl(178,85%,32%)]/10 ring-2 ring-[hsl(178,85%,42%)]' : ''}`}
+    >
       <div className="flex items-center gap-2 mb-3">
         <Shield className="w-4 h-4 text-[hsl(38,62%,58%)]" />
         <p className="text-white/70 text-xs font-medium">{t('dashboard_my_license')}</p>
@@ -290,11 +309,11 @@ function LicenseCard({ profile }) {
           </div>
           <p className="text-white/50 text-xs text-center mb-3">{statusLabel}</p>
           <div className="flex items-center gap-2">
-            <button onClick={handleView}
+            <button type="button" onClick={handleView}
               className="px-3 py-1.5 rounded-xl border border-white/20 text-white/70 text-xs font-medium hover:border-[hsl(38,62%,58%)] hover:text-[hsl(38,62%,58%)] transition">
               {t('license_view')}
             </button>
-            <button onClick={openPicker} disabled={uploading}
+            <button type="button" onClick={openPicker} disabled={uploading}
               className="px-3 py-1.5 rounded-xl border border-white/20 text-white/70 text-xs font-medium hover:border-[hsl(38,62%,58%)] hover:text-[hsl(38,62%,58%)] transition disabled:opacity-50">
               {uploading ? '...' : t('license_replace')}
             </button>
@@ -308,7 +327,10 @@ function LicenseCard({ profile }) {
               ? <Loader2 className="w-5 h-5 text-white/40 animate-spin" />
               : <Upload className="w-5 h-5 text-white/25" />}
           </div>
-          <p className="text-white/40 text-xs text-center mb-4">{t('dashboard_license_missing')}</p>
+          <p className="text-white/40 text-xs text-center mb-1">{t('dashboard_license_missing')}</p>
+          <p className="text-white/25 text-[10px] text-center mb-4">
+            {lang === 'fa' ? 'فایل را اینجا رها کنید یا از دستگاه انتخاب کنید' : lang === 'ar' ? 'اسحب الملف هنا أو اختره من جهازك' : 'Drop a file here or choose from your device'}
+          </p>
           <button type="button" onClick={(e) => { e.stopPropagation(); openPicker(); }} disabled={uploading}
             className="px-4 py-2 rounded-xl border border-white/20 text-white/60 text-xs font-medium hover:border-[hsl(38,62%,58%)] hover:text-[hsl(38,62%,58%)] transition disabled:opacity-50">
             {uploading ? t('dashboard_saving') : t('dashboard_upload_license')}
@@ -320,13 +342,13 @@ function LicenseCard({ profile }) {
 
       <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,application/pdf"
         className="hidden" onChange={(e) => handleUpload(e.target.files?.[0])} />
-    </>
+    </div>
   );
 }
 
 // ─── HomeView ─────────────────────────────────────────────────────────────────
 
-function HomeView({ profile, tours, reviews, userId, lang, onNavigate, onOpenChat }) {
+function HomeView({ profile, tours, reviews, userId, lang, onNavigate, onOpenChat, onProfileSave }) {
   const { t, lang: i18nLang, dir } = useI18n();
   const [reqTab, setReqTab] = useState('new');
   const [latestChats, setLatestChats] = useState([]);
@@ -538,7 +560,7 @@ function HomeView({ profile, tours, reviews, userId, lang, onNavigate, onOpenCha
 
         {/* License */}
         <div className={`${cardBase} flex flex-col`}>
-          <LicenseCard profile={profile} />
+          <LicenseCard profile={profile} onSave={onProfileSave} />
         </div>
       </div>
 
@@ -873,15 +895,21 @@ function ProfileView({ profile, userId, onSave }) {
     city:       profile?.city || '',
     bio:        profile?.bio || '',
     avatar_url: profile?.avatar_url || '',
-    languages:  profile?.languages || '',
-    username:   profile?.username || '',
+    languages:  parseLanguages(profile?.languages),
   });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
+  const [otherLanguage, setOtherLanguage] = useState('');
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [avatarDragActive, setAvatarDragActive] = useState(false);
+  const avatarFileRef = useRef(null);
 
+  const completionFields = profile?.role === 'guide' || profile?.role === 'agency'
+    ? PROFILE_FIELDS
+    : PROFILE_FIELDS.filter(field => field !== 'languages');
   const completion = Math.round(
-    PROFILE_FIELDS.filter(f => form[f]?.toString().trim()).length / PROFILE_FIELDS.length * 100
+    completionFields.filter(f => form[f]?.toString().trim()).length / completionFields.length * 100
   );
 
   const handleChange = (e) => {
@@ -889,9 +917,68 @@ function ProfileView({ profile, userId, onSave }) {
     setForm(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleUsernameChange = (e) => {
-    const raw = e.target.value.replace(/^@/, '').trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
-    setForm(prev => ({ ...prev, username: raw }));
+  const toggleLanguage = (language) => {
+    setForm(prev => {
+      const exists = prev.languages.some(item => item.toLocaleLowerCase() === language.toLocaleLowerCase());
+      return {
+        ...prev,
+        languages: exists
+          ? prev.languages.filter(item => item.toLocaleLowerCase() !== language.toLocaleLowerCase())
+          : [...prev.languages, language],
+      };
+    });
+  };
+
+  const addOtherLanguage = () => {
+    const language = otherLanguage.trim();
+    if (!language) return;
+    setForm(prev => ({
+      ...prev,
+      languages: parseLanguages([...prev.languages, language]),
+    }));
+    setOtherLanguage('');
+  };
+
+  const handleAvatarUpload = async (file) => {
+    if (!file || !userId) return;
+    setError('');
+    const allowed = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowed.includes(file.type)) {
+      setError(lang === 'fa' ? 'فقط تصاویر JPG، PNG یا WEBP مجاز هستند.' : 'Only JPG, PNG or WEBP images are allowed.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError(lang === 'fa' ? 'حجم تصویر باید کمتر از ۵ مگابایت باشد.' : 'Profile image must be smaller than 5 MB.');
+      return;
+    }
+
+    setUploadingAvatar(true);
+    try {
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const path = `${userId}/${Date.now()}-${safeName}`;
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(path, file, { cacheControl: '3600', upsert: false });
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage.from('avatars').getPublicUrl(path);
+      const avatarUrl = data.publicUrl;
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: avatarUrl })
+        .eq('id', userId);
+      if (profileError) throw profileError;
+
+      setForm(prev => ({ ...prev, avatar_url: avatarUrl }));
+      onSave({ ...profile, avatar_url: avatarUrl });
+      toast.success(lang === 'fa' ? 'عکس پروفایل بارگذاری شد.' : 'Profile photo uploaded.');
+    } catch (err) {
+      setError(err.message || 'Failed to upload profile photo');
+    } finally {
+      setUploadingAvatar(false);
+      setAvatarDragActive(false);
+      if (avatarFileRef.current) avatarFileRef.current.value = '';
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -899,42 +986,17 @@ function ProfileView({ profile, userId, onSave }) {
     setError('');
     setSaving(true);
     try {
-      const originalUsername = profile?.username || '';
-      if (form.username !== originalUsername) {
-        if (!/^[a-z0-9_]{3,20}$/.test(form.username)) {
-          toast.error(t('username_invalid'));
-          setSaving(false);
-          return;
-        }
-        const { data: clash } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('username', form.username)
-          .neq('id', userId)
-          .maybeSingle();
-        if (clash) {
-          toast.error(t('username_taken'));
-          setSaving(false);
-          return;
-        }
-      }
-
+      const profilePayload = { ...form, languages: form.languages.join(', ') };
       const { error: err } = await supabase
         .from('profiles')
-        .update({ ...form })
+        .update(profilePayload)
         .eq('id', userId);
       if (err) {
-        if (err.code === '23505') {
-          toast.error(t('username_taken'));
-          setSaving(false);
-          return;
-        }
         throw err;
       }
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
-      if (form.username !== originalUsername) toast.success(t('username_saved'));
-      onSave({ ...profile, ...form });
+      onSave({ ...profile, ...profilePayload });
     } catch (err) {
       setError(err.message || 'Failed to save profile');
     } finally {
@@ -981,15 +1043,55 @@ function ProfileView({ profile, userId, onSave }) {
 
       <form onSubmit={handleSubmit} className="bg-[hsl(222,45%,14%)] border border-white/[0.08] rounded-2xl p-6 space-y-5">
 
-        {/* Avatar */}
-        <div className="flex items-center gap-4 pb-5 border-b border-white/[0.07]">
-          <div className="w-16 h-16 rounded-2xl bg-[hsl(178,85%,32%)]/20 border border-[hsl(178,85%,32%)]/30 flex items-center justify-center flex-shrink-0 overflow-hidden">
-            <img decoding="async" loading="lazy" src={avatarFor(form)} alt="" className="w-full h-full object-cover" />
+        {/* Avatar upload */}
+        <div className="pb-5 border-b border-white/[0.07]">
+          <label className={labelClass}>{lang === 'fa' ? 'عکس پروفایل' : lang === 'ar' ? 'صورة الملف الشخصي' : 'Profile Photo'}</label>
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => !uploadingAvatar && avatarFileRef.current?.click()}
+            onKeyDown={event => {
+              if ((event.key === 'Enter' || event.key === ' ') && !uploadingAvatar) {
+                event.preventDefault();
+                avatarFileRef.current?.click();
+              }
+            }}
+            onDragEnter={event => { event.preventDefault(); setAvatarDragActive(true); }}
+            onDragOver={event => { event.preventDefault(); setAvatarDragActive(true); }}
+            onDragLeave={event => {
+              event.preventDefault();
+              if (!event.currentTarget.contains(event.relatedTarget)) setAvatarDragActive(false);
+            }}
+            onDrop={event => {
+              event.preventDefault();
+              setAvatarDragActive(false);
+              handleAvatarUpload(event.dataTransfer.files?.[0]);
+            }}
+            className={`flex items-center gap-4 p-4 rounded-2xl border-2 border-dashed cursor-pointer transition ${avatarDragActive
+              ? 'border-[hsl(178,85%,45%)] bg-[hsl(178,85%,32%)]/10'
+              : 'border-white/15 bg-white/[0.02] hover:border-[hsl(178,85%,40%)]/60'
+            }`}
+          >
+            <div className="w-20 h-20 rounded-2xl bg-[hsl(178,85%,32%)]/20 border border-[hsl(178,85%,32%)]/30 flex items-center justify-center flex-shrink-0 overflow-hidden">
+              <img decoding="async" src={avatarFor(form)} alt="" className="w-full h-full object-cover" />
+            </div>
+            <div className="flex-1">
+              <p className="text-white/70 text-sm font-medium">
+                {uploadingAvatar
+                  ? (lang === 'fa' ? 'در حال بارگذاری…' : 'Uploading…')
+                  : (lang === 'fa' ? 'عکس را اینجا رها کنید یا برای انتخاب کلیک کنید' : lang === 'ar' ? 'اسحب الصورة هنا أو انقر للاختيار' : 'Drop your photo here or click to choose')}
+              </p>
+              <p className="text-white/30 text-xs mt-1">JPG, PNG, WEBP · max 5 MB</p>
+            </div>
+            {uploadingAvatar ? <Loader2 className="w-5 h-5 text-teal-400 animate-spin" /> : <Upload className="w-5 h-5 text-white/35" />}
           </div>
-          <div className="flex-1">
-            <label className={labelClass}>Avatar URL</label>
-            <input name="avatar_url" value={form.avatar_url} onChange={handleChange} className={inputClass} placeholder="https://..." />
-          </div>
+          <input
+            ref={avatarFileRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="hidden"
+            onChange={event => handleAvatarUpload(event.target.files?.[0])}
+          />
         </div>
 
         {/* Name + Phone */}
@@ -1004,34 +1106,79 @@ function ProfileView({ profile, userId, onSave }) {
           </div>
         </div>
 
-        {/* City + Languages */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* City */}
+        <div>
           <div>
             <label className={labelClass}>City</label>
             <input name="city" value={form.city} onChange={handleChange} className={inputClass} placeholder="Isfahan" />
           </div>
-          <div>
-            <label className={labelClass}>Languages Spoken</label>
-            <input name="languages" value={form.languages} onChange={handleChange} className={inputClass} placeholder="Persian, English, French" />
-          </div>
         </div>
 
-        {/* Username */}
-        <div>
-          <label className={labelClass}>{t('username_label')}</label>
-          <div className="flex items-center rounded-xl border border-white/10 bg-white/[0.05] focus-within:border-[hsl(178,85%,32%)] focus-within:ring-1 focus-within:ring-[hsl(178,85%,32%)]/50 transition overflow-hidden">
-            <span className="px-3 text-white/40 text-sm select-none">@</span>
-            <input
-              value={form.username}
-              onChange={handleUsernameChange}
-              className="flex-1 py-2.5 pe-3.5 bg-transparent text-white text-sm placeholder:text-white/25 focus:outline-none"
-              placeholder="your_username"
-              dir="ltr"
-              maxLength={20}
-            />
+        {/* Languages */}
+        {(profile?.role === 'guide' || profile?.role === 'agency') && (
+          <div>
+            <label className={labelClass}>Languages Spoken</label>
+            <div className="flex flex-wrap gap-2 mb-3">
+              {popularLanguages.map(language => {
+                const selected = form.languages.some(item => item.toLocaleLowerCase() === language.toLocaleLowerCase());
+                return (
+                  <button
+                    key={language}
+                    type="button"
+                    onClick={() => toggleLanguage(language)}
+                    className={`px-3 py-1.5 rounded-full text-xs border transition ${selected
+                      ? 'bg-[hsl(178,85%,32%)]/20 border-[hsl(178,85%,32%)] text-teal-300'
+                      : 'bg-white/[0.03] border-white/10 text-white/55 hover:border-white/25'
+                    }`}
+                  >
+                    {selected && <span className="me-1">✓</span>}{language}
+                  </button>
+                );
+              })}
+            </div>
+
+            {form.languages.filter(language => !popularLanguages.some(item => item.toLocaleLowerCase() === language.toLocaleLowerCase())).length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-3">
+                {form.languages
+                  .filter(language => !popularLanguages.some(item => item.toLocaleLowerCase() === language.toLocaleLowerCase()))
+                  .map(language => (
+                    <button
+                      key={language}
+                      type="button"
+                      onClick={() => toggleLanguage(language)}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs bg-[hsl(178,85%,32%)]/20 border border-[hsl(178,85%,32%)] text-teal-300"
+                      title="Remove language"
+                    >
+                      {language}<X className="w-3 h-3" />
+                    </button>
+                  ))}
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <input
+                value={otherLanguage}
+                onChange={event => setOtherLanguage(event.target.value)}
+                onKeyDown={event => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    addOtherLanguage();
+                  }
+                }}
+                className={inputClass}
+                placeholder="Other language"
+                maxLength={60}
+              />
+              <button
+                type="button"
+                onClick={addOtherLanguage}
+                className="shrink-0 flex items-center gap-1.5 px-4 rounded-xl bg-white/10 text-white/70 text-xs hover:bg-white/15"
+              >
+                <Plus className="w-3.5 h-3.5" /> Add
+              </button>
+            </div>
           </div>
-          <p className="mt-1.5 text-white/30 text-[11px]">{t('username_help')}</p>
-        </div>
+        )}
 
         {/* Bio */}
         <div>
@@ -1041,35 +1188,8 @@ function ProfileView({ profile, userId, onSave }) {
 
         {/* License Document Section */}
         {(profile?.role === 'guide' || profile?.role === 'agency') && (
-          <div className="border-t border-white/[0.07] pt-5">
-            <div className="mb-4">
-              <div className="flex items-center justify-between mb-3">
-                <label className={labelClass}>License Document</label>
-                <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
-                  profile?.license_status === 'verified'
-                    ? 'bg-emerald-500/20 text-emerald-400'
-                    : profile?.license_status === 'pending_review'
-                    ? 'bg-yellow-500/20 text-yellow-400'
-                    : 'bg-red-500/20 text-red-400'
-                }`}>
-                  {profile?.license_status === 'verified' ? '✓ Verified' : profile?.license_status === 'pending_review' ? '⏳ Pending Review' : '✗ Not Uploaded'}
-                </span>
-              </div>
-              <p className="text-white/30 text-xs mb-3">Upload PDF, JPG, or PNG (max 5MB)</p>
-              <div className="relative">
-                <input
-                  type="file"
-                  accept=".pdf,.jpg,.jpeg,.png"
-                  disabled={true}
-                  className="absolute inset-0 opacity-0 cursor-not-allowed"
-                  title="License upload coming soon"
-                />
-                <div className="w-full px-4 py-3 rounded-xl border-2 border-dashed border-white/20 bg-white/[0.02] flex items-center justify-center gap-2 text-white/40 text-sm cursor-not-allowed">
-                  <Upload className="w-4 h-4" />
-                  License Upload (Coming Soon)
-                </div>
-              </div>
-            </div>
+          <div className="border-t border-white/[0.07] pt-5 min-h-52 flex flex-col">
+            <LicenseCard profile={{ ...profile, id: userId }} onSave={onSave} />
           </div>
         )}
 
@@ -1981,6 +2101,7 @@ export default function Dashboard() {
             lang={lang}
             onNavigate={nav}
             onOpenChat={(otherId) => navigate(`/chat/${otherId}`)}
+            onProfileSave={handleProfileSaved}
           />
         );
       case 'requests':

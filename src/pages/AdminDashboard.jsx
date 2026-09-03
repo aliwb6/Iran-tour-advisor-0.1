@@ -15,6 +15,7 @@ import { useAllArticlesAdmin } from '@/hooks/useSupabase';
 import ArticleEditor from '@/components/articles/ArticleEditor';
 import AdminChatMonitor from './AdminChatMonitor';
 import { checkProfileCompletion } from '@/lib/profileCompletion';
+import HomeDestinationsEditor from '@/components/admin/HomeDestinationsEditor';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -27,6 +28,7 @@ const NAV = [
   { id: 'chats',    label: 'Chat Monitor',   Icon: MessageSquare },
   { id: 'comments', label: 'Comments',       Icon: MessageSquare },
   { id: 'articles', label: 'Articles',       Icon: BookOpen },
+  { id: 'destinations', label: 'Homepage Wonders', Icon: ImageIcon },
 ];
 
 const STATUS_CFG = {
@@ -1379,6 +1381,8 @@ export default function AdminDashboard() {
         return <AdminChatMonitor />;
       case 'articles':
         return <ArticlesView profile={profile} />;
+      case 'destinations':
+        return <HomeDestinationsEditor />;
       default:
         return null;
     }

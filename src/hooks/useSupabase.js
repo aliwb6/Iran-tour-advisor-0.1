@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/supabaseClient';
+import { mergeLanguages, popularLanguages } from '@/data/languages';
 
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1564960723835-2898c9df9297?w=800&h=600&fit=crop";
 
@@ -31,17 +32,48 @@ export function useTours(filters = {}) {
           query = query.contains('theme', [filters.theme]);
         }
         if (filters.duration && filters.duration !== 'all') {
-          if (filters.duration === 'day')    query = query.lte('duration', 1);
-          if (filters.duration === '2to3')   query = query.gte('duration', 2).lte('duration', 3);
-          if (filters.duration === 'week')   query = query.gte('duration', 4).lte('duration', 7);
-          if (filters.duration === 'custom') query = query.gte('duration', 8);
+          if (filters.duration === 'short')  query = query.lte('duration', 7);
+          if (filters.duration === 'medium') query = query.gte('duration', 8).lte('duration', 11);
+          if (filters.duration === 'long')   query = query.gte('duration', 12);
         }
 
         const { data, error: supabaseError } = await query.order('created_at', { ascending: false });
 
         if (supabaseError) throw supabaseError;
         if (isMounted) {
-          setTours(data || []);
+          let rows = data || [];
+          if (rows.length > 0) {
+            const { data: reviewRows } = await supabase
+              .from('reviews')
+              .select('tour_id, rating')
+              .in('tour_id', rows.map(row => row.id));
+
+            if (reviewRows) {
+              const aggregates = reviewRows.reduce((result, review) => {
+                if (!review.tour_id) return result;
+                const current = result[review.tour_id] || { count: 0, sum: 0, positive: 0 };
+                const rating = Number(review.rating) || 0;
+                current.count += 1;
+                current.sum += rating;
+                if (rating >= 4) current.positive += 1;
+                result[review.tour_id] = current;
+                return result;
+              }, {});
+
+              rows = rows.map(row => {
+                const aggregate = aggregates[row.id];
+                if (!aggregate) return row;
+                return {
+                  ...row,
+                  rating: aggregate.sum / aggregate.count,
+                  review_count: aggregate.count,
+                  positive_review_count: aggregate.positive,
+                };
+              });
+            }
+          }
+          if (!isMounted) return;
+          setTours(rows);
           setError(null);
         }
       } catch (err) {
@@ -366,6 +398,27 @@ export function useGuides() {
 export function useAgencies() {
   const { data, loading, error } = useProfilesByRole(['agency']);
   return { agencies: data, loading, error };
+}
+
+export function useAvailableProfileLanguages() {
+  const [languages, setLanguages] = useState(popularLanguages);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    supabase
+      .from('profiles')
+      .select('languages')
+      .in('role', ['guide', 'agency'])
+      .then(({ data }) => {
+        if (!isMounted) return;
+        setLanguages(mergeLanguages(popularLanguages, (data || []).map(row => row.languages)));
+      });
+
+    return () => { isMounted = false; };
+  }, []);
+
+  return languages;
 }
 
 export function useGuideProfile(guideId) {
