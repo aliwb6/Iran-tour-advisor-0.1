@@ -22,6 +22,7 @@ import {
   persistGuideReview,
 } from '@/lib/profileCompletion';
 import HomeDestinationsEditor from '@/components/admin/HomeDestinationsEditor';
+import { buildReviewModerationUpdates, persistReviewModeration } from '@/lib/reviews';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -38,6 +39,8 @@ const NAV = [
 ];
 
 const STATUS_CFG = {
+  approved:       { label: 'Approved',       dot: 'bg-emerald-400', wrap: 'bg-emerald-500/20 border-emerald-500/30 text-emerald-300' },
+  pending:        { label: 'Pending',        dot: 'bg-yellow-400',  wrap: 'bg-yellow-500/20  border-yellow-500/30  text-yellow-300'  },
   published:      { label: 'Published',      dot: 'bg-emerald-400', wrap: 'bg-emerald-500/20 border-emerald-500/30 text-emerald-300' },
   pending_review: { label: 'Pending Review', dot: 'bg-yellow-400',  wrap: 'bg-yellow-500/20  border-yellow-500/30  text-yellow-300'  },
   draft:          { label: 'Draft',          dot: 'bg-gray-400',    wrap: 'bg-gray-500/20    border-gray-500/30    text-gray-300'    },
@@ -270,11 +273,11 @@ function OverviewView({ tours, guides, reviews, loading }) {
             {recentComments.map(r => (
               <div key={r.id} className="flex items-start gap-3 pb-3 border-b border-white/[0.06] last:border-0 last:pb-0">
                 <div className="w-8 h-8 rounded-full bg-[hsl(178,85%,32%)]/30 flex items-center justify-center flex-shrink-0 text-[hsl(178,85%,50%)] text-xs font-bold">
-                  {r.reviewer_name?.[0]?.toUpperCase() || '?'}
+                  {(r.reviewer?.full_name || r.reviewer_name)?.[0]?.toUpperCase() || '?'}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2 mb-1">
-                    <p className="text-white text-xs font-medium">{r.reviewer_name || 'Anonymous'}</p>
+                    <p className="text-white text-xs font-medium">{r.reviewer?.full_name || r.reviewer_name || 'Anonymous'}</p>
                     <StarRating rating={r.rating || 0} />
                   </div>
                   {r.review_text && (
@@ -951,21 +954,32 @@ function GuideProfileReviewModal({ guide, busy, onClose, onSave }) {
 
 // ─── Comment Card ────────────────────────────────────────────────────────────
 
-function CommentCard({ review, onReply, onDelete, busy }) {
+function CommentCard({ review, onReply, onModerate, busy }) {
   const [reply, setReply] = useState(review.admin_reply || '');
+  const [reviewText, setReviewText] = useState(review.review_text || review.body || '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    setReply(review.admin_reply || '');
+    setReviewText(review.review_text || review.body || '');
+  }, [review.id, review.admin_reply, review.review_text, review.body]);
 
   const handleSaveReply = async () => {
     setSaving(true);
     setError('');
     try {
-      const { error: err } = await supabase
+      const { data, error: err } = await supabase
         .from('reviews')
-        .update({ admin_reply: reply })
-        .eq('id', review.id);
+        .update({ admin_reply: reply.trim() })
+        .eq('id', review.id)
+        .select('id, admin_reply');
       if (err) throw err;
-      onReply(review.id, reply);
+      if (!Array.isArray(data) || data.length !== 1) {
+        throw new Error(data?.length > 1 ? 'Multiple reviews matched this reply.' : 'Review not found for reply.');
+      }
+      setReply(data[0].admin_reply || '');
+      onReply(review.id, data[0].admin_reply || '');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -976,6 +990,31 @@ function CommentCard({ review, onReply, onDelete, busy }) {
   const date = review.created_at
     ? new Date(review.created_at).toLocaleDateString()
     : '';
+  const reviewerEmail = review.reviewer?.email || review.reviewer_email || '';
+  const targetName = review.target_profile?.full_name
+    || review.guide?.full_name
+    || review.agency?.agency_name
+    || review.agency?.full_name
+    || review.tours?.title
+    || 'Unknown target';
+  const targetType = review.target_profile?.role === 'agency'
+    ? 'Agency'
+    : review.target_profile?.role === 'guide'
+      ? 'Guide'
+      : review.guide_id
+        ? 'Guide'
+        : review.agency_id
+          ? 'Agency'
+          : 'Tour';
+
+  const handleModeration = async (decision) => {
+    setError('');
+    try {
+      await onModerate(review, decision, reviewText);
+    } catch (moderationError) {
+      setError(moderationError.message || 'The review could not be updated.');
+    }
+  };
 
   return (
     <div className={`${CARD} p-4`}>
@@ -983,34 +1022,37 @@ function CommentCard({ review, onReply, onDelete, busy }) {
         <div className="flex items-start gap-3 flex-1 min-w-0">
           <div className="w-9 h-9 rounded-xl bg-[hsl(178,85%,32%)]/20 flex items-center justify-center flex-shrink-0">
             <span className="text-[hsl(178,85%,55%)] font-bold text-xs">
-              {review.reviewer_name?.[0]?.toUpperCase() || '?'}
+              {(review.reviewer?.full_name || review.reviewer_name)?.[0]?.toUpperCase() || '?'}
             </span>
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <p className="text-white font-semibold text-sm">{review.reviewer_name || 'Anonymous'}</p>
+              <p className="text-white font-semibold text-sm">{review.reviewer?.full_name || review.reviewer_name || 'Anonymous'}</p>
               <StarRating rating={review.rating || 0} />
+              <StatusPill status={review.status || 'pending'} />
             </div>
             <div className="flex items-center gap-2 mt-0.5 text-[10px] text-white/35">
-              {review.tours?.title && (
-                <span className="text-[hsl(38,62%,58%)]/80">Re: {review.tours.title}</span>
-              )}
+              <span className="text-[hsl(38,62%,58%)]/80">{targetType}: {targetName}</span>
+              {reviewerEmail && <span>· {reviewerEmail}</span>}
               {date && <span>· {date}</span>}
             </div>
           </div>
         </div>
-        <button
-          onClick={() => onDelete(review.id)}
-          disabled={busy}
-          className="w-8 h-8 rounded-lg bg-red-500/10 hover:bg-red-500/20 flex items-center justify-center text-red-400 transition flex-shrink-0 disabled:opacity-50"
-        >
-          {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
-        </button>
       </div>
 
-      {review.review_text && (
-        <p className="text-white/65 text-sm leading-relaxed mb-4 pl-12">{review.review_text}</p>
-      )}
+      {review.title && <p className="mb-2 pl-12 text-sm font-semibold text-white/80">{review.title}</p>}
+
+      <div className="mb-4 pl-12">
+        <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wider text-white/40">
+          Review text
+        </label>
+        <textarea
+          rows={4}
+          value={reviewText}
+          onChange={event => setReviewText(event.target.value)}
+          className="w-full resize-y rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2.5 text-sm leading-relaxed text-white/75 focus:border-[hsl(178,85%,32%)]/60 focus:outline-none focus:ring-1 focus:ring-[hsl(178,85%,32%)]/30"
+        />
+      </div>
 
       {review.admin_reply && (
         <div className="mb-4 pl-12">
@@ -1024,6 +1066,36 @@ function CommentCard({ review, onReply, onDelete, busy }) {
       )}
 
       <ErrorBox message={error} onClose={() => setError('')} />
+
+      <div className="mb-4 flex flex-wrap justify-end gap-2 border-b border-white/[0.07] pb-4 pl-12">
+        <button
+          type="button"
+          onClick={() => handleModeration('save')}
+          disabled={busy || !reviewText.trim()}
+          className="inline-flex items-center gap-1.5 rounded-xl bg-white/[0.07] px-3.5 py-2 text-xs font-semibold text-white/70 hover:bg-white/[0.12] disabled:opacity-40"
+        >
+          {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Edit2 className="h-3.5 w-3.5" />}
+          Save edits
+        </button>
+        <button
+          type="button"
+          onClick={() => handleModeration('reject')}
+          disabled={busy || !reviewText.trim() || review.status === 'rejected'}
+          className="inline-flex items-center gap-1.5 rounded-xl border border-red-500/25 bg-red-500/15 px-3.5 py-2 text-xs font-semibold text-red-300 hover:bg-red-500/25 disabled:opacity-40"
+        >
+          <XCircle className="h-3.5 w-3.5" />
+          Reject
+        </button>
+        <button
+          type="button"
+          onClick={() => handleModeration('approve')}
+          disabled={busy || !reviewText.trim() || review.status === 'approved'}
+          className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-500/25 bg-emerald-500/15 px-3.5 py-2 text-xs font-semibold text-emerald-300 hover:bg-emerald-500/25 disabled:opacity-40"
+        >
+          <CheckCircle2 className="h-3.5 w-3.5" />
+          Approve
+        </button>
+      </div>
 
       <div className="pl-12 space-y-2">
         <textarea
@@ -1046,29 +1118,51 @@ function CommentCard({ review, onReply, onDelete, busy }) {
   );
 }
 
-function CommentsView({ reviews, loading, onReply, onDelete, busyId }) {
+function CommentsView({ reviews, loading, onReply, onModerate, busyId }) {
+  const [filter, setFilter] = useState('pending');
   const [sortBy, setSortBy] = useState('newest');
   if (loading) return <SectionLoader />;
 
-  const sorted = [...reviews].sort((a, b) => {
-    if (sortBy === 'oldest') return new Date(a.created_at || 0) - new Date(b.created_at || 0);
+  const filtered = filter === 'all' ? reviews : reviews.filter(review => (review.status || 'pending') === filter);
+  const sorted = [...filtered].sort((a, b) => {
+    if (sortBy === 'oldest') return new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
     if (sortBy === 'rating-high') return Number(b.rating || 0) - Number(a.rating || 0);
     if (sortBy === 'rating-low') return Number(a.rating || 0) - Number(b.rating || 0);
     if (sortBy === 'unreplied') return Number(Boolean(a.admin_reply)) - Number(Boolean(b.admin_reply));
-    return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+    const statusOrder = { pending: 0, approved: 1, rejected: 2 };
+    const statusDifference = (statusOrder[a.status || 'pending'] ?? 3) - (statusOrder[b.status || 'pending'] ?? 3);
+    if (statusDifference) return statusDifference;
+    return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
   });
 
   return (
     <div>
       <div className="flex items-center justify-between gap-3 flex-wrap mb-5">
-        <div className="flex items-center gap-3"><h2 className="text-white font-bold text-lg">Comments</h2><span className="text-white/40 text-xs">{reviews.length} total</span></div>
+        <div className="flex items-center gap-3"><h2 className="text-white font-bold text-lg">Comments / Reviews</h2><span className="text-white/40 text-xs">{reviews.length} total</span></div>
         <select value={sortBy} onChange={event => setSortBy(event.target.value)} aria-label="Sort comments" className="px-3 py-2 rounded-xl border border-white/10 bg-[hsl(222,45%,14%)] text-white text-xs focus:outline-none focus:border-[hsl(178,85%,32%)]/60 [color-scheme:dark]">
           <option value="newest" className="bg-[hsl(222,45%,14%)] text-white">Sort by: Newest</option><option value="oldest" className="bg-[hsl(222,45%,14%)] text-white">Sort by: Oldest</option><option value="rating-high" className="bg-[hsl(222,45%,14%)] text-white">Sort by: Highest rating</option><option value="rating-low" className="bg-[hsl(222,45%,14%)] text-white">Sort by: Lowest rating</option><option value="unreplied" className="bg-[hsl(222,45%,14%)] text-white">Sort by: Unreplied first</option>
         </select>
       </div>
 
-      {reviews.length === 0 ? (
-        <EmptyState Icon={MessageSquare} title="No comments yet" desc="Reviews from travelers will appear here." />
+      <div className="mb-5 flex flex-wrap gap-2">
+        {['pending', 'approved', 'rejected', 'all'].map(status => (
+          <button
+            key={status}
+            type="button"
+            onClick={() => setFilter(status)}
+            className={`rounded-xl border px-3 py-1.5 text-xs font-semibold capitalize transition ${
+              filter === status
+                ? 'border-[hsl(178,85%,32%)]/50 bg-[hsl(178,85%,32%)]/20 text-[hsl(178,85%,55%)]'
+                : 'border-white/10 bg-white/[0.04] text-white/45 hover:text-white/70'
+            }`}
+          >
+            {status}
+          </button>
+        ))}
+      </div>
+
+      {sorted.length === 0 ? (
+        <EmptyState Icon={MessageSquare} title={`No ${filter === 'all' ? '' : `${filter} `}reviews`} desc="Submitted traveler reviews will appear here." />
       ) : (
         <div className="space-y-4">
           {sorted.map(review => (
@@ -1077,7 +1171,7 @@ function CommentsView({ reviews, loading, onReply, onDelete, busyId }) {
               review={review}
               busy={busyId === review.id}
               onReply={onReply}
-              onDelete={onDelete}
+              onModerate={onModerate}
             />
           ))}
         </div>
@@ -1372,7 +1466,14 @@ export default function AdminDashboard() {
     try {
       const { data, error: err } = await supabase
         .from('reviews')
-        .select('*, tours(title)')
+        .select(`
+          *,
+          tours(title),
+          target_profile:profiles!reviews_profile_id_fkey(id, full_name, role),
+          guide:profiles!reviews_guide_id_fkey(id, full_name),
+          reviewer:profiles!reviews_reviewer_id_fkey(id, full_name, email),
+          agency:agencies!reviews_agency_id_fkey(id, user_id, agency_name, full_name)
+        `)
         .order('created_at', { ascending: false });
       if (err) throw err;
       setReviews(data || []);
@@ -1430,16 +1531,27 @@ export default function AdminDashboard() {
     setReviews(prev => prev.map(r => r.id === id ? { ...r, admin_reply: replyText } : r));
   };
 
-  const handleDeleteReview = async (id) => {
-    if (!window.confirm('Delete this comment permanently?')) return;
-    setBusyId(id);
+  const handleReviewModeration = async (review, decision, reviewText) => {
+    setBusyId(review.id);
     setError('');
     try {
-      const { error: err } = await supabase.from('reviews').delete().eq('id', id);
-      if (err) throw err;
+      const updates = buildReviewModerationUpdates({
+        decision,
+        reviewText,
+        reviewedBy: profile.id,
+      });
+      await persistReviewModeration(supabase, review.id, updates);
       await fetchReviews();
+      toast.success(
+        decision === 'approve'
+          ? 'Review approved.'
+          : decision === 'reject'
+            ? 'Review rejected.'
+            : 'Review edits saved.',
+      );
     } catch (err) {
       setError(err.message);
+      throw err;
     } finally {
       setBusyId(null);
     }
@@ -1457,7 +1569,7 @@ export default function AdminDashboard() {
     tours:    tours.length,
     platform: platformTours.length,
     guides:   guides.length,
-    comments: reviews.length,
+    comments: reviews.filter(review => (review.status || 'pending') === 'pending').length,
     articles: 0, // ArticlesView manages its own data via useAllArticlesAdmin
   };
 
@@ -1555,7 +1667,7 @@ export default function AdminDashboard() {
             loading={loadingReviews}
             busyId={busyId}
             onReply={handleReplyUpdate}
-            onDelete={handleDeleteReview}
+            onModerate={handleReviewModeration}
           />
         );
       case 'chats':

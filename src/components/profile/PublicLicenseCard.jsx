@@ -27,7 +27,7 @@ const copy = {
   },
 };
 
-export default function PublicLicenseCard({ profile, lang = 'en' }) {
+export default function PublicLicenseCard({ profile, lang = 'en', className = '' }) {
   const [opening, setOpening] = useState(false);
   const labels = copy[lang] || copy.en;
   const licensePath = profile?.license_url?.trim();
@@ -58,7 +58,7 @@ export default function PublicLicenseCard({ profile, lang = 'en' }) {
   };
 
   return (
-    <section className="p-5 rounded-2xl bg-emerald-500/[0.06] border border-emerald-500/20 shadow-sm">
+    <section className={`${className} p-5 rounded-2xl bg-emerald-500/[0.06] border border-emerald-500/20 shadow-sm`}>
       <div className="flex items-start gap-3">
         <div className="w-10 h-10 rounded-xl bg-emerald-500/15 text-emerald-500 flex items-center justify-center flex-shrink-0">
           <FileText className="w-5 h-5" />

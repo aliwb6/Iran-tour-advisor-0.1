@@ -17,6 +17,8 @@ import { FALLBACK_IMAGE } from '@/hooks/useSupabase';
 import { iranianDestinations } from '@/data/iranianCities';
 import PublicProfileGallery from '@/components/profile/PublicProfileGallery';
 import PublicLicenseCard from '@/components/profile/PublicLicenseCard';
+import ProfileReviewDialog from '@/components/profile/ProfileReviewDialog';
+import { fetchProfileReviewsSafely } from '@/lib/reviews';
 
 const FALLBACK_IMG = 'https://images.unsplash.com/photo-1589562784072-9ede7d082e5e?w=800&h=1000&fit=crop';
 
@@ -182,7 +184,11 @@ function BookingWidget({ guide, lang }) {
 
 function ReviewCard({ review }) {
   const [expanded, setExpanded] = useState(false);
-  const text = review.comment || '';
+  const text = review.review_text || review.body || review.comment || '';
+  const reviewerName = review.reviewer?.full_name || review.reviewer_name || review.userName || 'Anonymous';
+  const reviewDate = review.created_at
+    ? new Date(review.created_at).toLocaleDateString()
+    : review.date || '';
   const needsTruncate = text.length > 150;
 
   return (
@@ -190,13 +196,13 @@ function ReviewCard({ review }) {
       <div className="flex items-start gap-3 mb-3">
         <div className="w-10 h-10 rounded-full bg-gold/20 flex items-center justify-center flex-shrink-0">
           <span className="font-heading text-sm font-bold text-gold">
-            {(review.userName || 'A')[0].toUpperCase()}
+            {reviewerName[0].toUpperCase()}
           </span>
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between mb-0.5">
-            <p className="font-body text-sm font-semibold text-foreground truncate">{review.userName || 'Anonymous'}</p>
-            <p className="font-body text-xs text-muted-foreground flex-shrink-0 ms-2">{review.date || ''}</p>
+            <p className="font-body text-sm font-semibold text-foreground truncate">{reviewerName}</p>
+            <p className="font-body text-xs text-muted-foreground flex-shrink-0 ms-2">{reviewDate}</p>
           </div>
           <StarRow rating={review.rating || 5} size="sm" />
         </div>
@@ -214,6 +220,12 @@ function ReviewCard({ review }) {
         >
           {expanded ? 'Read less' : 'Read more'}
         </button>
+      )}
+      {review.admin_reply && (
+        <div className="mt-3 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.06] p-3">
+          <p className="font-body text-xs font-semibold text-emerald-600 dark:text-emerald-400">Admin reply</p>
+          <p className="mt-1 font-body text-xs leading-relaxed text-foreground/70">{review.admin_reply}</p>
+        </div>
       )}
     </div>
   );
@@ -260,6 +272,9 @@ export default function GuideDetails() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showAllReviews, setShowAllReviews] = useState(false);
+  const [reviewList, setReviewList] = useState([]);
+  const [reviewError, setReviewError] = useState('');
+  const [reviewOpen, setReviewOpen] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -269,7 +284,7 @@ export default function GuideDetails() {
     const run = async () => {
       try {
         // Part 1/2/3: profile + published tours (newest first).
-        const [{ data: profileData, error: profileErr }, { data: tourData }] = await Promise.all([
+        const [{ data: profileData, error: profileErr }, { data: tourData }, reviewResult] = await Promise.all([
           selectPublicProfiles(supabase).eq('id', id).single(),
           supabase
             .from('tours')
@@ -277,6 +292,7 @@ export default function GuideDetails() {
             .or(`guide_id.eq.${id},agency_id.eq.${id}`)
             .eq('status', 'published')
             .order('created_at', { ascending: false }),
+          fetchProfileReviewsSafely(supabase, { targetType: 'guide', profileId: id }),
         ]);
         if (profileErr) throw profileErr;
 
@@ -298,6 +314,8 @@ export default function GuideDetails() {
         if (mounted) {
           setGuide(profileData);
           setTours(tourData || []);
+          setReviewList(reviewResult.reviews);
+          setReviewError(reviewResult.error || '');
           setChatUnlocked(unlocked);
           setError(null);
         }
@@ -345,7 +363,6 @@ export default function GuideDetails() {
   const languages = Array.isArray(guide.languages) ? guide.languages : (guide.languages ? guide.languages.split(',').map((s) => s.trim()) : []);
   const rating = guide.rating ?? null;
   const reviewCount = guide.reviews ?? guide.review_count ?? 0;
-  const reviewList = Array.isArray(guide.review_list) ? guide.review_list : [];
   const otherCities = Array.isArray(guide.other_cities) ? guide.other_cities : [];
   const licenseId = guide.license_id || guide.license_number || null;
   const licenseVerified = guide.license_status === 'verified';
@@ -362,6 +379,15 @@ export default function GuideDetails() {
       return;
     }
     navigate(`/chat/${id}`);
+  };
+
+  const handleWriteReview = () => {
+    if (!user) {
+      toast.error(lang === 'fa' ? 'برای ثبت نظر وارد حساب خود شوید.' : lang === 'ar' ? 'سجّل الدخول لكتابة تقييم.' : 'Sign in to write a review.');
+      navigate('/login');
+      return;
+    }
+    setReviewOpen(true);
   };
 
   return (
@@ -381,15 +407,15 @@ export default function GuideDetails() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-        {/* ── TOP SECTION: Photo + Info ── */}
+        {/* ── TOP SECTION: Photo + Info + Verified License ── */}
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-          className="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-8 mb-12"
+          className="grid grid-cols-1 lg:grid-cols-[minmax(280px,360px)_minmax(0,1fr)] xl:grid-cols-[minmax(320px,400px)_minmax(0,1fr)_280px] gap-8 mb-12"
         >
           {/* Photo */}
-          <div className="w-full lg:w-[400px] aspect-[3/4] rounded-2xl overflow-hidden shadow-lg">
+          <div className="w-full max-w-[400px] mx-auto lg:mx-0 lg:max-w-none aspect-[3/4] rounded-2xl overflow-hidden shadow-lg">
             <img decoding="async" loading="lazy"
               src={transformImage(avatar || FALLBACK_IMG, imgPresets.card)}
               alt={name}
@@ -523,6 +549,8 @@ export default function GuideDetails() {
                 {lang === 'fa' ? 'چت' : lang === 'ar' ? 'محادثة' : 'Chat'}
               </button>
               <button
+                type="button"
+                onClick={handleWriteReview}
                 className="flex items-center justify-center gap-2 px-8 py-3 rounded-xl border-2 border-gold text-gold font-body font-semibold text-sm hover:bg-gold/5 active:scale-[0.98] transition-all"
               >
                 <PenLine className="w-4 h-4" />
@@ -530,6 +558,13 @@ export default function GuideDetails() {
               </button>
             </div>
           </div>
+
+          {/* Verified license: full-width on tablet, compact third column on desktop. */}
+          <PublicLicenseCard
+            profile={guide}
+            lang={lang}
+            className="w-full max-w-sm justify-self-center lg:col-span-2 xl:col-span-1 xl:self-center xl:justify-self-stretch"
+          />
         </motion.div>
 
         {/* ── BELOW: 70/30 grid ── */}
@@ -594,7 +629,13 @@ export default function GuideDetails() {
                 {lang === 'fa' ? 'نظرات' : lang === 'ar' ? 'التقييمات' : 'Reviews'}
               </h2>
 
-              {rating != null && (
+              {reviewError && (
+                <p role="alert" className="mb-4 rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 font-body text-sm text-destructive">
+                  {lang === 'fa' ? 'بارگذاری نظرات ممکن نشد.' : lang === 'ar' ? 'تعذر تحميل التقييمات.' : 'Reviews could not be loaded.'}
+                </p>
+              )}
+
+              {!reviewError && rating != null && (
                 <div className="flex items-start gap-8 mb-6 p-5 rounded-2xl bg-card border border-border/50">
                   <div className="text-center">
                     <p className="font-heading text-5xl font-bold text-foreground">{Number(rating).toFixed(1)}</p>
@@ -609,11 +650,11 @@ export default function GuideDetails() {
                 </div>
               )}
 
-              {reviewList.length > 0 ? (
+              {!reviewError && reviewList.length > 0 ? (
                 <>
                   <div className="space-y-4">
-                    {visibleReviews.map((review, idx) => (
-                      <ReviewCard key={idx} review={review} />
+                    {visibleReviews.map(review => (
+                      <ReviewCard key={review.id} review={review} />
                     ))}
                   </div>
                   {reviewList.length > 3 && (
@@ -627,22 +668,30 @@ export default function GuideDetails() {
                     </button>
                   )}
                 </>
-              ) : (
+              ) : !reviewError ? (
                 <p className="font-body text-muted-foreground text-sm py-6 text-center">
                   {lang === 'fa' ? 'هنوز نظری ثبت نشده است' : lang === 'ar' ? 'لا توجد تقييمات بعد' : 'No reviews yet'}
                 </p>
-              )}
+              ) : null}
             </section>
           </div>
 
           {/* RIGHT COLUMN — Booking Widget */}
           <div className="lg:col-span-1 self-start space-y-6">
             <BookingWidget guide={guide} lang={lang} />
-            <PublicLicenseCard profile={guide} lang={lang} />
             <PublicProfileGallery images={guide.gallery_images} lang={lang} />
           </div>
         </div>
       </div>
+      <ProfileReviewDialog
+        open={reviewOpen}
+        onOpenChange={setReviewOpen}
+        targetType="guide"
+        profileId={guide.id}
+        profileName={name}
+        user={user}
+        lang={lang}
+      />
     </div>
   );
 }

@@ -22,6 +22,7 @@ import GuideRequestsView from '@/components/dashboard/GuideRequestsView';
 import NotificationsView from '@/components/dashboard/NotificationsView';
 import TripRequestForm from '@/components/profile/TripRequestForm';
 import { checkProfileCompletion } from '@/lib/profileCompletion';
+import { fetchProfileReviewsSafely } from '@/lib/reviews';
 import { parseLanguages, popularLanguages } from '@/data/languages';
 import { iranianDestinations } from '@/data/iranianCities';
 
@@ -876,11 +877,11 @@ function HomeView({ profile, tours, reviews, userId, lang, onNavigate, onOpenCha
             {reviews.slice(0, 5).map(review => (
               <div key={review.id} className="flex items-start gap-3 pb-4 border-b border-white/[0.07] last:border-0 last:pb-0">
                 <div className="w-8 h-8 rounded-full bg-[hsl(178,85%,32%)]/30 flex items-center justify-center flex-shrink-0 text-[hsl(178,85%,50%)] text-xs font-bold">
-                  {review.reviewer_name?.[0]?.toUpperCase() || '?'}
+                  {(review.reviewer?.full_name || review.reviewer_name)?.[0]?.toUpperCase() || '?'}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2 mb-1">
-                    <p className="text-white text-xs font-medium">{review.reviewer_name || 'Anonymous'}</p>
+                    <p className="text-white text-xs font-medium">{review.reviewer?.full_name || review.reviewer_name || 'Anonymous'}</p>
                     <StarRating rating={review.rating || 0} />
                   </div>
                   {review.review_text && (
@@ -2359,15 +2360,22 @@ export default function Dashboard() {
 
       setAuthUser(user);
 
-      const [profileRes, toursRes, reviewsRes] = await Promise.all([
-        supabase.from('profiles').select('*').eq('id', user.id).single(),
+      const profileRes = await supabase.from('profiles').select('*').eq('id', user.id).single();
+      const loadedProfile = profileRes.data || {};
+      const [toursRes, reviewResult] = await Promise.all([
         supabase.from('tours').select('*').eq('owner_id', user.id).order('created_at', { ascending: false }),
-        supabase.from('reviews').select('*').eq('guide_id', user.id).order('created_at', { ascending: false }),
+        loadedProfile.role === 'guide' || loadedProfile.role === 'agency'
+          ? fetchProfileReviewsSafely(supabase, {
+            targetType: loadedProfile.role,
+            profileId: user.id,
+          })
+          : Promise.resolve({ reviews: [], error: null }),
       ]);
 
-      setProfile(profileRes.data || {});
+      setProfile(loadedProfile);
       setTours(toursRes.data || []);
-      setReviews(reviewsRes.data || []);
+      setReviews(reviewResult.reviews);
+      if (reviewResult.error) toast.error('Reviews could not be loaded.');
       setLoading(false);
     }
     init();

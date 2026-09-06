@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/supabaseClient';
 import { selectPublicProfiles } from '@/lib/publicProfiles';
+import { fetchProfileReviewsSafely } from '@/lib/reviews';
 import { mergeLanguages, popularLanguages } from '@/data/languages';
 
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1564960723835-2898c9df9297?w=800&h=600&fit=crop";
@@ -47,7 +48,8 @@ export function useTours(filters = {}) {
             const { data: reviewRows } = await supabase
               .from('reviews')
               .select('tour_id, rating')
-              .in('tour_id', rows.map(row => row.id));
+              .in('tour_id', rows.map(row => row.id))
+              .eq('status', 'approved');
 
             if (reviewRows) {
               const aggregates = reviewRows.reduce((result, review) => {
@@ -423,6 +425,7 @@ export function useGuideProfile(guideId) {
   const [tours, setTours] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [reviewError, setReviewError] = useState(null);
 
   useEffect(() => {
     if (!guideId) return;
@@ -434,14 +437,15 @@ export function useGuideProfile(guideId) {
         const [profileResult, toursResult, reviewsResult] = await Promise.all([
           selectPublicProfiles(supabase).eq('id', guideId).single(),
           supabase.from('tours').select('*').eq('guide_id', guideId).eq('status', 'published'),
-          supabase.from('reviews').select('*').eq('guide_id', guideId).order('created_at', { ascending: false }),
+          fetchProfileReviewsSafely(supabase, { targetType: 'guide', profileId: guideId }),
         ]);
 
         if (profileResult.error) throw profileResult.error;
         if (isMounted) {
           setGuide(profileResult.data);
           setTours(toursResult.data || []);
-          setReviews(reviewsResult.data || []);
+          setReviews(reviewsResult.reviews);
+          setReviewError(reviewsResult.error);
           setError(null);
         }
       } catch (err) {
@@ -455,7 +459,7 @@ export function useGuideProfile(guideId) {
     return () => { isMounted = false; };
   }, [guideId]);
 
-  return { guide, reviews, tours, loading, error };
+  return { guide, reviews, tours, loading, error, reviewError };
 }
 
 export function useAgencyProfile(agencyId) {
@@ -464,6 +468,7 @@ export function useAgencyProfile(agencyId) {
   const [tours, setTours] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [reviewError, setReviewError] = useState(null);
 
   useEffect(() => {
     if (!agencyId) return;
@@ -475,14 +480,15 @@ export function useAgencyProfile(agencyId) {
         const [profileResult, toursResult, reviewsResult] = await Promise.all([
           selectPublicProfiles(supabase).eq('id', agencyId).single(),
           supabase.from('tours').select('*').eq('agency_id', agencyId).eq('status', 'published'),
-          supabase.from('reviews').select('*').eq('agency_id', agencyId).order('created_at', { ascending: false }),
+          fetchProfileReviewsSafely(supabase, { targetType: 'agency', profileId: agencyId }),
         ]);
 
         if (profileResult.error) throw profileResult.error;
         if (isMounted) {
           setAgency(profileResult.data);
           setTours(toursResult.data || []);
-          setReviews(reviewsResult.data || []);
+          setReviews(reviewsResult.reviews);
+          setReviewError(reviewsResult.error);
           setError(null);
         }
       } catch (err) {
@@ -496,7 +502,7 @@ export function useAgencyProfile(agencyId) {
     return () => { isMounted = false; };
   }, [agencyId]);
 
-  return { agency, reviews, tours, loading, error };
+  return { agency, reviews, tours, loading, error, reviewError };
 }
 
 export function useSpecialties(role = 'guide') {
