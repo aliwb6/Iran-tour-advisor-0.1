@@ -4,10 +4,10 @@ import { checkProfileCompletion } from '@/lib/profileCompletion';
 
 const FIELD_LABELS = {
   full_name:   { en: 'Full Name',              fa: 'نام کامل',             ar: 'الاسم الكامل' },
+  email:       { en: 'Email',                  fa: 'ایمیل',                ar: 'البريد الإلكتروني' },
   phone:       { en: 'Phone Number',            fa: 'شماره تلفن',           ar: 'رقم الهاتف' },
   city:        { en: 'City',                    fa: 'شهر',                  ar: 'المدينة' },
-  bio:         { en: 'Bio (at least 50 chars)', fa: 'بیو (حداقل ۵۰ کاراکتر)', ar: 'نبذة (50 حرفاً على الأقل)' },
-  avatar_url:  { en: 'Profile Photo',           fa: 'عکس پروفایل',         ar: 'الصورة الشخصية' },
+  bio:         { en: 'Bio',                     fa: 'بیو',                  ar: 'نبذة' },
   languages:   { en: 'Languages (at least 1)',  fa: 'زبان‌ها (حداقل ۱)',    ar: 'اللغات (لغة واحدة على الأقل)' },
   specialty:   { en: 'Specialty',               fa: 'تخصص',                 ar: 'التخصص' },
   tour_types:  { en: 'Tour Types',              fa: 'نوع تور',              ar: 'أنواع الجولات' },

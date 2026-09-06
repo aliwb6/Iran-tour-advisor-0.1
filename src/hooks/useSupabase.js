@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/supabaseClient';
+import { selectPublicProfiles } from '@/lib/publicProfiles';
 import { mergeLanguages, popularLanguages } from '@/data/languages';
 
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1564960723835-2898c9df9297?w=800&h=600&fit=crop";
@@ -361,11 +362,8 @@ function useProfilesByRole(roles) {
     const fetchRows = async () => {
       try {
         const list = Array.isArray(roles) ? roles : [roles];
-        const { data: rows, error: supabaseError } = await supabase
-          .from('profiles')
-          .select('*')
+        const { data: rows, error: supabaseError } = await selectPublicProfiles(supabase)
           .in('role', list)
-          .eq('is_approved', true)
           .order('created_at', { ascending: false });
 
         if (supabaseError) throw supabaseError;
@@ -406,9 +404,7 @@ export function useAvailableProfileLanguages() {
   useEffect(() => {
     let isMounted = true;
 
-    supabase
-      .from('profiles')
-      .select('languages')
+    selectPublicProfiles(supabase, 'languages')
       .in('role', ['guide', 'agency'])
       .then(({ data }) => {
         if (!isMounted) return;
@@ -436,7 +432,7 @@ export function useGuideProfile(guideId) {
     const fetchAll = async () => {
       try {
         const [profileResult, toursResult, reviewsResult] = await Promise.all([
-          supabase.from('profiles').select('*').eq('id', guideId).single(),
+          selectPublicProfiles(supabase).eq('id', guideId).single(),
           supabase.from('tours').select('*').eq('guide_id', guideId).eq('status', 'published'),
           supabase.from('reviews').select('*').eq('guide_id', guideId).order('created_at', { ascending: false }),
         ]);
@@ -477,7 +473,7 @@ export function useAgencyProfile(agencyId) {
     const fetchAll = async () => {
       try {
         const [profileResult, toursResult, reviewsResult] = await Promise.all([
-          supabase.from('profiles').select('*').eq('id', agencyId).single(),
+          selectPublicProfiles(supabase).eq('id', agencyId).single(),
           supabase.from('tours').select('*').eq('agency_id', agencyId).eq('status', 'published'),
           supabase.from('reviews').select('*').eq('agency_id', agencyId).order('created_at', { ascending: false }),
         ]);
@@ -512,9 +508,7 @@ export function useSpecialties(role = 'guide') {
 
     const fetchSpecialties = async () => {
       try {
-        const { data } = await supabase
-          .from('profiles')
-          .select('specialties')
+        const { data } = await selectPublicProfiles(supabase, 'specialties')
           .eq('role', role);
 
         if (isMounted) {

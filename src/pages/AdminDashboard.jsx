@@ -14,7 +14,13 @@ import TourForm from '@/components/dashboard/TourForm';
 import { useAllArticlesAdmin } from '@/hooks/useSupabase';
 import ArticleEditor from '@/components/articles/ArticleEditor';
 import AdminChatMonitor from './AdminChatMonitor';
-import { checkProfileCompletion } from '@/lib/profileCompletion';
+import {
+  buildGuideReviewUpdates,
+  checkProfileCompletion,
+  getGuideApprovalEligibility,
+  getGuideReviewValidationError,
+  persistGuideReview,
+} from '@/lib/profileCompletion';
 import HomeDestinationsEditor from '@/components/admin/HomeDestinationsEditor';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -676,7 +682,7 @@ function GuidesView({ guides, loading, onReviewProfile, busyId }) {
     if (sortBy === 'city') return (a.city || '').localeCompare(b.city || '');
     if (sortBy === 'role') return (a.role || '').localeCompare(b.role || '');
     if (sortBy === 'status') {
-      const rank = (guide) => guide.is_approved ? 0 : guide.approval_rejection_reason ? 2 : 1;
+      const rank = (guide) => guide.is_approved ? 0 : guide.is_rejected ? 2 : 1;
       return rank(a) - rank(b);
     }
     return new Date(b.created_at || 0) - new Date(a.created_at || 0);
@@ -724,11 +730,11 @@ function GuidesView({ guides, loading, onReviewProfile, busyId }) {
                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium border flex-shrink-0 ${
                     guide.is_approved
                       ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25'
-                      : guide.approval_rejection_reason
+                      : guide.is_rejected
                         ? 'bg-red-500/15 text-red-400 border-red-500/25'
                         : 'bg-gray-500/15 text-gray-400 border-gray-500/25'
                   }`}>
-                    {guide.is_approved ? 'Approved' : guide.approval_rejection_reason ? 'Rejected' : 'Pending'}
+                    {guide.is_approved ? 'Approved' : guide.is_rejected ? 'Rejected' : 'Pending'}
                   </span>
                 </div>
 
@@ -753,7 +759,7 @@ function GuidesView({ guides, loading, onReviewProfile, busyId }) {
                   }`}>
                     {comp.completed ? 'Profile Complete' : `Incomplete — ${comp.passed}/${comp.total}`}
                   </span>
-                  {guide.license_status === 'pending_review' && !guide.is_approved && !guide.approval_rejection_reason && (
+                  {guide.license_status === 'pending_review' && !guide.is_approved && !guide.is_rejected && (
                     <span className="px-2 py-0.5 rounded-full font-medium border bg-blue-500/15 text-blue-400 border-blue-500/25">
                       Review Requested
                     </span>
@@ -800,14 +806,15 @@ function GuideProfileReviewModal({ guide, busy, onClose, onSave }) {
   const [openingLicense, setOpeningLicense] = useState(false);
   const hasLicense = Boolean(guide.license_url?.trim());
   const parsedTourTypes = form.tourTypes.split(/[,،;]/).map(value => value.trim()).filter(Boolean);
-  const completion = checkProfileCompletion({
+  const reviewProfile = {
     ...guide,
     ...form,
     specialty: parsedTourTypes[0] || '',
     specialties: guide.role === 'guide' ? parsedTourTypes : guide.specialties,
     tour_types: guide.role === 'agency' ? parsedTourTypes : guide.tour_types,
-  });
-  const canApprove = completion.completed && hasLicense && form.license_status === 'verified';
+  };
+  const approvalEligibility = getGuideApprovalEligibility(reviewProfile, { submitting: busy });
+  const completion = approvalEligibility;
   const profileHref = guide.role === 'agency' ? `/agencies/${guide.id}` : `/guides/${guide.id}`;
   const inputClass = 'w-full px-3 py-2 rounded-xl border border-white/10 bg-white/[0.05] text-white text-sm placeholder:text-white/25 focus:outline-none focus:border-[hsl(178,85%,32%)]/60';
 
@@ -834,8 +841,13 @@ function GuideProfileReviewModal({ guide, busy, onClose, onSave }) {
   };
   const submit = async (decision) => {
     const reason = rejectionReason.trim();
-    if (decision === 'reject' && !reason) {
-      setLocalError('A rejection reason is required.');
+    const validationError = getGuideReviewValidationError({
+      decision,
+      profile: reviewProfile,
+      rejectionReason: reason,
+    });
+    if (validationError) {
+      setLocalError(validationError);
       return;
     }
     if (form.license_status === 'verified' && !hasLicense) {
@@ -843,16 +855,20 @@ function GuideProfileReviewModal({ guide, busy, onClose, onSave }) {
       return;
     }
     setLocalError('');
-    const { tourTypes, ...profileFields } = form;
-    const saved = await onSave(guide, {
-      ...profileFields,
-      specialty: parsedTourTypes[0] || null,
-      ...(guide.role === 'agency' ? { tour_types: parsedTourTypes } : { specialties: parsedTourTypes }),
-      is_approved: decision === 'approve' ? true : decision === 'reject' ? false : guide.is_approved,
-      approval_rejection_reason: decision === 'approve' ? null : decision === 'reject' ? reason : guide.approval_rejection_reason || null,
-      approval_reviewed_at: decision === 'save' ? guide.approval_reviewed_at || null : new Date().toISOString(),
-    }, decision);
-    if (saved) onClose();
+    const updates = buildGuideReviewUpdates({
+      guide,
+      form,
+      parsedTourTypes,
+      decision,
+      rejectionReason: reason,
+      reviewedAt: new Date().toISOString(),
+    });
+    try {
+      const saved = await onSave(guide, updates, decision);
+      if (saved) onClose();
+    } catch (error) {
+      setLocalError(error.message || 'The profile review could not be saved.');
+    }
   };
 
   return (
@@ -923,7 +939,9 @@ function GuideProfileReviewModal({ guide, busy, onClose, onSave }) {
           <div className="flex items-center justify-end gap-2 flex-wrap pt-2 border-t border-white/10">
             <button disabled={busy} onClick={() => submit('save')} className="px-4 py-2 rounded-xl bg-white/8 text-white/70 text-xs hover:bg-white/12 disabled:opacity-50">Save changes</button>
             <button disabled={busy} onClick={() => submit('reject')} className="px-4 py-2 rounded-xl bg-red-500/15 border border-red-500/25 text-red-400 text-xs hover:bg-red-500/25 disabled:opacity-50">Reject profile</button>
-            <button disabled={busy || !canApprove} onClick={() => submit('approve')} title={!completion.completed ? 'All profile fields must be completed first.' : form.license_status !== 'verified' ? 'Verify the uploaded license before approving this profile.' : ''} className="px-4 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 text-xs hover:bg-emerald-500/25 disabled:opacity-40">{busy ? 'Saving…' : 'Approve profile'}</button>
+            {!guide.is_approved && (
+              <button disabled={!approvalEligibility.canApprove} onClick={() => submit('approve')} title={!completion.completed ? 'All required profile fields and an uploaded license are needed before approval.' : ''} className="px-4 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 text-xs hover:bg-emerald-500/25 disabled:opacity-40">{busy ? 'Saving…' : 'Approve profile'}</button>
+            )}
           </div>
         </div>
       </div>
@@ -1396,17 +1414,13 @@ export default function AdminDashboard() {
     setBusyId(guide.id);
     setError('');
     try {
-      const { error: err } = await supabase
-        .from('profiles')
-        .update(updates)
-        .eq('id', guide.id);
-      if (err) throw err;
-      await fetchGuides();
+      const saved = await persistGuideReview(supabase, guide.id, updates);
+      setGuides(current => current.map(item => item.id === saved.id ? saved : item));
       toast.success(decision === 'approve' ? 'Profile approved.' : decision === 'reject' ? 'Profile rejected with reason.' : 'Profile changes saved.');
-      return true;
+      return saved;
     } catch (err) {
       setError(err.message);
-      return false;
+      throw err;
     } finally {
       setBusyId(null);
     }

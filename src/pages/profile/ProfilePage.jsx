@@ -257,15 +257,15 @@ export default function ProfilePage() {
       {/* ── Pending approval / incomplete profile banner (guide / agency only) ── */}
       {(localProfile?.role === 'guide' || localProfile?.role === 'agency') && !localProfile?.is_approved && (
         <div className="max-w-6xl mx-auto px-5 sm:px-8 lg:px-10 mt-6">
-          <div className={`flex items-start gap-3 p-4 rounded-2xl border ${localProfile.approval_rejection_reason ? 'bg-red-500/10 border-red-500/30' : 'bg-amber-500/10 border-amber-500/30'}`}>
-            <Clock className={`w-5 h-5 shrink-0 mt-0.5 ${localProfile.approval_rejection_reason ? 'text-red-500' : 'text-amber-500'}`} />
+          <div className={`flex items-start gap-3 p-4 rounded-2xl border ${localProfile.is_rejected ? 'bg-red-500/10 border-red-500/30' : 'bg-amber-500/10 border-amber-500/30'}`}>
+            <Clock className={`w-5 h-5 shrink-0 mt-0.5 ${localProfile.is_rejected ? 'text-red-500' : 'text-amber-500'}`} />
             <div>
-              <p className={`font-heading text-sm font-semibold ${localProfile.approval_rejection_reason ? 'text-red-700 dark:text-red-400' : 'text-amber-700 dark:text-amber-400'}`}>
-                {localProfile.approval_rejection_reason
+              <p className={`font-heading text-sm font-semibold ${localProfile.is_rejected ? 'text-red-700 dark:text-red-400' : 'text-amber-700 dark:text-amber-400'}`}>
+                {localProfile.is_rejected
                   ? (lang === 'fa' ? 'پروفایل شما رد شد' : lang === 'ar' ? 'تم رفض ملفك الشخصي' : 'Your profile was rejected')
                   : t('profile_pending_title')}
               </p>
-              <p className={`font-body text-sm mt-0.5 ${localProfile.approval_rejection_reason ? 'text-red-700/80 dark:text-red-400/80' : 'text-amber-700/80 dark:text-amber-400/80'}`}>
+              <p className={`font-body text-sm mt-0.5 ${localProfile.is_rejected ? 'text-red-700/80 dark:text-red-400/80' : 'text-amber-700/80 dark:text-amber-400/80'}`}>
                 {localProfile.approval_rejection_reason || t('profile_pending_desc')}
               </p>
             </div>

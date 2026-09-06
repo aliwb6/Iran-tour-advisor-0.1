@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState, Fragment } from 'react';
 import { Link, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { useI18n } from '@/lib/i18n.jsx';
 import { supabase } from '@/supabaseClient';
+import { selectPublicProfiles } from '@/lib/publicProfiles';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sparkles, Send, MapPin, Clock, Users, Wallet,
@@ -625,7 +626,7 @@ export default function AIAssistant() {
     (async () => {
       const [toursRes, guidesRes] = await Promise.all([
         supabase.from('tours').select('*').eq('status', 'published'),
-        supabase.from('profiles').select('*').in('role', ['guide', 'agency']),
+        selectPublicProfiles(supabase).in('role', ['guide', 'agency']),
       ]);
       if (cancelled) return;
       setCatalogue({ tours: toursRes.data || [], guides: guidesRes.data || [], ready: true });

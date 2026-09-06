@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n.jsx';
 import { supabase } from '@/supabaseClient';
+import { selectPublicProfiles } from '@/lib/publicProfiles';
 import { avatarFor } from '@/lib/avatar';
 
 // ── City catalog ─────────────────────────────────────────────────────────────
@@ -209,9 +210,7 @@ export default function CityPage() {
           .eq('status', 'published')
           .ilike('city', `%${city.name}%`)
           .order('created_at', { ascending: false }),
-        supabase
-          .from('profiles')
-          .select('id, full_name, avatar_url, gender, city, languages, role')
+        selectPublicProfiles(supabase, 'id, full_name, avatar_url, gender, city, languages, role')
           .in('role', ['guide', 'agency'])
           .ilike('city', `%${city.name}%`),
       ]);

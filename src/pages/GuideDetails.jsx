@@ -9,12 +9,14 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/supabaseClient';
+import { selectPublicProfiles } from '@/lib/publicProfiles';
 import { avatarFor } from '@/lib/avatar';
 import { useAuth } from '@/lib/AuthContext';
 import TourCard from '@/components/tours/TourCard';
 import { FALLBACK_IMAGE } from '@/hooks/useSupabase';
 import { iranianDestinations } from '@/data/iranianCities';
 import PublicProfileGallery from '@/components/profile/PublicProfileGallery';
+import PublicLicenseCard from '@/components/profile/PublicLicenseCard';
 
 const FALLBACK_IMG = 'https://images.unsplash.com/photo-1589562784072-9ede7d082e5e?w=800&h=1000&fit=crop';
 
@@ -268,7 +270,7 @@ export default function GuideDetails() {
       try {
         // Part 1/2/3: profile + published tours (newest first).
         const [{ data: profileData, error: profileErr }, { data: tourData }] = await Promise.all([
-          supabase.from('profiles').select('*').eq('id', id).single(),
+          selectPublicProfiles(supabase).eq('id', id).single(),
           supabase
             .from('tours')
             .select('*')
@@ -636,6 +638,7 @@ export default function GuideDetails() {
           {/* RIGHT COLUMN — Booking Widget */}
           <div className="lg:col-span-1 self-start space-y-6">
             <BookingWidget guide={guide} lang={lang} />
+            <PublicLicenseCard profile={guide} lang={lang} />
             <PublicProfileGallery images={guide.gallery_images} lang={lang} />
           </div>
         </div>
